@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# автогенерация реестра фич (scripts/gen-registry.ts)
+src/features/_registry.generated.ts

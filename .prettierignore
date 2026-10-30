@@ -1,0 +1,4 @@
+node_modules
+.next
+package-lock.json
+src/features/_registry.generated.ts
