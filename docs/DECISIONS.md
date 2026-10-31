@@ -17,7 +17,7 @@
 | Q-02 | События для совместных действий в коопе (вынос вдвоём, передача предметов, смена при СЛР) | Юра | Егор | завтра |
 | Q-03 | Как закончить звонок 112, если игрок не называет слот? Выхода нет, игрок застрянет, а `missed` из D-17 недостижим. Предложение: выход через 120 с или кнопка «Завершить звонок» с `missed` по оставшимся слотам | Юра | Егор | **открыт** |
 | Q-04 | Перезаход во время открытой мини-игры: сервер открывает её заново? | Юра | Егор | решено → D-53 |
-| Q-05 | Коды ошибок в `npcSay(mistake)` → `context.mistake.code`: какие строки шлёт сценарий? ИИ сейчас ждёт id интерактива/зоны (`cover_window`, `cover_wardrobe`, `cover_run_out`, `light_switch`, `elevator_call`, `z_collapse`, `z_canopy_danger`, `z_wire_danger`) и коды мини-игр (`go_bag_trap`, `tourniquet_no_time`…) | Матвей | Юра | открыт |
+| Q-05 | Коды ошибок в `npcSay(mistake)` → `context.mistake.code`: какие строки шлёт сценарий? ИИ сейчас ждёт id интерактива/зоны (`cover_window`, `cover_wardrobe`, `cover_run_out`, `light_switch`, `elevator_call`, `z_collapse`, `z_canopy_danger`, `z_wire_danger`) и коды мини-игр (`go_bag_trap`, `tourniquet_no_time`…) | Матвей | Юра | решено → D-58 |
 
 ## Решения
 
