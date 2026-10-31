@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { ChunkData } from "@game/shared";
+import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView } from "../world/ChunkView";
+import { Landscape } from "../world/Landscape";
 import { Hud } from "./Hud";
 import { MinigameOverlay } from "./MinigameHost";
 import { Player } from "./Player";
@@ -32,11 +34,9 @@ function World() {
 export function Game() {
   return (
     <div className="game">
-      <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 300 }} dpr={[1, 1.5]}>
-        <color attach="background" args={["#9fc5e8"]} />
-        <fog attach="fog" args={["#9fc5e8", 30, 120]} />
-        <hemisphereLight args={["#ffffff", "#8d7b68", 0.9]} />
-        <directionalLight position={[30, 60, -20]} intensity={1.4} castShadow />
+      <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 600 }} dpr={[1, 1.5]}>
+        <Atmosphere />
+        <Landscape />
         <World />
         <RemotePlayers />
         <Player />

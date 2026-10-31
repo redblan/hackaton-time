@@ -7,7 +7,9 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { MINIGAMES, type ChunkData, type MinigameId, type MinigameResult } from "@game/shared";
 import { minigames } from "../minigames";
+import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView, getColliders } from "../world/ChunkView";
+import { Landscape } from "../world/Landscape";
 import { MINIGAME_NAMES, MinigameHost } from "./MinigameHost";
 import { Button } from "./ui";
 
@@ -120,12 +122,10 @@ function ChunksTab() {
         )}
       </div>
       <div className="sandbox-stage sandbox-3d">
-        <Canvas camera={{ position: [center[0] + 14, center[1] + 12, center[2] + 14], fov: 50 }}>
-          <color attach="background" args={["#dbeafe"]} />
-          <hemisphereLight args={["#ffffff", "#8d7b68", 1]} />
-          <directionalLight position={[20, 40, 10]} intensity={1.2} />
+        <Canvas shadows camera={{ position: [center[0] + 14, center[1] + 12, center[2] + 14], fov: 50, far: 600 }}>
+          <Atmosphere />
+          <Landscape />
           {chunk && <ChunkView chunk={chunk} flags={flags} />}
-          <gridHelper args={[48, 48]} position={[center[0], chunk?.bounds.min[1] ?? 0, center[2]]} />
           <OrbitControls target={center} makeDefault />
         </Canvas>
       </div>

@@ -8,6 +8,8 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Box3, CanvasTexture, DoubleSide, Vector3, type Points } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
+import { Character } from "./Character";
+import { paintSurface } from "./style";
 
 const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 
@@ -69,7 +71,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   return (
     <group name={props.chunk.id}>
       <Instances key={`${props.chunk.id}:${boxes.length}`} limit={Math.max(1,boxes.length)} range={boxes.length} castShadow receiveShadow frustumCulled={false}>
-        <boxGeometry /><meshStandardMaterial roughness={.85}/>
+        <boxGeometry /><meshStandardMaterial roughness={.85} ref={(m)=>{if(m&&!m.userData.painted){m.userData.painted=true;paintSurface(m);m.needsUpdate=true;}}}/>
         {boxes.map(o=><Instance key={o.id} position={o.pos} scale={o.size} rotation-y={o.rotY??0} color={o.color}/>)}
       </Instances>
       {objects.map((o) => {
@@ -88,10 +90,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
           case "npc":
             return (
               <group key={o.id} position={o.pos} rotation-y={o.rotY ?? 0}>
-                <mesh position={[0, o.pose === "lie" ? 0.2 : 0.9, 0]} rotation-z={o.pose === "lie" ? Math.PI / 2 : 0}>
-                  <capsuleGeometry args={[0.28, 1.1, 4, 8]} />
-                  <meshStandardMaterial color="#60a5fa" />
-                </mesh>
+                <Character npcId={o.npcId} pose={o.pose} />
               </group>
             );
           case "sign":
