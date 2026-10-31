@@ -36,7 +36,7 @@ const chunk: ChunkData = {
   neighbors: [],
   objects: [
     { id: "spawn", kind: "spawn", role: "inside_top", pos: [2, 6, 2] },
-    { id: "val", kind: "npc", npcId: "valentina", pos: [3, 6, 2], when: "neighbor_valentina" },
+    { id: "val", kind: "npc", npcId: "valentina", pos: [3, 6, 2] },
   ],
 };
 writeFileSync(join(dir, "e1f3.json"), JSON.stringify(chunk));
