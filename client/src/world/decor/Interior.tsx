@@ -7,9 +7,11 @@
  *   лестница z 0..3 (площадка x 8..12), коридор z 3.05..4.925, квартира z 5.075..11.8,
  *   проём квартиры x 4..6 на z = 5, лифт (10, 4), перегородка комнат x = 6, окна на z = 11.8.
  */
-import { useEffect, useMemo } from "react";
-import { DoubleSide, MeshStandardMaterial } from "three";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { BufferGeometry, DoubleSide, MeshStandardMaterial, type Group } from "three";
 import type { ChunkData } from "@game/shared";
+import { useStore } from "../../core/store";
 import { paintSurface } from "../style";
 import { Builder, labelAtlas, labelQuad, mergeQuads, rng, useBuilt } from "./build";
 import { parquetMaterial, wallpaperMaterial } from "./patterns";
@@ -161,7 +163,9 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
 
   // ---------- двери ----------
   for (const d of floorDoors(entrance, floor)) {
-    b.add(P.door(theme, d), { x: d.x, y: 0, z: d.z, ry: d.ry });
+    // двустворчатая дверь квартиры: коробка здесь, створки — отдельно, они открываются/закрываются (AnimatedDoor)
+    if (d.double) b.add(P.doorParts(theme, d).frame, { x: d.x, y: 0, z: d.z, ry: d.ry });
+    else b.add(P.door(theme, d), { x: d.x, y: 0, z: d.z, ry: d.ry });
     if (d.open === 0) b.add(P.doormat(["#7a5a3a", "#4f6b8f", "#8a4a3e"][Math.floor(random() * 3)]!), { x: d.x, y: 0, z: 4.55 });
   }
   b.add(P.doormat("#8a7a6a"), { x: 5, y: 0, z: 4.55 });
@@ -296,17 +300,57 @@ function useLabels(entrance: number, floor: number) {
       ),
       { text: String(floor), bg: "#111417", fg: "#ff6a3a", font: "bold 96px monospace" },
     ]);
-    const quads = doors.map((d, i) => {
+    let plate = new BufferGeometry();
+    const quads: BufferGeometry[] = [];
+    doors.forEach((d, i) => {
+      if (d.double) {
+        // табличка на подвижной створке: локально к створке (петля в нуле), ставится в AnimatedDoor
+        const lw = (d.width! - 0.1) / 2 - 0.01;
+        plate = labelQuad(0.22, 0.11, cells[i]!, { x: -lw * 0.5, y: 1.62, z: P.LEAF_Z + 0.075 });
+        return;
+      }
       const p = P.doorPlate(d);
       // локальные координаты двери → чанк (поворот двери ry)
       const x = d.x + p.x * Math.cos(d.ry) + p.z * Math.sin(d.ry);
       const z = d.z - p.x * Math.sin(d.ry) + p.z * Math.cos(d.ry);
-      return labelQuad(0.22, 0.11, cells[i]!, { x, y: p.y, z, ry: d.ry + p.ry });
+      quads.push(labelQuad(0.22, 0.11, cells[i]!, { x, y: p.y, z, ry: d.ry + p.ry }));
     });
     // табло лифта: корпус на y 2.56, лицо в сторону −z (лифт повёрнут на π)
     quads.push(labelQuad(0.42, 0.18, cells[doors.length]!, { x: 10, y: 2.56, z: LIFT_Z - 0.105, ry: Math.PI }));
-    return { texture, geometry: mergeQuads(quads) };
+    return { texture, geometry: mergeQuads(quads), plate };
   }, [entrance, floor]);
+}
+
+/** Створки двери квартиры: E на «Дверь квартиры» закрывает/открывает (store.doors по чанку), поворот с анимацией. */
+function AnimatedDoor({ chunkId, theme, spec, plate, plateMaterial }: { chunkId: string; theme: FloorTheme; spec: DoorSpec; plate: BufferGeometry; plateMaterial: MeshStandardMaterial }) {
+  const open = useStore((s) => s.doors[chunkId] ?? true);
+  const parts = useMemo(() => P.doorParts(theme, spec), [theme, spec]);
+  useEffect(
+    () => () => {
+      parts.frame.dispose();
+      parts.leaves.forEach((l) => l.geometry.dispose());
+    },
+    [parts],
+  );
+  const leaves = useRef<(Group | null)[]>([]);
+  useFrame((_, dt) => {
+    parts.leaves.forEach((l, i) => {
+      const g = leaves.current[i];
+      if (!g) return;
+      const target = open ? l.s * spec.open : 0;
+      g.rotation.y += (target - g.rotation.y) * Math.min(1, dt * 7);
+    });
+  });
+  return (
+    <group position={[spec.x, 0, spec.z]} rotation-y={spec.ry}>
+      {parts.leaves.map((l, i) => (
+        <group key={i} ref={(el) => void (leaves.current[i] = el)} position={[l.hinge, 0, 0]} rotation-y={l.s * spec.open}>
+          <mesh geometry={l.geometry} material={solidMaterial} castShadow />
+          {i === parts.leaves.length - 1 && <mesh geometry={plate} material={plateMaterial} />}
+        </group>
+      ))}
+    </group>
+  );
 }
 
 const solidMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.82 });
@@ -315,11 +359,12 @@ paintSurface(solidMaterial);
 export function Interior({ chunk }: { chunk: ChunkData }) {
   const parsed = parseFloorId(chunk.id);
   if (!parsed) return null;
-  return <FloorInterior entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} />;
+  return <FloorInterior chunkId={chunk.id} entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} />;
 }
 
-function FloorInterior({ entrance, floor, origin }: { entrance: number; floor: number; origin: readonly number[] }) {
+function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; entrance: number; floor: number; origin: readonly number[] }) {
   const theme = useMemo(() => floorTheme(entrance, floor), [entrance, floor]);
+  const mainDoor = useMemo(() => floorDoors(entrance, floor).find((d) => d.double)!, [entrance, floor]);
   const solid = useBuilt(() => buildFloorDecor(entrance, floor, theme), [entrance, floor, theme]);
   const paper = useBuilt(buildWallpaper, []);
   const floors = useBuilt(buildApartmentFloor, []);
@@ -340,6 +385,7 @@ function FloorInterior({ entrance, floor, origin }: { entrance: number; floor: n
       Object.values(materials).forEach((m) => m.dispose());
       labels.texture.dispose();
       labels.geometry.dispose();
+      labels.plate.dispose();
     },
     [materials, labels],
   );
@@ -351,6 +397,7 @@ function FloorInterior({ entrance, floor, origin }: { entrance: number; floor: n
       <mesh geometry={hall} material={materials.hall} receiveShadow />
       <mesh geometry={ceiling} material={solidMaterial} />
       <mesh geometry={labels.geometry} material={materials.label} />
+      <AnimatedDoor chunkId={chunkId} theme={theme} spec={mainDoor} plate={labels.plate} plateMaterial={materials.label} />
     </group>
   );
 }

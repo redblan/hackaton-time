@@ -44,6 +44,11 @@ export function Player() {
       if (e.code === "KeyE" && !e.repeat) {
         const p = store.get().prompt;
         if (p) sendEvent({ type: "interact", target: p.target as InteractableId });
+        // Дверь квартиры открывается/закрывается на клиенте (вид), сценарий на сервере получает interact как раньше
+        if (p?.target === "apartment_door") {
+          const id = chunkAt(body.current.pos);
+          store.set((st) => ({ doors: { ...st.doors, [id]: !(st.doors[id] ?? true) } }));
+        }
       }
     };
     const up = (e: KeyboardEvent) => keys.delete(e.code);

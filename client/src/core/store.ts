@@ -64,6 +64,8 @@ export interface State {
   debug: boolean;
   /** Чувствительность мыши, множитель */
   sensitivity: number;
+  /** Дверь квартиры по чанкам: false — закрыта (E на «Дверь квартиры»). По умолчанию открыта. Только вид, без коллизий. */
+  doors: Record<string, boolean>;
 }
 
 const initial: State = {
@@ -89,6 +91,7 @@ const initial: State = {
   help: false,
   debug: false,
   sensitivity: readSensitivity(),
+  doors: {},
 };
 
 function readSensitivity() {
@@ -136,4 +139,4 @@ let seq = 0;
 export const nextKey = () => ++seq;
 
 // Отладка в dev: window.__store.get() в консоли браузера
-if (import.meta.env.DEV) (window as unknown as { __store: typeof store }).__store = store;
+if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __store: typeof store }).__store = store;

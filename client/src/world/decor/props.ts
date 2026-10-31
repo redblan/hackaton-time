@@ -76,6 +76,13 @@ function doorLeaves(opts: DoorOptions) {
   ];
 }
 
+/** Части двери для анимации: коробка отдельно, створки с петлёй в локальном нуле (поворот ry = s·угол). */
+export function doorParts(theme: FloorTheme, opts: DoorOptions = {}) {
+  const b = new Builder();
+  doorFrame(b, theme.doorDark, opts.width ?? 1.0);
+  return { frame: b.build(), leaves: doorLeaves(opts).map((l) => ({ ...l, geometry: doorLeaf(theme, l.lw, l.s) })) };
+}
+
 /** Дверь квартиры: коробка с наличником, полотно с шестью филёнками, ручка. Лицо — +z. */
 export function door(theme: FloorTheme, opts: DoorOptions = {}): BufferGeometry {
   const b = new Builder();
