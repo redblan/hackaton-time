@@ -77,7 +77,8 @@ export function logout() {
 export function connect(auth: Auth) {
   socket?.disconnect();
   store.set({ auth, netError: null });
-  const s: GameSocket = io({ auth: { token: auth.token } });
+  // Только WebSocket (wss:// под HTTPS), без HTTP long-polling (D-66)
+  const s: GameSocket = io({ auth: { token: auth.token }, transports: ["websocket"] });
   socket = s;
 
   s.on("connect", () => {

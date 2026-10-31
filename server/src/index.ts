@@ -116,8 +116,10 @@ if (existsSync(config.clientDist)) {
 
 const cert = config.https ? loadCert() : null;
 const server = cert ? createHttps(cert, app) : createHttp(app);
+// Только WebSocket (D-66): клиенты подключаются сразу по ws/wss, HTTP long-polling выключен
 const io = new Server<ClientToServer, ServerToClient, Record<string, never>, SocketData>(server, {
   cors: { origin: true },
+  transports: ["websocket"],
 });
 
 io.use(async (socket, next) => {

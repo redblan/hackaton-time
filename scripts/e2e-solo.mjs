@@ -9,7 +9,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const name = "bot_" + Date.now().toString(36).slice(-4);
 const res = await fetch(U + "/api/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, password: "bot-pass" }) });
 const { token } = await res.json();
-const s = io(U, { auth: { token }, rejectUnauthorized: false });
+const s = io(U, { auth: { token }, rejectUnauthorized: false, transports: ["websocket"] });
 const t0 = Date.now();
 const log = (...a) => console.log(`${((Date.now() - t0) / 1000).toFixed(0).padStart(4)}s`, ...a);
 let stage = null, minigame = null, end = null;
