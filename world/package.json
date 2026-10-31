@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsx src/build.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": { "@game/shared": "*" }
 }
