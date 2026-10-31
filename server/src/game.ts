@@ -568,6 +568,19 @@ export class Game {
   private now(room: Room) {
     return gameNow(room, Date.now());
   }
+  /** Для F3 и автотеста: что за прохождение у игрока (адрес, флаги, этап) */
+  runInfo(playerId: PlayerId) {
+    const room = this.myRoom(playerId);
+    if (!room?.run) return null;
+    return {
+      roomId: room.id,
+      address: room.run.config.address,
+      flags: [...room.flags],
+      stage: room.run.stage[playerId] ?? null,
+      finished: room.finished,
+    };
+  }
+
   private myRoom(playerId: PlayerId) {
     const id = this.roomOf.get(playerId);
     return id ? this.rooms.get(id) : undefined;

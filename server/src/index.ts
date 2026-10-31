@@ -87,7 +87,7 @@ app.get(["/api/me", "/api/debug/me"], async (req, res) => {
     return;
   }
   const [memory, profile] = await Promise.all([store.getMemory(player.id), store.getProfile(player.id)]);
-  res.json({ name: player.name, db: store.kind, memory, profile });
+  res.json({ name: player.name, db: store.kind, memory, profile, run: game.runInfo(player.id) });
 });
 
 app.use("/assets", express.static(config.assetsDir, { maxAge: "1h" }));
