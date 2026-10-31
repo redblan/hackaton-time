@@ -3,7 +3,7 @@
  * На настоящих карточках и базе знаний, без модели — как на демо, если Ollama не ответила.
  */
 import { describe, expect, it } from "vitest";
-import type { NpcRequest } from "@game/shared";
+import type { NpcRequest, StageId } from "@game/shared";
 import { createAi, createInMemoryStore } from "../src/index";
 import { detectInjection, looksBroken } from "../src/text";
 
@@ -111,5 +111,41 @@ describe("защита: NPC не ломается (M9)", () => {
     const r = await ai.say(ask("mihalych", "Какие таблетки пить от давления?"));
     expect(r.factIds).toEqual([]);
     expect(r.text).not.toMatch(/таблет|мг\b/i);
+  });
+});
+
+describe("рация и имя (M8, M14)", () => {
+  const radio = (playerMessage: string, stage: StageId): NpcRequest => ({
+    npcId: "mihalych",
+    playerId: "jury",
+    event: "free_talk",
+    playerMessage,
+    context: { flags: [], facts: [], stage, channel: "radio" },
+  });
+
+  it("по рации Михалыч подсказывает по текущему этапу", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: offline });
+    expect((await ai.say(radio("Михалыч, я тут, что дальше?", "collapse"))).text).toContain("балкон");
+    expect((await ai.say(radio("А сейчас куда?", "call_112"))).text).toContain("112");
+  });
+
+  it("по рации в промпт уходит этап и подсказка", async () => {
+    const seen = { body: "" };
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Иди на четвёртый. Приём.", seen) });
+    await ai.say(radio("Куда идти?", "collapse"));
+    expect(seen.body).toContain("по рации");
+    expect(seen.body).toContain("балкон");
+  });
+
+  it("Михалыч иногда зовёт по имени, папа — никогда", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: offline });
+    const named = (npcId: NpcRequest["npcId"], ev: NpcRequest["event"]): NpcRequest => ({
+      npcId,
+      playerId: "jury",
+      event: ev,
+      context: { flags: [], facts: [], playerName: "Матвей" },
+    });
+    expect((await ai.say(named("mihalych", "partner_call"))).text.startsWith("Матвей, ")).toBe(true);
+    for (let i = 0; i < 3; i++) expect((await ai.say(named("papa", "quake_started"))).text).not.toContain("Матвей");
   });
 });

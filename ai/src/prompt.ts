@@ -1,10 +1,42 @@
 /** Сборка промпта: карточка + цель события + факты из базы + память игрока + последние реплики. */
-import type { NpcRequest, PlayerMemory, SkillId } from "@game/shared";
+import type { NpcRequest, PlayerMemory, SkillId, StageId } from "@game/shared";
 import type { ChatMessage } from "./ollama";
 import type { KnowledgeFact, NpcCard, NpcEventCard } from "./types";
 
 /** NPC, у которых тон игрока даёт outcome calmed / panicked (DECISIONS D-25). Они не учат игрока сами. */
 export const EMOTIONAL: ReadonlySet<string> = new Set(["vanya", "valentina", "victim_bleeding", "victim_cpr", "victim_unconscious", "victim_scared", "neighbor_leg"]);
+
+/** Подсказки Михалыча по рации: что делать на этом этапе (M8) */
+export const RADIO_HINTS: Partial<Record<StageId, string>> = {
+  wake: "Пока трясёт — укройся, на лестницу не беги.",
+  cover: "Пока трясёт — под стол или к несущей стене, от окон подальше.",
+  pack: "Бери главное: документы, аптечку, воду, фонарик. Газ перекрой, свет не трогай.",
+  exit_apartment: "Дверь перекосило — открывайте вдвоём с отцом.",
+  elevator: "Лифт не трогай, только лестница. Застрявшему скажи, что спасателей вызовешь.",
+  smoke: "Дым — пригнись, мокрую тряпку к лицу и быстро мимо.",
+  collapse: "Пролёт рухнул. Иди на четвёртый, через балкон во второй подъезд.",
+  neighbor: "Соседке говори спокойно, представься. Кота пусть берёт — и веди медленно.",
+  exit_building: "Выходи и сразу от стены — козырёк треснул.",
+  yard_assess: "Осмотрись. К проводу и к тому, кто рядом, не подходи.",
+  call_112: "Звони 112: адрес с таблички, что случилось, сколько пострадавших.",
+  triage: "Сначала кровотечение, потом кто не дышит, остальные подождут.",
+  first_aid: "Делай по шагам, не торопись. Я рядом.",
+  aftershock: "Всех, кто на ногах, — на площадку, подальше от дома!",
+  handover: "Бригада здесь. Доложи капитану: кто, в каком состоянии, что сделали.",
+  debrief: "Выдохни. Послушай капитана, он дело говорит.",
+  done: "Хорошо отработали. Отбой.",
+};
+
+/** Имя игрока для обращения: без кавычек и мусора, не длиннее 20 символов (M14) */
+export function playerName(req: NpcRequest): string | undefined {
+  const raw = req.context.playerName;
+  if (typeof raw !== "string") return undefined;
+  const name = raw.replace(/[^\p{L}\p{N} -]/gu, "").trim().slice(0, 20);
+  return name || undefined;
+}
+
+/** Кто обращается к игроку по имени: все, кроме папы (он говорит «ты») и диспетчера */
+export const CALLS_BY_NAME = (npcId: string) => npcId !== "papa" && npcId !== "dispatcher";
 
 export interface PlannedFact {
   fact: KnowledgeFact;
@@ -65,6 +97,14 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
     "- Вопрос не про землетрясение и не про то, что вокруг, — ответь одной фразой в характере и верни разговор к делу.",
   ];
   if (plan.eventCard) lines.push(`Сейчас твоя цель: ${plan.eventCard.goal}.`);
+  if (req.context.channel === "radio") {
+    lines.push("Ты говоришь по рации: 1–2 короткие фразы, по делу, можно закончить словом «Приём».");
+    const hint = RADIO_HINTS[req.context.stage as StageId];
+    if (hint) lines.push(`Подсказка по тому, что игроку делать сейчас: ${hint}`);
+  }
+  const name = playerName(req);
+  if (name && CALLS_BY_NAME(card.id)) lines.push(`Игрока зовут ${name}. Иногда обращайся по имени.`);
+  if (card.id === "papa") lines.push("Игрок — твой ребёнок. По имени не обращайся, говори «ты».");
   if (req.context.stage) lines.push(`Этап: ${req.context.stage}.`);
   if (plan.recognized) lines.push("Ты уже встречал этого игрока в прошлый раз — покажи, что узнал его.");
   if (plan.mistakeNote) lines.push(`Игрок только что ошибся. Объясни, почему это опасно: ${plan.mistakeNote}`);

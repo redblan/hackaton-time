@@ -5,13 +5,13 @@
  * локальная Ollama стримом → если модель молчит дольше таймаута, шаблон из карточки,
  * который этот игрок ещё не слышал → обновляем память.
  */
-import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemory } from "@game/shared";
+import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemory, StageId } from "@game/shared";
 import { factsBySkill, loadData, type AiData } from "./data";
 import { createDispatcher } from "./dispatcher";
 import { createGromov } from "./gromov";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
-import { buildMessages, cleanReply, EMOTIONAL, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
+import { buildMessages, CALLS_BY_NAME, cleanReply, EMOTIONAL, playerName, RADIO_HINTS, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
 import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
@@ -145,11 +145,19 @@ export function createAi(opts: CreateAiOptions): AiModule {
       if (reaction?.length && !f) {
         // реакция на тон уже прозвучала
       } else if (f) parts.push(`${f.told > 0 ? "Я уже говорил, коротко: " : ""}${stripLabel(f.fact.explanations[f.explanation] ?? f.fact.fact)}`);
-      else if (templates.length > 0) {
+      else if (req.context.channel === "radio" && RADIO_HINTS[req.context.stage as StageId]) {
+        parts.push(`${RADIO_HINTS[req.context.stage as StageId]} Приём.`);
+      } else if (templates.length > 0) {
         const t = pickLeastUsed(memory, req.npcId, req.event, templates);
         parts.push(t.text);
         key = t.key;
       } else parts.push("Не знаю точно. Спросим у спасателей, когда приедут.");
+    }
+    // Иногда — по имени: каждая третья реплика этого NPC игроку (M14)
+    const name = playerName(req);
+    const said = memory.recent.filter((r) => r.npcId === req.npcId && r.from === "npc").length;
+    if (name && CALLS_BY_NAME(req.npcId) && said % 3 === 0 && parts.length > 0 && !parts[0]!.startsWith("(")) {
+      parts[0] = `${name}, ${parts[0]!.charAt(0).toLowerCase()}${parts[0]!.slice(1)}`;
     }
     return { text: parts.join(" "), key };
   }
