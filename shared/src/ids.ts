@@ -83,6 +83,7 @@ export const ITEMS = [
   "water",
   "flashlight",
   "warm_clothes",
+  "bandage",
   "laptop", // ловушка
   "console", // ловушка
   "mugs", // ловушка
@@ -108,6 +109,7 @@ export const INTERACTABLES = [
   "balcony_door", // переходный балкон
   "neighbor_door", // дверь Валентины Петровны
   "address_plate", // табличка с адресом на доме
+  "building_plan", // план эвакуации / схема дома на стене подъезда
   "victim_bleeding",
   "victim_cpr",
   "victim_unconscious",
@@ -162,3 +164,44 @@ export const NPC_EVENTS = [
   "free_talk", // игрок сам написал NPC
 ] as const;
 export type NpcEvent = (typeof NPC_EVENTS)[number];
+
+/**
+ * Слоты звонка в 112: что диспетчер должен узнать от игрока.
+ * Матвей вытаскивает их из текста (ai/src/dispatcher.ts), Юра проверяет полноту.
+ */
+export const DISPATCHER_SLOTS = [
+  "address", // адрес дома
+  "what", // что случилось
+  "victims", // сколько пострадавших
+  "condition", // их состояние
+  "trapped", // люди в лифте / под завалом
+  "fire", // есть ли пожар, задымление
+  "hazard", // опасности: оборванный провод, газ, козырёк
+] as const;
+export type DispatcherSlot = (typeof DISPATCHER_SLOTS)[number];
+
+/** Что игрок должен сообщить бригаде (Громову) при передаче. */
+export const HANDOVER_ITEMS = [
+  "victims", // кто пострадал и что с ними сделали
+  "tourniquet_time", // время наложения жгута
+  "trapped", // кто остался в здании / в лифте
+  "fire", // где пожар
+  "hazard", // опасности во дворе
+] as const;
+export type HandoverItem = (typeof HANDOVER_ITEMS)[number];
+
+/**
+ * Итоги диалога (NpcResponse.outcome → GameEvent dialogOutcome).
+ * ИИ возвращает, сценарий реагирует.
+ */
+export const DIALOG_OUTCOMES = [
+  "calmed", // NPC успокоился (Ваня, Валентина, пострадавший)
+  "panicked", // NPC запаниковал от грубости/паники игрока
+  "agreed_to_go", // NPC согласился идти с игроком (Валентина)
+  "slots_complete", // диспетчер 112 получил всё
+  "handover_complete", // бригада получила всё
+] as const;
+export type DialogOutcome =
+  | (typeof DIALOG_OUTCOMES)[number]
+  | `slot_missing:${DispatcherSlot}`
+  | `handover_missing:${HandoverItem}`;
