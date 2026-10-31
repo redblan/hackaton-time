@@ -106,6 +106,14 @@ describe("защита: NPC не ломается (M9)", () => {
     expect(r.text).not.toMatch(/языковая модель/);
   });
 
+  it("иероглифы в ответе модели — заменяем шаблоном (прогон e2e на qwen2.5:3b)", async () => {
+    expect(looksBroken("Открой дверь с另一边, я за тобой.")).toBe(true);
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Открой дверь с另一边, я за тобой.") });
+    const r = await ai.say(event("papa", "door_jammed"));
+    expect(r.source).toBe("template");
+    expect(r.text).not.toMatch(/[\u4e00-\u9fff]/);
+  });
+
   it("медицинский вопрос вне базы — не выдумывает, а отправляет к спасателям", async () => {
     const ai = createAi({ memory: createInMemoryStore(), fetchImpl: offline });
     const r = await ai.say(ask("mihalych", "Какие таблетки пить от давления?"));
