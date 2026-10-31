@@ -1,13 +1,13 @@
 # Общие зоны: PR, который их трогает, ждёт апрува лида.
 # Свои фичи (src/features/<имя>, src/app/(app)/<имя>) мержатся без апрува при зелёном CI.
-/src/shared/          @tvarina-only
-/src/app/layout.tsx   @tvarina-only
-/src/app/globals.css  @tvarina-only
-/src/app/api/         @tvarina-only
-/scripts/             @tvarina-only
-/package.json         @tvarina-only
-/package-lock.json    @tvarina-only
-/next.config.ts       @tvarina-only
-/drizzle.config.ts    @tvarina-only
-/AGENTS.md            @tvarina-only
-/.github/             @tvarina-only
+/src/shared/          @redblan
+/src/app/layout.tsx   @redblan
+/src/app/globals.css  @redblan
+/src/app/api/         @redblan
+/scripts/             @redblan
+/package.json         @redblan
+/package-lock.json    @redblan
+/next.config.ts       @redblan
+/drizzle.config.ts    @redblan
+/AGENTS.md            @redblan
+/.github/             @redblan

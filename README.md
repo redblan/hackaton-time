@@ -7,7 +7,7 @@
 Нужно: **Node.js 20.9+**, **Git**, **Postgres** (локальный или через Docker).
 
 ```bash
-git clone https://github.com/tvarina-only/hackaton-time.git
+git clone https://github.com/redblan/hackaton-time.git
 cd hackaton-time
 npm install
 cp .env.example .env        # Windows (PowerShell): copy .env.example .env

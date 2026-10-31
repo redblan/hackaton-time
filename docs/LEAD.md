@@ -7,7 +7,7 @@ cd hackaton-time
 git add -A
 git commit -m "Hackathon template"
 git branch -M main
-git remote add origin git@github.com:tvarina-only/hackaton-time.git   # или https://...
+git remote add origin git@github.com:redblan/hackaton-time.git   # или https://...
 git push -u origin main
 ```
 
