@@ -7,9 +7,9 @@ import { Clone, Instance, Instances, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Box3, CanvasTexture, DoubleSide, Vector3, type Points } from "three";
-import type { Aabb, ChunkData, WorldObject } from "@game/shared";
+import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 
-const active = (o: WorldObject, flags: string[]) => !o.when || flags.includes(o.when);
+const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 
 function Sign({object}:{object:Extract<WorldObject,{kind:'sign'}>}) {
   const texture=useMemo(()=>{

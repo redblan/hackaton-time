@@ -28,17 +28,12 @@ export function removeFact(state: RunState, fact: string) {
   state.facts = state.facts.filter((f) => f !== fact);
 }
 
-/** TODO(D-40): перенести в `RunState.timers`, когда поле появится в контракте. */
 export function getTimer(state: RunState, name: string): number | null {
-  const prefix = `timer:${name}:`;
-  const fact = state.facts.find((f) => f.startsWith(prefix));
-  return fact ? Number(fact.slice(prefix.length)) : null;
+  return state.timers[name] ?? null;
 }
 
 export function setTimer(state: RunState, name: string, at: number) {
-  const prefix = `timer:${name}:`;
-  state.facts = state.facts.filter((f) => !f.startsWith(prefix));
-  state.facts.push(`${prefix}${at}`);
+  state.timers[name] = at;
 }
 
 export function log(
@@ -82,7 +77,6 @@ export function say(ctx: Ctx, npcId: NpcId, event: NpcEvent, context?: Record<st
 }
 
 export function openMinigame(ctx: Ctx, game: MinigameId, params?: Record<string, unknown>) {
-  // TODO(Q-04): после перезахода сервер должен заново открыть мини-игру, иначе этап заблокирован.
   addFact(ctx.state, "minigame_open");
   ctx.effects.push({
     type: "openMinigame",

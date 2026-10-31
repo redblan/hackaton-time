@@ -1,0 +1,93 @@
+/* Шрифты только системные — без интернета */
+:root {
+  --bg: #1e293b;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --accent: #f97316;
+  --accent-2: #fb923c;
+  --danger: #dc2626;
+  --line: #e2e8f0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body { background: var(--bg); }
+h1 { margin: 0 0 8px; font-size: 28px; }
+h2 { margin: 20px 0 8px; font-size: 18px; }
+h3 { margin: 12px 0 6px; font-size: 15px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.error { color: var(--danger); margin: 8px 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+
+.screen { min-height: 100%; display: grid; place-items: center; padding: 16px; background: radial-gradient(circle at 30% 20%, #334155, #0f172a); color: #fff; }
+.card { background: var(--card); color: var(--text); border-radius: 18px; padding: 24px; width: min(420px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.card-wide { width: min(720px, 100%); }
+.form { display: grid; gap: 12px; margin-top: 16px; }
+.form label, label.small { display: grid; gap: 4px; font-weight: 600; }
+input, select, textarea { font: inherit; padding: 10px 12px; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--text); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+label.check { display: flex; align-items: center; gap: 6px; font-weight: 400; }
+
+.btn { font: inherit; font-weight: 700; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer; transition: transform .05s; }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-2); }
+.btn-ghost { background: #f1f5f9; color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.role { font: inherit; text-align: left; display: grid; gap: 4px; padding: 14px; border-radius: 14px; border: 2px solid var(--line); background: #fff; cursor: pointer; }
+.role-mine { border-color: var(--accent); background: #fff7ed; }
+.role-taken { opacity: .6; cursor: default; }
+
+/* Игра */
+.game { position: fixed; inset: 0; }
+.game canvas { display: block; }
+.hud { position: absolute; inset: 0; pointer-events: none; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.hud-stage { position: absolute; top: 16px; left: 16px; max-width: 420px; background: rgba(15,23,42,.6); padding: 12px 16px; border-radius: 14px; }
+.stage-name { font-weight: 800; font-size: 18px; color: #fdba74; }
+.stage-hint { margin-top: 4px; }
+.inventory { margin-top: 6px; font-size: 13px; opacity: .85; }
+.hud-top-right { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; align-items: center; }
+.hud-leave { pointer-events: auto; padding: 6px 12px; font-size: 13px; text-shadow: none; }
+.hud-chunks { background: rgba(15,23,42,.6); padding: 8px 12px; border-radius: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.hud-offline { position: absolute; top: 60px; right: 16px; background: var(--danger); padding: 6px 10px; border-radius: 8px; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 2px rgba(0,0,0,.3); }
+.hud-prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(15,23,42,.75); padding: 10px 16px; border-radius: 12px; font-size: 18px; font-weight: 700; }
+kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6px; border-radius: 6px; background: #fff; color: #0f172a; text-shadow: none; }
+.hud-click { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); background: rgba(15,23,42,.7); padding: 8px 14px; border-radius: 10px; }
+.hud-npc { position: absolute; left: 16px; bottom: 16px; width: min(520px, 45vw); display: grid; gap: 6px; }
+.npc-line { background: rgba(15,23,42,.7); padding: 8px 12px; border-radius: 12px; line-height: 1.35; }
+.npc-line b { color: #93c5fd; }
+.npc-line-me b { color: #fdba74; }
+.caret { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.tag { margin-left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,.2); }
+.hud-chat { position: absolute; right: 16px; bottom: 16px; width: min(380px, 40vw); display: grid; gap: 6px; pointer-events: auto; }
+.chat-log { display: grid; gap: 2px; font-size: 14px; max-height: 180px; overflow: hidden; }
+.chat-log b { color: #86efac; }
+.chat-input { display: flex; gap: 6px; opacity: .75; }
+.hud-chat-active .chat-input { opacity: 1; }
+.chat-input select { padding: 6px; }
+.chat-input input { flex: 1; padding: 6px 10px; }
+.nameplate { color: #fff; font: 600 13px system-ui; background: rgba(15,23,42,.65); padding: 2px 8px; border-radius: 8px; white-space: nowrap; pointer-events: none; }
+.world-sign { color: #0f172a; background: #fef3c7; padding: 2px 8px; border-radius: 6px; font: 600 12px system-ui; white-space: nowrap; pointer-events: none; }
+
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(15,23,42,.55); pointer-events: auto; text-shadow: none; color: var(--text); padding: 16px; z-index: 10; }
+.minigame { display: grid; place-items: center; width: 100%; height: 100%; }
+.debrief { background: #f1f5f9; padding: 12px; border-radius: 12px; }
+
+/* Песочница */
+.sandbox { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: #f8fafc; }
+.sandbox-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; }
+.sandbox-body { display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+.sandbox-side { display: grid; align-content: start; gap: 8px; padding: 16px; border-right: 1px solid var(--line); overflow: auto; background: #fff; }
+.sandbox-stage { position: relative; display: grid; place-items: center; padding: 16px; background: #334155; min-height: 0; }
+.sandbox-3d { padding: 0; }
+.json { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 10px; font-size: 12px; overflow: auto; max-height: 320px; margin: 0; }
+@media (max-width: 720px) { .sandbox-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }

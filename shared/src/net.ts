@@ -18,10 +18,21 @@ export interface PlayerPublic {
   anim: "idle" | "walk" | "run" | "crouch" | "carry";
 }
 
+/** NPC, которого двигает сервер (сопровождение Валентины). Статичные NPC — в чанках. */
+export interface NpcPublic {
+  npcId: NpcId;
+  pos: Vec3;
+  rotY: number;
+  /** За кем идёт; null — стоит на месте */
+  following: PlayerId | null;
+}
+
 export interface ClientToServer {
   /** Лобби */
   "room:join": (p: { mode: Mode }) => void;
   "room:ready": (p: { role: Role }) => void;
+  /** Выйти из комнаты в лобби (в коопе напарник играет дальше) */
+  "room:leave": () => void;
   /** Движение, ~15 раз в секунду */
   "player:move": (p: { pos: Vec3; rotY: number; anim: PlayerPublic["anim"] }) => void;
   /** Подгрузка мира: клиент сообщает, какие чанки хочет (по своей позиции) */
@@ -38,6 +49,8 @@ export interface ServerToClient {
   "room:state": (p: { roomId: string; mode: Mode; players: PlayerPublic[]; started: boolean }) => void;
   /** Позиции всех игроков в комнате, ~10 раз в секунду */
   "players:update": (p: { players: PlayerPublic[] }) => void;
+  /** Подвижные NPC комнаты, ~10 раз в секунду. Клиент рисует их вместо одноимённых NPC из чанков */
+  "npcs:update": (p: { npcs: NpcPublic[] }) => void;
   "chunk:data": (p: { chunk: ChunkData }) => void;
   /** Чанки, которые клиент должен выгрузить */
   "chunk:drop": (p: { ids: ChunkId[] }) => void;

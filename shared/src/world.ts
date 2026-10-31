@@ -24,13 +24,15 @@ export interface ChunkData {
 }
 
 /**
- * `when` — флаг прохождения (RunConfig.flags). Объект виден/работает,
+ * `when` — флаг прохождения (RunConfig.flags + setFlag). Объект виден/работает,
  * только если флаг выставлен. Например `fire_f5`, `collapse_f4`, `lift_vanya`.
- * Без `when` объект есть всегда.
+ * `unless` — наоборот: объект пропадает, когда флаг выставлен (папа ушёл: `unless: "papa_left"`).
+ * Без них объект есть всегда. Проверять через `isObjectActive()`.
  */
 interface Base {
   id: string;
   when?: string;
+  unless?: string;
 }
 
 export type WorldObject =
@@ -54,4 +56,10 @@ export type WorldObject =
 export interface Aabb {
   min: Vec3;
   max: Vec3;
+}
+
+/** Виден ли объект при этих флагах (`when` / `unless`). Единое правило для клиента, сервера и мира. */
+export function isObjectActive(o: { when?: string; unless?: string }, flags: readonly string[] | ReadonlySet<string>): boolean {
+  const has = (f: string) => ("has" in flags ? flags.has(f) : flags.includes(f));
+  return (!o.when || has(o.when)) && (!o.unless || !has(o.unless));
 }
