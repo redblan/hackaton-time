@@ -11,6 +11,7 @@ import { createDispatcher } from "./dispatcher";
 import { createGromov } from "./gromov";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
+import { createLlmQueue, type QueueStats } from "./queue";
 import { buildMessages, CALLS_BY_NAME, cleanReply, EMOTIONAL, playerName, RADIO_HINTS, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
 import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
@@ -18,6 +19,7 @@ import type { KnowledgeFact, NpcCard } from "./types";
 export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
 export { createDispatcher, extractSlots, requiredSlots } from "./dispatcher";
 export { createGromov, extractHandover, requiredHandover } from "./gromov";
+export { createLlmQueue, QueueSkip, type QueueStats } from "./queue";
 export { loadData, unverifiedFacts } from "./data";
 export type { KnowledgeFact, NpcCard } from "./types";
 
@@ -26,7 +28,19 @@ export interface CreateAiOptions extends AiOptions {
   data?: AiData;
   /** Подмена fetch — для тестов */
   fetchImpl?: typeof fetch;
+  /** Сколько запросов к модели одновременно. По умолчанию 1 или AI_LLM_CONCURRENCY (M10) */
+  llmConcurrency?: number;
+  /** Сколько запросов может ждать очереди. По умолчанию 3 или AI_LLM_QUEUE */
+  llmMaxQueue?: number;
 }
+
+/** AiModule + состояние очереди к модели (для F3-оверлея и логов сервера) */
+export type Ai = AiModule & { llmStats(): QueueStats };
+
+const envInt = (name: string): number | undefined => {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) && v >= 0 ? v : undefined;
+};
 
 
 /** Ключ шаблона в memory.toldFacts: так помним, какие шаблоны игрок уже слышал. */
@@ -41,13 +55,17 @@ const FALLBACK_CARD = (id: NpcCard["id"]): NpcCard => ({
   events: {},
 });
 
-export function createAi(opts: CreateAiOptions): AiModule {
+export function createAi(opts: CreateAiOptions): Ai {
   const data = opts.data ?? loadData();
   const url = opts.ollamaUrl ?? "http://127.0.0.1:11434";
   const model = opts.model ?? "qwen2.5:7b-instruct";
   const timeoutMs = opts.timeoutMs ?? 6000;
   /** Кого игрок уже встретил в текущем прохождении: `${playerId}:${npcId}` */
   const metThisRun = new Set<string>();
+  const queue = createLlmQueue({
+    concurrency: opts.llmConcurrency ?? envInt("AI_LLM_CONCURRENCY") ?? 1,
+    maxQueue: opts.llmMaxQueue ?? envInt("AI_LLM_QUEUE") ?? 3,
+  });
   const dispatcher = createDispatcher();
   const gromov = createGromov(data);
 
@@ -231,14 +249,18 @@ export function createAi(opts: CreateAiOptions): AiModule {
     let source: NpcResponse["source"];
     try {
       if (p.injection) throw new Error("попытка вывести NPC из роли — отвечаем шаблоном");
-      const raw = await ollamaChat({
-        url,
-        model,
-        timeoutMs,
-        messages: buildMessages(req, p, memory),
-        onToken,
-        fetchImpl: opts.fetchImpl,
-      });
+      // Через очередь: срок — timeoutMs с момента запроса, а не с момента, когда дошла очередь
+      const raw = await queue.run(req.playerId, timeoutMs, (remaining) =>
+        ollamaChat({
+          url,
+          model,
+          timeoutMs: remaining,
+          totalMs: timeoutMs * 3,
+          messages: buildMessages(req, p, memory),
+          onToken,
+          fetchImpl: opts.fetchImpl,
+        }),
+      );
       text = cleanReply(raw);
       if (!text) throw new Error("ollama: пустой ответ");
       if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
@@ -255,6 +277,7 @@ export function createAi(opts: CreateAiOptions): AiModule {
   }
 
   return {
+    llmStats: () => queue.stats(),
     say: (req) => respond(req),
     sayStream: (req, onToken) => respond(req, onToken),
     resetRun(playerId: PlayerId) {

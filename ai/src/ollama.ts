@@ -11,13 +11,15 @@ export interface OllamaCall {
   messages: ChatMessage[];
   /** Сколько ждать первый токен. Не дождались — ошибка, вызывающий берёт шаблон. */
   timeoutMs: number;
+  /** Предел на весь ответ; по умолчанию 3 × timeoutMs */
+  totalMs?: number;
   onToken?: (t: string) => void;
   fetchImpl?: typeof fetch;
 }
 
 /**
  * Возвращает текст ответа. Бросает ошибку, если модель не ответила до таймаута.
- * Если модель начала отвечать, но тянет дольше 3 × timeoutMs, отдаём то, что успело прийти.
+ * Если модель начала отвечать, но тянет дольше totalMs, отдаём то, что успело прийти.
  */
 export async function ollamaChat(call: OllamaCall): Promise<string> {
   const ctrl = new AbortController();
@@ -26,7 +28,7 @@ export async function ollamaChat(call: OllamaCall): Promise<string> {
   const firstTokenTimer = setTimeout(() => {
     if (!gotToken) ctrl.abort();
   }, call.timeoutMs);
-  const totalTimer = setTimeout(() => ctrl.abort(), call.timeoutMs * 3);
+  const totalTimer = setTimeout(() => ctrl.abort(), call.totalMs ?? call.timeoutMs * 3);
   try {
     const res = await (call.fetchImpl ?? fetch)(`${call.url}/api/chat`, {
       method: "POST",
@@ -35,6 +37,8 @@ export async function ollamaChat(call: OllamaCall): Promise<string> {
         model: call.model,
         messages: call.messages,
         stream: true,
+        // Модель остаётся в памяти между репликами — иначе первая фраза после паузы грузится секундами
+        keep_alive: "2h",
         options: { num_predict: 120, temperature: 0.6 },
       }),
       signal: ctrl.signal,
