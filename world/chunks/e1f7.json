@@ -37,7 +37,7 @@
       "id": "landing",
       "kind": "box",
       "pos": [
-        6,
+        10,
         17.95,
         1.5
       ],
@@ -50,371 +50,419 @@
       "collide": true
     },
     {
-      "id": "stair-a-0",
-      "kind": "box",
-      "pos": [
-        1,
-        15.15,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-0",
-      "kind": "box",
-      "pos": [
-        8,
-        16.65,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-1",
-      "kind": "box",
-      "pos": [
-        1.3,
-        15.3,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-1",
-      "kind": "box",
-      "pos": [
-        8.3,
-        16.8,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-2",
-      "kind": "box",
-      "pos": [
-        1.6,
-        15.45,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-2",
-      "kind": "box",
-      "pos": [
-        8.6,
-        16.95,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-3",
-      "kind": "box",
-      "pos": [
-        1.9,
-        15.6,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-3",
-      "kind": "box",
-      "pos": [
-        8.9,
-        17.1,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-4",
-      "kind": "box",
-      "pos": [
-        2.2,
-        15.75,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-4",
-      "kind": "box",
-      "pos": [
-        9.2,
-        17.25,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-5",
-      "kind": "box",
-      "pos": [
-        2.5,
-        15.9,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-5",
-      "kind": "box",
-      "pos": [
-        9.5,
-        17.4,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-6",
-      "kind": "box",
-      "pos": [
-        2.8,
-        16.05,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-6",
-      "kind": "box",
-      "pos": [
-        9.8,
-        17.55,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-7",
-      "kind": "box",
-      "pos": [
-        3.1,
-        16.2,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-7",
-      "kind": "box",
-      "pos": [
-        10.1,
-        17.7,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-8",
-      "kind": "box",
-      "pos": [
-        3.4,
-        16.35,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-8",
-      "kind": "box",
-      "pos": [
-        10.4,
-        17.85,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-a-9",
-      "kind": "box",
-      "pos": [
-        3.6999999999999997,
-        16.5,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "stair-b-9",
-      "kind": "box",
-      "pos": [
-        10.7,
-        18,
-        1.5
-      ],
-      "size": [
-        0.3,
-        0.3,
-        3
-      ],
-      "color": "#b8aaa0",
-      "collide": true
-    },
-    {
-      "id": "half-landing",
+      "id": "south-wall",
       "kind": "box",
       "pos": [
         6,
-        16.5,
+        19.5,
+        0
+      ],
+      "size": [
+        12,
+        3,
+        0.2
+      ],
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "well-wall",
+      "kind": "box",
+      "pos": [
+        4,
+        17,
+        2.975
+      ],
+      "size": [
+        8,
+        4,
+        0.15
+      ],
+      "color": "#e2d3c0",
+      "collide": true
+    },
+    {
+      "id": "mid-landing",
+      "kind": "box",
+      "pos": [
+        2.6,
+        16.45,
         1.5
       ],
       "size": [
-        4,
-        0.2,
-        3
+        4.8,
+        0.1,
+        2.8
       ],
       "color": "#b8aaa0",
       "collide": true
     },
     {
-      "id": "stair-end-rail-0.4",
+      "id": "flight-divider",
       "kind": "box",
       "pos": [
-        0.4,
-        18,
+        6.5,
+        17,
         1.5
       ],
       "size": [
-        0.8,
         3,
-        3
+        4,
+        0.2
       ],
-      "color": "#acb8b7",
+      "color": "#c9c2bb",
       "collide": true
     },
     {
-      "id": "stair-end-rail-11.4",
+      "id": "flight1-0",
       "kind": "box",
       "pos": [
-        11.4,
-        18,
+        7.85,
+        17.7,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-0",
+      "kind": "box",
+      "pos": [
+        5.15,
+        16.2,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-1",
+      "kind": "box",
+      "pos": [
+        7.55,
+        17.55,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-1",
+      "kind": "box",
+      "pos": [
+        5.45,
+        16.05,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-2",
+      "kind": "box",
+      "pos": [
+        7.25,
+        17.4,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-2",
+      "kind": "box",
+      "pos": [
+        5.75,
+        15.9,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-3",
+      "kind": "box",
+      "pos": [
+        6.95,
+        17.25,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-3",
+      "kind": "box",
+      "pos": [
+        6.05,
+        15.75,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-4",
+      "kind": "box",
+      "pos": [
+        6.65,
+        17.1,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-4",
+      "kind": "box",
+      "pos": [
+        6.35,
+        15.6,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-5",
+      "kind": "box",
+      "pos": [
+        6.35,
+        16.95,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-5",
+      "kind": "box",
+      "pos": [
+        6.65,
+        15.45,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-6",
+      "kind": "box",
+      "pos": [
+        6.05,
+        16.8,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-6",
+      "kind": "box",
+      "pos": [
+        6.95,
+        15.3,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-7",
+      "kind": "box",
+      "pos": [
+        5.75,
+        16.65,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-7",
+      "kind": "box",
+      "pos": [
+        7.25,
+        15.15,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-8",
+      "kind": "box",
+      "pos": [
+        5.45,
+        16.5,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-8",
+      "kind": "box",
+      "pos": [
+        7.55,
+        15,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight1-9",
+      "kind": "box",
+      "pos": [
+        5.15,
+        16.35,
+        0.775
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "flight2-9",
+      "kind": "box",
+      "pos": [
+        7.85,
+        14.85,
+        2.225
+      ],
+      "size": [
+        0.3,
+        0.3,
+        1.25
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-west",
+      "kind": "box",
+      "pos": [
+        0.1,
+        19.5,
         1.5
       ],
       "size": [
-        0.8,
+        0.2,
         3,
         3
       ],
-      "color": "#acb8b7",
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "stair-east",
+      "kind": "box",
+      "pos": [
+        11.9,
+        19.5,
+        1.5
+      ],
+      "size": [
+        0.2,
+        3,
+        3
+      ],
+      "color": "#f3ddbd",
       "collide": true
     },
     {
@@ -746,32 +794,6 @@
       ],
       "scale": 1,
       "rotY": 0,
-      "collide": false
-    },
-    {
-      "id": "visual:stairs-a",
-      "kind": "model",
-      "src": "furniture/stairs.glb",
-      "pos": [
-        2.35,
-        15,
-        1.5
-      ],
-      "scale": 1,
-      "rotY": 1.5707963267948966,
-      "collide": false
-    },
-    {
-      "id": "visual:stairs-b",
-      "kind": "model",
-      "src": "furniture/stairs.glb",
-      "pos": [
-        9.35,
-        16.5,
-        1.5
-      ],
-      "scale": 1,
-      "rotY": 1.5707963267948966,
       "collide": false
     },
     {

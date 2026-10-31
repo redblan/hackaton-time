@@ -18,7 +18,8 @@
     "test": "npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm run test",
     "world": "npm run build -w world",
-    "chat": "npm run chat -w ai --"
+    "chat": "npm run chat -w ai --",
+    "walk": "tsx scripts/walk-check.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

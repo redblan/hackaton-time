@@ -19,18 +19,43 @@ function content(x: number, y: number, z: number) {
 export function floorChunk(entrance: number, floor: number): ChunkData {
   const x=(entrance-1)*12,y=(floor-1)*3;
   const {objects,p,box,zone,interact,model}=content(x,y,0);
-  // Leave the southern stairwell open through the slab; two flights meet at a landing.
+  // Лестничная клетка по D-56: x 0..12, z 0..3. Площадка этажа x 8..12 на уровне пола.
+  // Марш 1 вниз: z 0.15..1.4, от x=8 к x=5, с y до y−1.5; промежуточная площадка x 0.2..5 на y−1.5;
+  // марш 2: z 1.6..2.85, от x=5 к x=8, вниз до y−3 — на площадку этажа ниже. На 1-м этаже маршей вниз нет.
+  // Над любой точкой пути ≥ 2.7 м свободно (рост игрока 1.7).
   box('slab',[6,-.05,7.5],[12,.1,9],'#d9c9b0');
-  box('landing',[6,-.05,1.5],[4,.1,3],'#d9c9b0');
-  for(let i=0;i<10;i++) {
-    box(`stair-a-${i}`,[1+i*.3,-2.85+i*.15,1.5],[.3,.3,3],'#b8aaa0');
-    box(`stair-b-${i}`,[8+i*.3,-1.35+i*.15,1.5],[.3,.3,3],'#b8aaa0');
+  const collapsed = floor===4 && entrance===1;
+  if(floor===1) {
+    box('landing',[6,-.05,1.5],[12,.1,3],'#d9c9b0');
+    box('south-wall-w',[2,1.5,0],[4,3,.2],'#f3ddbd');
+    box('south-wall-e',[10,1.5,0],[4,3,.2],'#f3ddbd');
+  } else {
+    box('landing',[10,-.05,1.5],[4,.1,3],'#d9c9b0');
+    box('south-wall',[6,1.5,0],[12,3,.2],'#f3ddbd');
+    // клетка закрыта от коридора нижнего этажа и перилами по краю над маршами (y−3..y+1)
+    box('well-wall',[4,-1,2.975],[8,4,.15],'#e2d3c0');
+    box('mid-landing',[2.6,-1.55,1.5],[4.8,.1,2.8],'#b8aaa0');
+    box('flight-divider',[6.5,-1,1.5],[3,4,.2],'#c9c2bb');
+    for(let i=0;i<10;i++) {
+      // ступень: 0.3 по ходу, 0.15 вниз; коробка 0.3 высотой — снизу не видно щелей
+      objects.push({id:`flight1-${i}`,kind:'box',pos:p(8-.3*(i+.5),-.15*(i+1)-.15,.775),size:[.3,.3,1.25],color:'#b8aaa0',collide:true,...(collapsed?{unless:'collapse_f4'}:{})});
+      objects.push({id:`flight2-${i}`,kind:'box',pos:p(5+.3*(i+.5),-1.5-.15*(i+1)-.15,2.225),size:[.3,.3,1.25],color:'#b8aaa0',collide:true,...(collapsed?{unless:'collapse_f4'}:{})});
+    }
   }
-  box('half-landing',[6,-1.5,1.5],[4,.2,3],'#b8aaa0');
-  for(const edge of [.4,11.4]) box(`stair-end-rail-${edge}`,[edge,0,1.5],[.8,3,3],'#acb8b7');
+  // Над маршем 2 этого этажа обычно идёт марш верхнего этажа. Где его нет (9-й этаж; 3-й при обвале 4→3) — перила
+  if(floor===9) box('top-rail',[8,.5,2.25],[.15,1,1.3],'#acb8b7');
+  if(floor===3 && entrance===1) box('collapse-rail',[8,.5,2.25],[.15,1,1.3],'#acb8b7','collapse_f4');
+  box('stair-west',[.1,1.5,1.5],[.2,3,3],'#f3ddbd');
+  box('stair-east',[11.9,1.5,1.5],[.2,3,3],'#f3ddbd');
   box('back-wall',[6,1.5,11.9],[12,3,.2],'#f3ddbd');
-  box('side-west',[.1,1.5,7.5],[.2,3,9],'#f3ddbd');
-  box('side-east',[11.9,1.5,7.5],[.2,3,9],'#f3ddbd');
+  // Переходный балкон на 4-м этаже — проём в стене между подъездами (z 4..5)
+  const sideWall = (id: string, wx: number, gap: boolean) => {
+    if (!gap) return box(id,[wx,1.5,7.5],[.2,3,9],'#f3ddbd');
+    box(`${id}-a`,[wx,1.5,3.5],[.2,3,1],'#f3ddbd');
+    box(`${id}-b`,[wx,1.5,8.5],[.2,3,7],'#f3ddbd');
+  };
+  sideWall('side-west',.1,floor===4 && entrance===2);
+  sideWall('side-east',11.9,floor===4 && entrance===1);
   box('room-divider',[6,1.5,9],[.15,3,6],'#e9cba9');
   box('hall-wall-left',[2,1.5,5],[4,3,.15],'#edcba4');
   box('hall-wall-right',[9,1.5,5],[6,3,.15],'#edcba4');
@@ -47,8 +72,6 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   model('visual:stove','furniture/kitchenStove.glb',[10.2,0,10.5]);
   model('visual:lift','furniture/doorwayFront.glb',[10,0,4]);
   model('visual:door','furniture/doorwayOpen.glb',[5,0,5]);
-  model('visual:stairs-a','furniture/stairs.glb',[2.35,-3,1.5],1,Math.PI/2);
-  model('visual:stairs-b','furniture/stairs.glb',[9.35,-1.5,1.5],1,Math.PI/2);
   interact('cover_table',[3,0,8],'Укрыться под столом');
   interact('cover_wall',[5,0,10],'Укрыться у внутренней стены');
   interact('cover_window',[8,0,11],'Подойти к окну');
@@ -74,8 +97,11 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   zone('z_smoke',[3,0,3],[7,3,5],`fire_f${floor}`);
   // The other entrance must remain a usable detour around the damaged flight.
   if(floor===4 && entrance===1) {
-    zone('z_collapse',[8.25,0,.5],[10.75,.8,2.5],'collapse_f4');
-    box('rubble',[9.5,.4,1.5],[2.5,.8,2], '#8b817c','collapse_f4');
+    // Обвал (D-46): марши 4→3 рухнули (flight1/2 с unless), на краю провала — завал по колено.
+    // z_collapse — сам провал: полез через завал → ошибка «полез по обломкам», обход — балкон в 2-й подъезд.
+    box('rubble',[7.8,.3,.775],[.5,.6,1.25],'#8b817c','collapse_f4');
+    box('rubble-mid',[4,-1.2,1.5],[1.6,.6,2],'#8b817c','collapse_f4');
+    zone('z_collapse',[5,-1.6,.15],[8,.6,1.4],'collapse_f4');
   }
   objects.push({id:'smoke',kind:'fx',fx:'smoke',pos:p(5,1,4),size:2,when:`fire_f${floor}`});
   if(entrance===1) {
@@ -97,6 +123,12 @@ export function yardChunk(col:number,row:number,address='ул. Садовая, 1
   box('ground',[6,-.1,6],[12,.2,12],'#8dab80');
   box('path',[6,.01,6],[4,.02,12],'#d7c8ac');
   zone('z_yard',[0,0,0],[12,4,12]);
+  // Забор по краю мира: за ним пустота. 1.2 м — не перепрыгнуть (прыжок ~0.8 м)
+  const fence = (id: string, pos: Vec3, size: Vec3) => box(id,pos,size,'#b9a27f');
+  if(col===0) fence('fence-w',[.1,.6,6],[.2,1.2,12]);
+  if(col===2) fence('fence-e',[11.9,.6,6],[.2,1.2,12]);
+  if(row===3) fence('fence-s',[6,.6,.1],[12,1.2,.2]);
+  if(row===0 && col===2) fence('fence-n',[6,.6,11.9],[12,1.2,.2]);
   if(row===0 && col<2) {
     box('canopy',[6,2.7,10],[5,.25,3],'#dbad79');
     zone('z_canopy_danger',[3,0,8],[9,3,12]);

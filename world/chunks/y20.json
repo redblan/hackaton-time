@@ -65,6 +65,38 @@
       ]
     },
     {
+      "id": "fence-e",
+      "kind": "box",
+      "pos": [
+        35.9,
+        0.6,
+        -6
+      ],
+      "size": [
+        0.2,
+        1.2,
+        12
+      ],
+      "color": "#b9a27f",
+      "collide": true
+    },
+    {
+      "id": "fence-n",
+      "kind": "box",
+      "pos": [
+        30,
+        0.6,
+        -0.09999999999999964
+      ],
+      "size": [
+        12,
+        1.2,
+        0.2
+      ],
+      "color": "#b9a27f",
+      "collide": true
+    },
+    {
       "id": "tree-trunk",
       "kind": "box",
       "pos": [
