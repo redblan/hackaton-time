@@ -11,7 +11,6 @@ export function Login() {
   const [repeat, setRepeat] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const secure = window.location.protocol === "https:";
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -69,9 +68,6 @@ export function Login() {
           </Button>
           <p className="muted small">
             {mode === "login" ? "Первый раз? Вкладка «Новый игрок»." : "Имя — 2–24 символа, пароль — от 4. Прогресс и навыки сохраняются за этим именем."}
-          </p>
-          <p className={`small ${secure ? "secure" : "muted"}`}>
-            {secure ? "🔒 Соединение зашифровано (HTTPS)" : "Соединение без шифрования — для демо запускайте npm run dev или npm run start с HTTPS"}
           </p>
         </form>
       </Card>
