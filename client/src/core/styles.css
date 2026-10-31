@@ -94,6 +94,11 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 
 .profile { display: grid; gap: 4px; background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
 
+.hud-partners { position: absolute; top: 130px; left: 16px; display: grid; gap: 4px; font-size: 13px; }
+.partner { background: rgba(15,23,42,.6); padding: 4px 10px; border-radius: 8px; display: flex; gap: 6px; align-items: center; }
+.partner-arrow { display: inline-block; font-weight: 900; color: #86efac; transition: transform .2s; }
+.partner .muted { color: #cbd5e1; }
+
 /* Песочница */
 .sandbox { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: #f8fafc; }
 .sandbox-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; }

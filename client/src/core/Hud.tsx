@@ -6,7 +6,8 @@ import { DebugOverlay } from "./DebugOverlay";
 import { Help } from "./Help";
 import { local } from "./local";
 import { getSocket, leaveRoom } from "./net";
-import { NPC_NAMES, STAGE_NAMES } from "./names";
+import { NPC_NAMES, ROLE_NAMES, STAGE_NAMES } from "./names";
+import { sample } from "./remote";
 import { nextKey, store, useStore } from "./store";
 import { Button } from "./ui";
 
@@ -207,6 +208,41 @@ function Loading() {
   );
 }
 
+/** Кооп: где напарники — расстояние, этаж, направление относительно взгляда */
+function Partners() {
+  const others = useStore((s) => s.others);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 250);
+    return () => clearInterval(t);
+  }, []);
+  if (others.length === 0) return null;
+  const me = local.pos;
+  const floorOf = (y: number, z: number) => (z < 0 ? "во дворе" : `${Math.max(1, Math.min(9, Math.floor((y + 0.5) / 3) + 1))} этаж`);
+  return (
+    <div className="hud-partners">
+      {others.map((p) => {
+        const s = sample(p.id);
+        if (!s) return null;
+        const dx = s.pos[0] - me[0];
+        const dz = s.pos[2] - me[2];
+        const dist = Math.round(Math.hypot(dx, s.pos[1] - me[1], dz));
+        // угол на напарника относительно взгляда (вперёд = -z, поворот rotY)
+        const ang = Math.atan2(-dx, -dz) - local.rotY;
+        return (
+          <div key={p.id} className="partner">
+            <span className="partner-arrow" style={{ transform: `rotate(${-ang}rad)` }}>
+              ↑
+            </span>
+            <b>{p.name}</b> · {dist} м · {floorOf(s.pos[1], s.pos[2])}
+            {p.role && <span className="muted"> · {ROLE_NAMES[p.role]}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** D-62: на этапе звонка 112 можно положить трубку */
 function HangUp() {
   const stage = useStore((s) => s.stage?.stage);
@@ -268,6 +304,7 @@ export function Hud() {
       <NpcLines />
       <ChatBox />
       <HangUp />
+      <Partners />
       <Loading />
       <DebugOverlay />
       <Help />

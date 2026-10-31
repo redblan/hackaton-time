@@ -133,6 +133,25 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
   });
 }
 
+/** Прогрев локальной модели: первая загрузка в память долгая, без прогрева первая реплика уйдёт в шаблон */
+async function warmupModel() {
+  const model = config.ollamaModel ?? "qwen2.5:7b-instruct";
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`${config.ollamaUrl}/api/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, prompt: "", keep_alive: "2h" }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.text()).slice(0, 120)}`);
+    console.log(`[ai] модель ${model} прогрета за ${((Date.now() - t0) / 1000).toFixed(1)} с`);
+  } catch (e) {
+    console.warn(`[ai] Ollama недоступна (${(e as Error).message}) — NPC отвечают шаблонами. Запуск: ollama serve; модель: ollama pull ${model}`);
+  }
+}
+void warmupModel();
+
 server.listen(config.port, config.host, () => {
   const proto = cert ? "https" : "http";
   console.log(`[server] слушаю ${proto}://${config.host}:${config.port}`);
