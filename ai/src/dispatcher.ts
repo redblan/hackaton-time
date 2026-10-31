@@ -28,7 +28,8 @@ export function extractSlots(message: string, address?: string): Set<DispatcherS
   const parts = address ? addressParts(address) : null;
   if (parts) {
     if (t.includes(parts.street) && new RegExp(`(^|\\D)${parts.house}(\\D|$)`).test(t)) found.add("address");
-  } else if (/(улиц|ул\.|проспект|пр\.|переул|дом)\s*\S+.*\d+/.test(t)) {
+  } else if (/(улиц|ул\.|проспект|пр\.|переул|дом)\s*\S+.*\d+/.test(t) || /(^|[\s,])[а-я]{4,}(ая|ий|ой|ов|ин|ая улица)?,?\s+(д\.?\s*|дом\s*)?\d{1,3}([^\d]|$)/.test(t) && !/пострадав|человек|раненых|этаж/.test(t)) {
+    // Адрес прохождения неизвестен (консольный чат) — засчитываем «Садовая 14»
     found.add("address");
   }
   for (const [slot, re] of Object.entries(SLOT_PATTERNS) as [DispatcherSlot, RegExp][]) {

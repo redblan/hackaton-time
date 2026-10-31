@@ -149,6 +149,10 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
       }
     }
   }
+  if (plan.facts.length === 0 && req.playerMessage && !EMOTIONAL.has(card.id)) {
+    // Прогон M4: без фактов модель 3B выдумывала («возьмите тапки и ключи»)
+    lines.push("По этому вопросу фактов у тебя НЕТ. Не отвечай по существу и ничего не советуй — одной фразой в характере скажи, что сейчас не до этого или что спросите у спасателей.");
+  }
   const messages: ChatMessage[] = [{ role: "system", content: lines.join("\n") }];
   for (const r of memory.recent.filter((r) => r.npcId === card.id).slice(-6)) {
     messages.push({ role: r.from === "player" ? "user" : "assistant", content: r.text });

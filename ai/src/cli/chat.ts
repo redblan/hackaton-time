@@ -74,7 +74,7 @@ for await (const raw of rl) {
   const before = await memory.get(playerId);
   process.stdout.write(`${npcId}> `);
   const started = Date.now();
-  const res = await ai.sayStream!({ npcId, playerId, event, playerMessage, context: { flags: [], facts: [], mistake } }, (t) =>
+  const res = await ai.sayStream!({ npcId, playerId, event, playerMessage, context: { flags: [], facts: [], address: "ул. Садовая, 14", mistake } }, (t) =>
     process.stdout.write(t),
   );
   const after = await memory.get(playerId);
