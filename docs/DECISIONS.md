@@ -86,7 +86,8 @@
 | D-57 | Новая зона Юры — `client/src/debrief/`: экран разбора (карточка навыков). Егор подключает компонент в HUD после `runEnd` | Юра, Егор |
 | D-58 | Ответ на Q-05 (коды в `context.mistake.code`). Единственный источник — сценарий Юры: `npcSay(mistake)` сейчас шлётся с кодами `cover_run_out`, `gas_light_switch` (оба — папа), `elevator_call` (Михалыч); коды ошибок мини-игр — ключи `MISTAKE_NOTES` в `shared/src/scenario/notes.ts` (`bag_trap_item`, `bag_no_documents`, `bag_no_kit`, `tourniquet_below_wound`, `tourniquet_no_time`, `pressure_released`, `cpr_too_slow`, `cpr_too_fast`, `cpr_pause`, `recovery_wrong_order`, `triage_wrong_order`). Матвей приводит свои ключи к этим строкам (`light_switch` → `gas_light_switch`, `go_bag_trap` → `bag_trap_item`). Новый код ошибки с репликой NPC — Юра добавляет в сценарий и в эту строку | Матвей, Юра |
 | D-59 | Контракт мира: у объекта есть `unless` — объект пропадает, когда флаг выставлен (папа ушёл: `unless: "papa_left"`). Видимость проверять только через `isObjectActive(o, flags)` из `@game/shared` — в ChunkView, getColliders, сервере | Никита, Егор |
-| D-60 | Очередь задач — `docs/BACKLOG.md`. Закончил задачу → отметь `[x]` в своём PR и бери следующую сверху, не дожидаясь лида | все |
+| D-60 | Очередь задач — `docs/BACKLOG.md`. Закончил задачу → отметь `[x]` в своём коммите и бери следующую сверху, не дожидаясь лида | все |
+| D-61 | Пушим сразу в main, без веток и PR (время жмёт): `npm run check` → `git pull --rebase` → `npm run check` → `git push`. Только своя зона; контракт — через Егора | все |
 
 ### Кооп
 
