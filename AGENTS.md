@@ -14,7 +14,7 @@
 | Папка | Владелец |
 |---|---|
 | `ai/` | Матвей |
-| `shared/src/scenario/` (кроме types.ts), `client/src/minigames/` | Юра |
+| `shared/src/scenario/` (кроме types.ts), `client/src/minigames/`, `client/src/debrief/` | Юра |
 | `world/`, `client/src/world/` | Никита |
 | `server/`, `client/src/core/`, `shared/src/*.ts`, `shared/src/scenario/types.ts`, конфиги, CI, `package.json` в корне | Егор (лид) |
 
