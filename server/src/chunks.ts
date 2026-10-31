@@ -1,7 +1,7 @@
 /** Мир: читает world/chunks/*.json, следит за изменениями (npm run world пересобирает на лету). */
 import { existsSync, readdirSync, readFileSync, watch } from "node:fs";
 import { join } from "node:path";
-import type { ChunkData, ChunkId, NpcId, Role, Vec3 } from "@game/shared";
+import { isObjectActive, type ChunkData, type ChunkId, type NpcId, type Role, type Vec3 } from "@game/shared";
 
 /** Сколько чанков клиент держит одновременно (≤ 10% от 30) */
 export const MAX_CHUNKS_PER_CLIENT = 3;
@@ -44,7 +44,7 @@ export class ChunkStore {
   findNpc(npcId: NpcId, flags: ReadonlySet<string>): Vec3 | null {
     for (const c of this.chunks.values()) {
       for (const o of c.objects) {
-        if (o.kind === "npc" && o.npcId === npcId && (!o.when || flags.has(o.when))) return o.pos;
+        if (o.kind === "npc" && o.npcId === npcId && isObjectActive(o, flags)) return o.pos;
       }
     }
     return null;

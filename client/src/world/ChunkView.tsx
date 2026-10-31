@@ -4,9 +4,9 @@
  * Никита заменяет тело (модели через useGLTF('/assets/...'), инстансинг, fx), сигнатуры не меняем.
  */
 import { Html } from "@react-three/drei";
-import type { Aabb, ChunkData, WorldObject } from "@game/shared";
+import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 
-const active = (o: WorldObject, flags: string[]) => !o.when || flags.includes(o.when);
+const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const objects = props.chunk.objects.filter((o) => active(o, props.flags));

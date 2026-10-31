@@ -1,5 +1,5 @@
 /** Какие чанки нужны по позиции игрока. Сетка — из шапки shared/src/world.ts. */
-import type { ChunkData, ChunkId, Vec3, WorldObject } from "@game/shared";
+import { isObjectActive, type ChunkData, type ChunkId, type Vec3, type WorldObject } from "@game/shared";
 
 export const TOTAL_CHUNKS = 30;
 export const MAX_CHUNKS = 3;
@@ -49,4 +49,4 @@ export function wantedChunks(pos: Vec3, loaded: Record<ChunkId, ChunkData>): Chu
   return [...new Set([cur, ...neighbors])].slice(0, MAX_CHUNKS);
 }
 
-export const isActive = (o: WorldObject, flags: string[]) => !o.when || flags.includes(o.when);
+export const isActive = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
