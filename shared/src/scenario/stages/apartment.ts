@@ -1,5 +1,5 @@
 import { ITEMS, type ItemId } from "../../ids";
-import { addFact, getTimer, hasFact, log, openMinigame, say, setTimer, type Ctx } from "../context";
+import { addFact, getTimer, hasFact, log, openMinigame, say, sayMistake, setTimer, type Ctx } from "../context";
 import type { StageDef } from "./types";
 
 const WAKE_MS = 3_000;
@@ -48,14 +48,16 @@ export const cover: StageDef = {
       case "cover_window":
         log(ctx, "cover", "mistake", "Встал у окна: стекло лопнуло рядом");
         ctx.effects.push({ type: "setFlag", flag: "window_broken" });
+        sayMistake(ctx, "papa", "cover", "cover_window");
         break;
       case "cover_wardrobe":
         log(ctx, "cover", "mistake", "Встал у шкафа: он упал рядом");
         ctx.effects.push({ type: "setFlag", flag: "wardrobe_fallen" });
+        sayMistake(ctx, "papa", "cover", "cover_wardrobe");
         break;
       case "cover_run_out":
         log(ctx, "cover", "mistake", "Побежал на лестницу во время толчка");
-        say(ctx, "papa", "mistake", { mistake: { skill: "cover", code: "cover_run_out" } });
+        sayMistake(ctx, "papa", "cover", "cover_run_out");
         break;
       default:
         return;
@@ -82,7 +84,7 @@ export const pack: StageDef = {
     if (event.type !== "interact" || hasFact(ctx.state, "minigame_open")) return;
     if (event.target === "light_switch") {
       log(ctx, "gas", "mistake", "Потянулся к выключателю при запахе газа", "gas_switch");
-      say(ctx, "papa", "mistake", { mistake: { skill: "gas", code: "gas_light_switch" } });
+      sayMistake(ctx, "papa", "gas", "gas_light_switch");
     }
     if (event.target === "gas_valve") {
       addFact(ctx.state, "gas_closed");

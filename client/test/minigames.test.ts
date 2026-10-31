@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { MISTAKE_NOTES } from "@game/shared";
 import {
   bagMistakes,
   cprMistakes,
   cprRate,
+  outcomeLines,
   recoveryMistakes,
   tourniquetMistakes,
   triageMistakes,
@@ -67,6 +69,25 @@ describe("сортировка (D-22)", () => {
   });
   it("выбрал из группы хуже лучшей оставшейся", () => {
     expect(triageMistakes(["cpr", "bleeding", "unconscious", "scared"], order)).toEqual(["triage_wrong_order"]);
+  });
+});
+
+describe("экран итога", () => {
+  const base = { game: "tourniquet", skill: "bleeding", timeMs: 1000 } as const;
+  it("успех: одна строка без совета", () => {
+    const lines = outcomeLines({ ...base, ok: true, mistakes: [] });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.advice).toBeUndefined();
+  });
+  it("ошибка: что не так и как правильно", () => {
+    expect(outcomeLines({ ...base, ok: false, mistakes: ["tourniquet_below_wound"] })).toEqual([
+      { title: "Наложил жгут ниже раны", advice: "Жгут накладывают выше раны" },
+    ]);
+  });
+  it("у каждой ошибки мини-игр есть заметка и совет", () => {
+    for (const code of Object.keys(MISTAKE_NOTES)) {
+      expect(outcomeLines({ ...base, ok: false, mistakes: [code] })[0]?.advice, code).toBeTruthy();
+    }
   });
 });
 

@@ -1,4 +1,4 @@
-import { addFact, hasFact, hasFlag, log, logOkIfClean, say, type Ctx } from "../context";
+import { addFact, hasFact, hasFlag, log, logOkIfClean, say, sayMistake, type Ctx } from "../context";
 import type { GameEvent } from "../types";
 import type { StageDef } from "./types";
 
@@ -29,7 +29,7 @@ export const elevator: StageDef = {
       (event.type === "enterZone" && event.zone === "z_elevator")
     ) {
       log(ctx, "elevator", "mistake", "Хотел спуститься на лифте", "elevator_call");
-      say(ctx, "mihalych", "mistake", { mistake: { skill: "elevator", code: "elevator_call" } });
+      sayMistake(ctx, "mihalych", "elevator", "elevator_call");
       return;
     }
     if (event.type === "interact" && event.target === "elevator_shaft" && hasFlag(state, "lift_vanya")) {
@@ -80,8 +80,9 @@ export const collapse: StageDef = {
   enter: (ctx) => say(ctx, "mihalych", "collapse_found"),
   on(ctx, event) {
     if (event.type === "enterZone" && event.zone === "z_collapse") {
-      log(ctx, "route", "mistake", "Полез по обломкам", "route_debris");
-      say(ctx, "mihalych", "route_hint");
+      if (log(ctx, "route", "mistake", "Полез по обломкам", "route_debris")) {
+        sayMistake(ctx, "mihalych", "route", "z_collapse");
+      }
     }
     if (
       (event.type === "interact" && event.target === "balcony_door") ||
@@ -124,7 +125,9 @@ export const exitBuilding: StageDef = {
     trackEscort(ctx, event);
     if (event.type !== "enterZone") return;
     if (event.zone === "z_canopy_danger") {
-      log(ctx, "exit_building", "mistake", "Задержался под треснувшим козырьком", "canopy");
+      if (log(ctx, "exit_building", "mistake", "Задержался под треснувшим козырьком", "canopy")) {
+        sayMistake(ctx, "mihalych", "exit_building", "z_canopy_danger");
+      }
     }
     if (event.zone === "z_yard" || event.zone === "z_safe_area") {
       logOkIfClean(ctx, "exit_building", "Быстро отошёл от здания");

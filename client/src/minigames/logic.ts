@@ -1,5 +1,5 @@
 /** Чистая логика мини-игр: коды ошибок и проверки без React, их покрывают тесты. */
-import type { ItemId, MinigameId, SkillId, VictimKind } from "@game/shared";
+import { MISTAKE_NOTES, type ItemId, type MinigameId, type MinigameResult, type SkillId, type VictimKind } from "@game/shared";
 
 export const GAME_SKILLS: Record<MinigameId, SkillId> = {
   go_bag: "go_bag",
@@ -81,6 +81,36 @@ export const RECOVERY_STEPS = [
 
 export function recoveryMistakes(order: number[]): string[] {
   return order.every((step, i) => step === i) ? [] : ["recovery_wrong_order"];
+}
+
+const SUCCESS_NOTES: Record<MinigameId, string> = {
+  go_bag: "В рюкзаке только нужное: документы и аптечка на месте",
+  tourniquet: "Давление удержано, жгут выше раны, время записано",
+  cpr: "Ровный темп 100–120 нажатий в минуту без пауз",
+  recovery_position: "Шаги выполнены по порядку, дыхание теперь свободно",
+  triage: "Первыми получили помощь те, кому она нужна срочнее",
+};
+
+/** TODO(Q-01): советы сверить с базой знаний Матвея. */
+const ADVICE: Record<string, string> = {
+  bag_trap_item: "Лишние вещи занимают место нужных",
+  bag_no_documents: "Документы берём всегда",
+  bag_no_kit: "Аптечка понадобится первой",
+  tourniquet_below_wound: "Жгут накладывают выше раны",
+  tourniquet_no_time: "В записке обязательно указывают время",
+  pressure_released: "Рану прижимают непрерывно",
+  cpr_too_slow: "Нужный темп: 100–120 нажатий в минуту",
+  cpr_too_fast: "Нужный темп: 100–120 нажатий в минуту",
+  cpr_pause: "Паузы при нажатиях должны быть минимальными",
+  recovery_wrong_order: "Порядок: рука, кисть к щеке, колено, поворот на бок",
+  triage_wrong_order: "Сначала помогают тем, чья жизнь под угрозой прямо сейчас",
+};
+
+export function outcomeLines(result: MinigameResult): { title: string; advice?: string }[] {
+  if (result.mistakes.length === 0) {
+    return [{ title: result.ok ? SUCCESS_NOTES[result.game] : "Попробуй ещё раз в следующем прохождении" }];
+  }
+  return result.mistakes.map((code) => ({ title: MISTAKE_NOTES[code] ?? code, advice: ADVICE[code] }));
 }
 
 export function shuffled<T>(list: T[], random: () => number = Math.random): T[] {

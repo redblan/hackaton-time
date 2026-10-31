@@ -229,6 +229,58 @@ describe("устойчивость прохождения", () => {
     );
   });
 
+  it.each([
+    ["cover_window", "papa", "cover"],
+    ["cover_wardrobe", "papa", "cover"],
+  ])("NPC реагирует на %s", (target, npcId, skill) => {
+    const { effects } = play(FULL, [{ type: "start" }, tick, tick, tick, interact(target)]);
+    expect(effects).toContainEqual(
+      expect.objectContaining({ npcId, event: "mistake", context: { mistake: { skill, code: target } } }),
+    );
+  });
+
+  it("опасные зоны: реакция NPC только на первый вход", () => {
+    const agreed = PERFECT.findIndex((s) => s.outcome === "agreed_to_go");
+    const yard = PERFECT.findIndex((s) => s.zone === "z_yard");
+    const balcony = PERFECT.findIndex((s) => s.target === "balcony_door");
+    const danger = (name: string) => [zone(name), zone(name)];
+    const steps = [
+      ...PERFECT.slice(0, balcony),
+      ...danger("z_collapse"),
+      ...PERFECT.slice(balcony, agreed + 1),
+      ...danger("z_canopy_danger"),
+      PERFECT[yard]!,
+      ...danger("z_wire_danger"),
+    ];
+    const { effects } = play(FULL, steps);
+    const codes = effects.flatMap((e) => {
+      const context = (e as { event?: string; context?: { mistake?: { code: string } } });
+      return context.event === "mistake" ? [context.context?.mistake?.code] : [];
+    });
+    expect(codes).toEqual(["z_collapse", "z_canopy_danger", "z_wire_danger"]);
+  });
+
+  it("простой 40 секунд: подсказка не чаще раза в 40 секунд", () => {
+    const hints = (ticks: number) => {
+      const stairs = PERFECT.findIndex((s) => s.zone === "z_stairs");
+      const steps = [...PERFECT.slice(0, stairs), ...Array.from({ length: ticks }, () => tick)];
+      return play(FULL, steps).effects.filter(
+        (e) => (e as { event?: string }).event === "route_hint",
+      );
+    };
+    expect(hints(39)).toHaveLength(0);
+    expect(hints(40)).toHaveLength(1);
+    expect(hints(79)).toHaveLength(1);
+    expect(hints(80)).toHaveLength(2);
+  });
+
+  it("пока открыта мини-игра, подсказок нет", () => {
+    const pack = PERFECT.indexOf(PERFECT[4]!);
+    const steps = [...PERFECT.slice(0, pack + 1), ...Array.from({ length: 60 }, () => tick)];
+    const { effects } = play(FULL, steps);
+    expect(effects.filter((e) => (e as { event?: string }).event === "gas_smell")).toHaveLength(0);
+  });
+
   it("бригада знает, накладывали ли жгут", () => {
     const { effects } = play(FULL, PERFECT);
     expect(effects).toContainEqual(

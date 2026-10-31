@@ -42,10 +42,10 @@ export function log(
   outcome: JournalEntry["outcome"],
   note: string,
   onceKey?: string,
-) {
+): boolean {
   if (onceKey) {
     const fact = `logged:${onceKey}`;
-    if (hasFact(ctx.state, fact)) return;
+    if (hasFact(ctx.state, fact)) return false;
     addFact(ctx.state, fact);
   }
   const entry: JournalEntry = {
@@ -58,6 +58,7 @@ export function log(
   };
   ctx.state.journal.push(entry);
   ctx.effects.push({ type: "journal", entry });
+  return true;
 }
 
 /** Навык засчитан как верный, только если по нему в прохождении не было ошибок. */
@@ -74,6 +75,11 @@ export function say(ctx: Ctx, npcId: NpcId, event: NpcEvent, context?: Record<st
     event,
     ...(context ? { context } : {}),
   });
+}
+
+/** Реакция NPC на ошибку. Код — ключ в ai/knowledge, список кодов в D-58. */
+export function sayMistake(ctx: Ctx, npcId: NpcId, skill: SkillId, code: string) {
+  say(ctx, npcId, "mistake", { mistake: { skill, code } });
 }
 
 export function openMinigame(ctx: Ctx, game: MinigameId, params?: Record<string, unknown>) {

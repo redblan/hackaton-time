@@ -8,6 +8,7 @@ import {
   openMinigame,
   removeFact,
   say,
+  sayMistake,
   setTimer,
   type Ctx,
 } from "../context";
@@ -57,7 +58,9 @@ export const yardAssess: StageDef = {
     trackEscort(ctx, event);
     if (event.type !== "enterZone") return;
     if (event.zone === "z_wire_danger") {
-      log(ctx, "yard_hazard", "mistake", "Подошёл к опасному месту во дворе", "yard_hazard");
+      if (log(ctx, "yard_hazard", "mistake", "Подошёл к опасному месту во дворе", "yard_hazard")) {
+        sayMistake(ctx, "mihalych", "yard_hazard", "z_wire_danger");
+      }
     }
     if (event.zone === "z_safe_area") {
       logOkIfClean(ctx, "yard_hazard", "Обошёл опасность во дворе");

@@ -1,5 +1,5 @@
 import { STAGES, type PlayerId, type Role, type StageId } from "../ids";
-import { addFact, getTimer, hasFact, hasFlag, log, removeFact, setTimer, type Ctx } from "./context";
+import { addFact, getTimer, hasFact, hasFlag, log, removeFact, say, setTimer, type Ctx } from "./context";
 import { MISTAKE_NOTES } from "./notes";
 import { cover, exitApartment, pack, wake } from "./stages/apartment";
 import { collapse, elevator, exitBuilding, neighbor, smoke } from "./stages/building";
@@ -10,6 +10,9 @@ import type { GameEvent, MinigameResult, ReduceResult, RunConfig, RunState } fro
 
 /** Пока реализован одиночный режим: этапы идут только у роли inside_top. */
 const ACTIVE_ROLE: Role = "inside_top";
+
+const IDLE_MS = 40_000;
+const NO_IDLE_HINT: StageId[] = ["wake", "cover", "debrief", "done"];
 
 const STAGE_DEFS: Record<StageId, StageDef> = {
   wake,
@@ -60,6 +63,7 @@ function makeCtx(
     at,
     goTo(stage) {
       state.stage[playerId] = stage;
+      setTimer(state, "activity", at);
       effects.push({ type: "stage", playerId, stage, hint: STAGE_DEFS[stage].hint });
       STAGE_DEFS[stage].enter?.(ctx);
     },
@@ -97,6 +101,20 @@ function aftershockDue(ctx: Ctx, at: number): boolean {
   );
 }
 
+/** Игрок завис на этапе: папа напоминает о своём, дальше подсказывает Михалыч по рации. */
+function hintIfIdle(ctx: Ctx, at: number) {
+  const { state } = ctx;
+  const stage = state.stage[ctx.playerId]!;
+  if (NO_IDLE_HINT.includes(stage) || hasFact(state, "minigame_open")) return;
+  const lastAction = Math.max(getTimer(state, "activity") ?? 0, getTimer(state, "idle_hint") ?? 0);
+  if (at - lastAction < IDLE_MS) return;
+  setTimer(state, "idle_hint", at);
+  const context = { stage, hint: STAGE_DEFS[stage].hint };
+  if (stage === "pack") say(ctx, "papa", "gas_smell", context);
+  else if (stage === "exit_apartment") say(ctx, "papa", "door_jammed", context);
+  else say(ctx, "mihalych", "route_hint", context);
+}
+
 function trackZone(ctx: Ctx, event: GameEvent) {
   if (event.type !== "enterZone") return;
   if (event.zone === "z_safe_area") addFact(ctx.state, "in_safe_area");
@@ -106,6 +124,8 @@ function trackZone(ctx: Ctx, event: GameEvent) {
 function handle(ctx: Ctx, event: GameEvent) {
   if (event.type === "minigameResult") applyMinigame(ctx, event.result);
   trackZone(ctx, event);
+  if (event.type === "tick") hintIfIdle(ctx, event.at);
+  else setTimer(ctx.state, "activity", event.at);
   if (event.type === "tick" && aftershockDue(ctx, event.at)) {
     addFact(ctx.state, "aftershock_resume");
     ctx.goTo("aftershock");
