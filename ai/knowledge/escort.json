@@ -11,6 +11,9 @@
     "mistakes": {
       "left_behind": "Убежал вперёд — соседка осталась одна в опасном подъезде."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России — Психологическая поддержка",
+      "url": "https://mchs.gov.ru/deyatelnost/bezopasnost-grazhdan/psihologicheskaya-podderzhka_7"
+    }
   }
 ]

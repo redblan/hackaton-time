@@ -11,6 +11,9 @@
     "mistakes": {
       "z_collapse": "По обломкам лезть нельзя: они могут обрушиться дальше."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Московской обл.) — Правила поведения при обрушении здания",
+      "url": "https://50.mchs.gov.ru/deyatelnost/poleznaya-informaciya/propaganda/pamyatki-naseleniyu/pravila-povedeniya-pri-obrushenii-zdaniya"
+    }
   }
 ]
