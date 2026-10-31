@@ -19,6 +19,7 @@ import { apartmentNumber, floorTheme, type FloorTheme, type HallProp } from "./t
 const BAND_H = 1.4;
 const OFF = 0.015; // отступ накладных панелей от плоскости стены (против мерцания)
 const CEIL = 2.9; // низ плиты верхнего этажа
+const LIFT_Z = 3.75; // плоскость дверей лифта
 
 export function parseFloorId(id: string): { entrance: number; floor: number } | null {
   const m = /^e([12])f(\d)$/.exec(id);
@@ -135,8 +136,6 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
     // марш 2: от (5, −1.5) вниз к (8, −3) вдоль парапета
     b.box(3.36, 0.05, 0.05, RAIL, { x: 6.5, y: -1.8, z: 2.82, rz: -0.4636 });
     for (const x of [5.3, 6.5, 7.7]) b.box(0.04, 0.95, 0.04, POST, { x, y: -1.5 - (x - 5) * 0.5 + 0.475, z: 2.82 });
-    // перила по краю площадки над маршем 1 (x 8, z 0..1.4)
-    b.add(P.railing(1.3, POST, RAIL), { x: 8.05, y: 0, z: 0.1, ry: -Math.PI / 2 });
   }
 
   // ---------- окна лестницы: внутренняя сторона фасадных окон (x 2 и 10, стекло 1.5×1.25 на y 1.8) ----------
@@ -174,8 +173,8 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
   b.box(0.35, 0.9, 0.02, "#6b4b36", { x: 2.6, y: 1.5, z: 5.09 });
   b.box(0.3, 0.84, 0.01, "#cfe3ea", { x: 2.6, y: 1.5, z: 5.105 });
 
-  // ---------- лифт: смотрит на −z (к площадке), табло — квад из атласа (см. useLabels) ----------
-  b.add(P.elevator(), { x: 10, y: 0, z: 4.0, ry: Math.PI });
+  // ---------- лифт: двери на z 3.75 (лицом к площадке), кабина уходит до стены коридора; Ваня стоит внутри (10, 0, 4) ----------
+  b.add(P.elevator({ depth: 1.15 }), { x: 10, y: 0, z: LIFT_Z, ry: Math.PI });
 
   // ---------- вещи в коридоре по теме этажа: у парапета, лицом в коридор ----------
   theme.hallProps.forEach((kind, i) => {
@@ -199,10 +198,15 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
   b.add(P.picture(theme.pictures[0]!), { x: 4.7, y: 1.95, z: 11.8 - OFF, ry: Math.PI });
   b.add(P.picture(theme.pictures[1]!, 0.5, 0.6), { x: 5.925 - OFF, y: 1.8, z: 8.0, ry: -Math.PI / 2 });
   // ---------- правая комната / кухня ----------
-  b.add(P.rug(1.6, 1.0, theme.rug), { x: 8.5, y: 0.014, z: 9.6 });
-  b.box(2.4, 0.9, 1.1, "#a97a4d", { x: 8, y: 0.45, z: 7.5 }); // комод: на нём лежат вещи для сборов (prop-*)
-  b.box(2.5, 0.04, 1.2, "#bf8f5f", { x: 8, y: 0.92, z: 7.5 });
-  for (const dx of [-0.8, 0, 0.8]) b.box(0.14, 0.03, 0.02, "#d9a441", { x: 8 + dx, y: 0.5, z: 6.96 });
+  b.add(P.rug(1.6, 1.0, theme.rug), { x: 8.5, y: 0.014, z: 10.3 });
+  // комод и стол под вещи для сборов: prop-* лежат на y 0.9..1.1 в сетке x 7..9, z 7..9 (generate.ts)
+  b.box(2.6, 0.86, 1.4, "#a97a4d", { x: 8, y: 0.43, z: 7.5 });
+  b.box(2.7, 0.04, 1.5, "#bf8f5f", { x: 8, y: 0.88, z: 7.5 });
+  for (const dx of [-0.85, 0, 0.85]) for (const y of [0.25, 0.6]) b.box(0.16, 0.03, 0.02, "#d9a441", { x: 8 + dx, y, z: 6.81 });
+  for (const dx of [-0.43, 0.43]) b.box(0.015, 0.8, 0.02, "#8f6238", { x: 8 + dx, y: 0.43, z: 6.805 });
+  b.box(2.6, 0.06, 1.25, "#bf8f5f", { x: 8, y: 0.87, z: 8.83 }); // стол
+  for (const dx of [-1.2, 1.2]) for (const dz of [-0.5, 0.5]) b.box(0.08, 0.84, 0.08, "#8f6238", { x: 8 + dx, y: 0.42, z: 8.83 + dz });
+  b.add(P.chair("#956944"), { x: 8.4, y: 0, z: 9.75, ry: Math.PI });
   b.add(P.fridge(), { x: 6.6, y: 0, z: 11.4 });
   b.add(P.stove(), { x: 10.2, y: 0, z: 11.4, ry: -Math.PI / 2 });
   b.box(0.02, 0.6, 4.2, "#e9eef0", { x: 11.8 - 0.01, y: 1.2, z: 9 }); // кухонный фартук
@@ -300,7 +304,7 @@ function useLabels(entrance: number, floor: number) {
       return labelQuad(0.22, 0.11, cells[i]!, { x, y: p.y, z, ry: d.ry + p.ry });
     });
     // табло лифта: корпус на y 2.56, лицо в сторону −z (лифт повёрнут на π)
-    quads.push(labelQuad(0.42, 0.18, cells[doors.length]!, { x: 10, y: 2.56, z: 4.0 - 0.105, ry: Math.PI }));
+    quads.push(labelQuad(0.42, 0.18, cells[doors.length]!, { x: 10, y: 2.56, z: LIFT_Z - 0.105, ry: Math.PI }));
     return { texture, geometry: mergeQuads(quads) };
   }, [entrance, floor]);
 }

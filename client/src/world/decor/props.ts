@@ -94,26 +94,41 @@ export function doorPlate(opts: DoorOptions = {}) {
   return { x: l.hinge + px * Math.cos(a) + pz * Math.sin(a), y: 1.62, z: -px * Math.sin(a) + pz * Math.cos(a), ry: a };
 }
 
-/** Лифт: стальной портал, две створки с зазором, табло над дверью, кнопка вызова. */
-export function elevator(): BufferGeometry {
+/**
+ * Лифт: кабина глубиной `depth` за порталом (пол, стены, потолок, поручень, лампа), створки раздвинуты
+ * на `gap` — внутри видно человека. Лицо (двери) на z = 0, кабина уходит в −z.
+ */
+export function elevator(opts: { depth?: number; gap?: number } = {}): BufferGeometry {
   const b = new Builder();
   const w = 1.3;
   const h = 2.3;
+  const depth = opts.depth ?? 1.2;
+  const gap = opts.gap ?? 0.55;
+  // портал
   b.box(0.12, h + 0.1, 0.3, METAL_DARK, { x: -w / 2 - 0.06, y: (h + 0.1) / 2 });
   b.box(0.12, h + 0.1, 0.3, METAL_DARK, { x: w / 2 + 0.06, y: (h + 0.1) / 2 });
   b.box(w + 0.24, 0.14, 0.3, METAL_DARK, { y: h + 0.03 });
   b.box(w + 0.3, 0.04, 0.4, METAL_DARK, { y: 0.02 });
-  // створки
-  for (const s of [-1, 1]) b.box(w / 2 - 0.02, h - 0.04, 0.06, METAL, { x: (s * w) / 4, y: h / 2 }, s < 0 ? 1 : 0.92);
-  b.box(0.02, h - 0.04, 0.08, BLACK, { y: h / 2 });
+  // створки, раздвинутые на gap (застряли)
+  const lw = w / 2 - 0.02;
+  for (const s of [-1, 1]) b.box(lw, h - 0.04, 0.06, METAL, { x: s * (lw / 2 + gap / 2), y: h / 2 }, s < 0 ? 1 : 0.92);
+  // кабина: пол, стены, потолок, задняя стенка с поручнем и зеркалом, лампа
+  const cab = "#b9b1a4";
+  b.box(w, 0.04, depth, "#6f6a62", { y: 0.02, z: -depth / 2 });
+  b.box(w + 0.1, 0.06, depth, cab, { y: h - 0.03, z: -depth / 2 }, 0.9);
+  for (const s of [-1, 1]) b.box(0.05, h, depth, cab, { x: s * (w / 2 + 0.025), y: h / 2, z: -depth / 2 });
+  b.box(w + 0.1, h, 0.05, cab, { y: h / 2, z: -depth + 0.025 });
+  b.box(w - 0.3, 0.9, 0.01, "#cfe3ea", { y: 1.45, z: -depth + 0.055 });
+  b.box(w - 0.2, 0.04, 0.04, METAL, { y: 0.95, z: -depth + 0.07 });
+  b.box(0.4, 0.03, 0.25, "#fff2c8", { y: h - 0.07, z: -depth / 2 });
   // табло (сама цифра — квад из атласа над дверью, см. Interior)
   b.box(0.5, 0.22, 0.08, BLACK, { y: h + 0.26, z: 0.06 });
   // кнопочная панель
   b.box(0.14, 0.3, 0.04, METAL, { x: w / 2 + 0.3, y: 1.15, z: 0.02 });
   b.cylinder(0.025, 0.025, 0.02, "#ffd36a", { x: w / 2 + 0.3, y: 1.22, z: 0.05, rx: Math.PI / 2 }, 8);
   b.cylinder(0.025, 0.025, 0.02, "#ffd36a", { x: w / 2 + 0.3, y: 1.08, z: 0.05, rx: Math.PI / 2 }, 8);
-  // корпус шахты за дверью (видно сверху и сбоку), чуть темнее стены
-  b.box(w + 0.24, h + 0.1, 0.16, "#c9c3b7", { y: (h + 0.1) / 2, z: -0.22 });
+  // корпус шахты вокруг кабины, чуть темнее стены
+  b.box(w + 0.24, h + 0.1, depth + 0.1, "#c9c3b7", { y: (h + 0.1) / 2, z: -depth / 2 - 0.1 });
   return b.build();
 }
 
