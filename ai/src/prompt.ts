@@ -1,6 +1,7 @@
 /** Сборка промпта: карточка + цель события + факты из базы + память игрока + последние реплики. */
 import type { NpcRequest, PlayerMemory, SkillId, StageId } from "@game/shared";
 import type { ChatMessage } from "./ollama";
+import { partnerNames } from "./team";
 import { stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard, NpcEventCard } from "./types";
 
@@ -106,6 +107,10 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
   }
   const name = playerName(req);
   if (name && CALLS_BY_NAME(card.id)) lines.push(`Игрока зовут ${name}. Иногда обращайся по имени.`);
+  const team = partnerNames(req);
+  if (team.length > 0) {
+    lines.push(`Игрок не один, с ним в команде: ${team.join(", ")}. Можешь упомянуть их по имени и напомнить держать связь. Где они сейчас, ты не знаешь — не выдумывай.`);
+  }
   if (card.id === "papa") lines.push("Игрок — твой ребёнок. По имени не обращайся, говори «ты».");
   if (req.context.stage) lines.push(`Этап: ${req.context.stage}.`);
   if (plan.recognized) lines.push("Ты уже встречал этого игрока в прошлый раз — покажи, что узнал его.");

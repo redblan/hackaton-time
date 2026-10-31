@@ -3,6 +3,7 @@
  * Слоты вытаскиваются из текста игрока ключевыми словами, без модели: так ответ мгновенный
  * и одинаковый на демо. На каждую реплику — `slots_complete` или `slot_missing:<первый недостающий>`.
  */
+import { teamKey } from "./team";
 import { DISPATCHER_SLOTS, type DispatcherSlot, type NpcRequest, type NpcResponse, type PlayerId } from "@game/shared";
 
 export const SLOT_PATTERNS: Record<Exclude<DispatcherSlot, "address">, RegExp> = {
@@ -89,10 +90,11 @@ export function createDispatcher(): Dispatcher {
   function stateFor(req: NpcRequest): CallState {
     const flags = Array.isArray(req.context.flags) ? req.context.flags : [];
     const address = typeof req.context.address === "string" ? req.context.address : undefined;
-    let st = calls.get(req.playerId);
+    const key = teamKey(req);
+    let st = calls.get(key);
     if (!st || req.event === "dispatcher_open") {
       st = { said: new Set(), asked: {}, flags, address };
-      calls.set(req.playerId, st);
+      calls.set(key, st);
     }
     // Флаги и адрес могут прийти позже (сервер шлёт контекст с каждой репликой)
     if (flags.length > 0) st.flags = [...new Set([...st.flags, ...flags])];

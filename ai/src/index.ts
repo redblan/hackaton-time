@@ -13,6 +13,7 @@ import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
 import { createLlmQueue, type QueueStats } from "./queue";
 import { buildMessages, CALLS_BY_NAME, cleanReply, EMOTIONAL, playerName, RADIO_HINTS, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
+import { partnerNames } from "./team";
 import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
@@ -171,6 +172,11 @@ export function createAi(opts: CreateAiOptions): Ai {
         key = t.key;
       } else parts.push("Не знаю точно. Спросим у спасателей, когда приедут.");
     }
+    // Кооп: папа и Михалыч один раз за прохождение напоминают держаться вместе с напарниками (M17)
+    const team = partnerNames(req);
+    if (team.length > 0 && p.firstThisRun && (req.npcId === "papa" || req.npcId === "mihalych") && req.event !== "mistake") {
+      parts.push(`${team.join(", ")} — на связи. Держитесь вместе и говорите друг другу, что видите.`);
+    }
     // Иногда — по имени: каждая третья реплика этого NPC игроку (M14)
     const name = playerName(req);
     const said = memory.recent.filter((r) => r.npcId === req.npcId && r.from === "npc").length;
@@ -227,7 +233,7 @@ export function createAi(opts: CreateAiOptions): Ai {
         ? (_m: PlayerMemory) => dispatcher.respond(req)
         : req.npcId === "gromov" && req.event === "debrief"
           ? (m: PlayerMemory) => gromov.debrief(req, m)
-          : req.npcId === "gromov" && (req.event === "brigade_arrived" || (req.event === "free_talk" && gromov.inHandover(req.playerId)))
+          : req.npcId === "gromov" && (req.event === "brigade_arrived" || (req.event === "free_talk" && gromov.inHandover(req)))
             ? (m: PlayerMemory) => gromov.handover(req, m)
             : undefined;
     if (fsm) {

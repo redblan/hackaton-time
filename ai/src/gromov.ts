@@ -20,6 +20,7 @@ import {
 import { factsBySkill, type AiData } from "./data";
 import { SLOT_PATTERNS } from "./dispatcher";
 import { SKILL_NAMES } from "./prompt";
+import { partnerNames, teamKey } from "./team";
 import { stripLabel } from "./text";
 
 const ITEM_PATTERNS: Record<HandoverItem, RegExp> = {
@@ -127,7 +128,7 @@ interface HandoverState {
 
 export interface Gromov {
   /** Ведёт ли Громов сейчас приём доклада у этого игрока */
-  inHandover(playerId: PlayerId): boolean;
+  inHandover(req: NpcRequest): boolean;
   handover(req: NpcRequest, memory: PlayerMemory): NpcResponse;
   /** Разбор; меняет память игрока (ошибки по навыкам, использованные объяснения) */
   debrief(req: NpcRequest, memory: PlayerMemory): NpcResponse;
@@ -149,10 +150,11 @@ export function createGromov(data: AiData): Gromov {
     const flags = Array.isArray(req.context.flags) ? (req.context.flags as string[]) : [];
     const facts = Array.isArray(req.context.facts) ? req.context.facts : [];
     const tourniquet = req.context.tourniquetApplied === true || facts.includes("tourniquet_applied");
-    let st = reports.get(req.playerId);
+    const key = teamKey(req);
+    let st = reports.get(key);
     if (!st || req.event === "brigade_arrived") {
       st = { said: new Set(), asked: {}, flags, tourniquet, done: false };
-      reports.set(req.playerId, st);
+      reports.set(key, st);
     }
     if (flags.length > 0) st.flags = [...new Set([...st.flags, ...flags])];
     st.tourniquet ||= tourniquet;
@@ -170,8 +172,8 @@ export function createGromov(data: AiData): Gromov {
   }
 
   return {
-    inHandover: (playerId) => {
-      const st = reports.get(playerId);
+    inHandover: (req) => {
+      const st = reports.get(teamKey(req));
       return !!st && !st.done;
     },
 
@@ -232,6 +234,8 @@ export function createGromov(data: AiData): Gromov {
       }
       const second = badSkills[1];
       if (second) parts.push(`И ещё потренируй: ${SKILL_NAMES[second]}.`);
+      const team = partnerNames(req);
+      if (team.length > 0) parts.push(`Спасибо команде: ${team.join(", ")}. Вместе сработали.`);
       parts.push(bad.length === 0 ? "Чисто, без ошибок. В следующий раз будет сложнее." : "Пройди ещё раз — ситуация будет другой.");
 
       if (!debriefed.has(req.playerId)) {
