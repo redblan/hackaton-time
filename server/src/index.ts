@@ -8,7 +8,7 @@ import express from "express";
 import { Server } from "socket.io";
 import { createAi, createStt } from "@game/ai";
 import type { ClientToServer, ServerToClient } from "@game/shared";
-import { login, LoginLimiter, register, type AuthResult } from "./auth";
+import { login, LoginLimiter, register, resolveToken, revokeToken, type AuthResult } from "./auth";
 import { ChunkStore } from "./chunks";
 import { config } from "./config";
 import { openStore } from "./db";
@@ -73,7 +73,7 @@ app.post("/api/login", async (req, res) => {
 });
 app.post("/api/logout", async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
-  if (token) await store.deleteSession(token).catch(() => {});
+  if (token) await revokeToken(store, token).catch(() => {});
   res.json({ ok: true });
 });
 
@@ -94,7 +94,7 @@ app.get("/api/chunks/:id", (req, res) => {
 // Оверлей для жюри (F3): что NPC помнят об игроке и его профиль навыков. Только про себя, по токену.
 app.get(["/api/me", "/api/debug/me"], async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
-  const player = token ? await store.getSession(token).catch(() => null) : null;
+  const player = token ? await resolveToken(store, token).catch(() => null) : null;
   if (!player) {
     res.status(401).json({ error: "Нужен вход" });
     return;
@@ -126,7 +126,7 @@ io.use(async (socket, next) => {
   const token = (socket.handshake.auth as { token?: unknown } | undefined)?.token;
   if (typeof token !== "string" || !token) return next(new Error("unauthorized"));
   try {
-    const player = await store.getSession(token);
+    const player = await resolveToken(store, token);
     if (!player) return next(new Error("unauthorized"));
     socket.data = { playerId: player.id, name: player.name, chunks: new Set() };
     next();

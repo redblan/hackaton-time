@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { login, LoginLimiter, register } from "../src/auth";
+import { login, LoginLimiter, register, resolveToken, revokeToken } from "../src/auth";
 import { MemStore } from "../src/db";
 
 describe("вход и регистрация", () => {
@@ -14,9 +14,11 @@ describe("вход и регистрация", () => {
     const ok = await login(store, limiter, "Юра", "1234");
     if (!ok.ok) throw new Error(ok.error);
     expect(ok.playerId).toBe(r.ok && r.playerId);
-    expect((await store.getSession(ok.token))?.name).toBe("Юра");
-    await store.deleteSession(ok.token);
-    expect(await store.getSession(ok.token)).toBeNull();
+    expect(ok.token.split(".")).toHaveLength(3); // JWT: header.payload.signature
+    expect((await resolveToken(store, ok.token))?.name).toBe("Юра");
+    expect(await resolveToken(store, ok.token + "x")).toBeNull(); // подпись не сошлась
+    await revokeToken(store, ok.token);
+    expect(await resolveToken(store, ok.token)).toBeNull(); // отозван, хотя не истёк
   });
 
   it("плохие имя и пароль отклоняются", async () => {

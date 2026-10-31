@@ -1,10 +1,13 @@
 /**
  * Вход и регистрация. Пароли — scrypt с солью, сравнение за постоянное время.
- * Сессия — случайный токен (192 бита) в БД, живёт SESSION_TTL_MS. Перебор паролей ограничен.
+ * Токен — JWT (HS256, см. jwt.ts) с id сессии `jti`; сессия лежит в БД и живёт SESSION_TTL_MS,
+ * поэтому токен можно отозвать (выход). Перебор паролей ограничен.
  */
 import { randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import type { Store } from "./db";
+import { config } from "./config";
+import type { PlayerRow, Store } from "./db";
+import { loadJwtSecret, signJwt, verifyJwt } from "./jwt";
 
 const scryptAsync = promisify(scrypt) as (pw: string, salt: string, len: number) => Promise<Buffer>;
 
@@ -57,10 +60,28 @@ export class LoginLimiter {
   }
 }
 
+let secret: string | null = null;
+const jwtSecret = () => (secret ??= loadJwtSecret(config.certsDir));
+
 async function newSession(store: Store, player: { id: string; name: string }): Promise<AuthResult> {
-  const token = randomBytes(24).toString("base64url");
-  await store.createSession(token, player.id);
+  const jti = randomBytes(24).toString("base64url");
+  await store.createSession(jti, player.id);
+  const token = signJwt({ sub: player.id, name: player.name, jti }, jwtSecret(), SESSION_TTL_MS);
   return { ok: true, token, playerId: player.id, name: player.name };
+}
+
+/** Токен → игрок: подпись и срок JWT, затем сессия в БД (отозванная — null). */
+export async function resolveToken(store: Store, token: string): Promise<PlayerRow | null> {
+  const claims = verifyJwt(token, jwtSecret());
+  if (!claims) return null;
+  const player = await store.getSession(claims.jti);
+  return player && player.id === claims.sub ? player : null;
+}
+
+/** Выход: удаляем сессию — токен с этим jti больше не принимается, даже пока не истёк. */
+export async function revokeToken(store: Store, token: string): Promise<void> {
+  const claims = verifyJwt(token, jwtSecret());
+  if (claims) await store.deleteSession(claims.jti);
 }
 
 export async function register(store: Store, rawName: unknown, rawPassword: unknown): Promise<AuthResult> {

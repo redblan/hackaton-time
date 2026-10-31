@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Server } from "socket.io";
 import { io as ioc, type Socket } from "socket.io-client";
 import type { AiModule, ChunkData, ClientToServer, GameEvent, NpcPublic, ServerToClient } from "@game/shared";
+import { resolveToken } from "../src/auth";
 
 const seen: GameEvent[] = [];
 vi.mock("@game/shared", async (orig) => {
@@ -72,7 +73,7 @@ async function boot(store: InstanceType<typeof MemStore>, aiImpl: AiModule = ai)
   const http: HttpServer = createServer();
   const io = new Server(http);
   io.use(async (s, next) => {
-    const p = await store.getSession(String(s.handshake.auth.token));
+    const p = await resolveToken(store, String(s.handshake.auth.token));
     if (!p) return next(new Error("unauthorized"));
     s.data = { playerId: p.id, name: p.name, chunks: new Set() };
     next();
