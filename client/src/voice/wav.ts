@@ -64,3 +64,10 @@ export function level(chunk: Float32Array): number {
   for (let i = 0; i < chunk.length; i++) sum += chunk[i]! * chunk[i]!;
   return Math.min(1, Math.sqrt(sum / Math.max(1, chunk.length)) * 4);
 }
+
+/** Пиковая громкость всей записи 0..1 — меньше ~0.01 значит, что микрофон отдал тишину */
+export function peakOf(samples: Float32Array): number {
+  let max = 0;
+  for (let i = 0; i < samples.length; i++) max = Math.max(max, Math.abs(samples[i]!));
+  return max;
+}

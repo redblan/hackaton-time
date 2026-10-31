@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES } from "./wav";
+import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES, peakOf } from "./wav";
 import { voiceTarget } from "./VoiceButton";
 
 const tone = (n: number) => new Float32Array(n).map((_, i) => Math.sin(i / 10) * 0.5);
@@ -18,6 +18,10 @@ describe("голос: WAV для сервера (D-69)", () => {
   });
   it("15 секунд укладываются в лимит сервера", () => {
     expect(encodeWav(new Float32Array(16000 * MAX_SECONDS)).byteLength).toBeLessThanOrEqual(MAX_WAV_BYTES);
+  });
+  it("тишина распознаётся по пиковой громкости", () => {
+    expect(peakOf(new Float32Array(16000))).toBeLessThan(0.01);
+    expect(peakOf(tone(16000))).toBeGreaterThan(0.4);
   });
   it("склейка кусков и громкость", () => {
     expect(concat([tone(10), tone(5)]).length).toBe(15);

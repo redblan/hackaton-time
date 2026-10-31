@@ -75,12 +75,14 @@ export function cleanTranscript(stdout: string): string {
     .trim();
 }
 
-/** Пиковая громкость записи 0..100% — сразу видно, пришла ли тишина */
-export function peak(wav: Buffer): string {
+/** Пиковая громкость записи 0..1 */
+export function peakLevel(wav: Buffer): number {
   let max = 0;
   for (let i = 44; i + 1 < wav.length; i += 2) max = Math.max(max, Math.abs(wav.readInt16LE(i)));
-  return `${Math.round((max / 32768) * 100)}%`;
+  return max / 32768;
 }
+/** То же в процентах — для лога отладки */
+export const peak = (wav: Buffer) => `${Math.round(peakLevel(wav) * 100)}%`;
 
 export function createStt(opts: SttOptions = {}) {
   const bin = opts.bin ?? process.env.WHISPER_BIN ?? "";
@@ -98,6 +100,8 @@ export function createStt(opts: SttOptions = {}) {
     async transcribe(audio: Buffer): Promise<string> {
       checkWav(audio);
       if (!opts.run && (!bin || !model)) throw new SttError("не заданы WHISPER_BIN и WHISPER_MODEL");
+      // Тишина: whisper на ней выдумывает «титры» и тратит секунды — сразу пусто (вживую: громкость 0%)
+      if (peakLevel(audio) < 0.01) return "";
       const dir = join(tmpdir(), "game-stt");
       await mkdir(dir, { recursive: true });
       const file = join(dir, `${randomUUID()}.wav`);

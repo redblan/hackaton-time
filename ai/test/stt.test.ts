@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { checkWav, cleanTranscript, createStt, SttError } from "../src/stt";
 
 /** WAV-заголовок + тишина */
-function wav({ rate = 16000, channels = 1, bits = 16, ms = 100 } = {}): Buffer {
+function wav({ rate = 16000, channels = 1, bits = 16, ms = 100, silent = false } = {}): Buffer {
   const data = Buffer.alloc(Math.round((rate * ms) / 1000) * channels * (bits / 8));
+  // Не тишина: тихую запись transcribe отсекает сразу, не зовя whisper
+  if (!silent && bits === 16) for (let i = 0; i + 1 < data.length; i += 2) data.writeInt16LE(Math.round(Math.sin(i / 20) * 8000), i);
   const h = Buffer.alloc(44);
   h.write("RIFF", 0, "ascii");
   h.writeUInt32LE(36 + data.length, 4);
@@ -50,6 +52,13 @@ describe("распознавание речи (M12)", () => {
     const file = seen[seen.indexOf("-f") + 1]!;
     const { existsSync } = await import("node:fs");
     expect(existsSync(file)).toBe(false);
+  });
+
+  it("тишина — whisper не зовём, сразу пусто", async () => {
+    let called = false;
+    const stt = createStt({ run: async () => ((called = true), "Редактор субтитров А.Синецкая") });
+    expect(await stt.transcribe(wav({ silent: true }))).toBe("");
+    expect(called).toBe(false);
   });
 
   it("без путей к whisper — понятная ошибка, а не падение", async () => {

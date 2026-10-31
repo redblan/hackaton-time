@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import type { NpcId } from "@game/shared";
 import { getSocket } from "../core/net";
 import { store, useStore, type State } from "../core/store";
-import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES } from "./wav";
+import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES, peakOf } from "./wav";
 import "./voice.css";
 
 type To = NpcId | "radio";
@@ -56,6 +56,8 @@ export function VoiceButton() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
       const ctx = new AudioContext();
+      // Контекст создан после await — браузер мог оставить его «спящим»: тогда в записи тишина
+      await ctx.resume();
       const src = ctx.createMediaStreamSource(stream);
       // ScriptProcessor устарел, но работает во всех браузерах и не требует отдельного файла воркера
       const node = ctx.createScriptProcessor(4096, 1, 1);
@@ -89,6 +91,11 @@ export function VoiceButton() {
     const samples = downsample(concat(r.chunks), rate).subarray(0, 16000 * MAX_SECONDS);
     if (samples.length < 16000 * 0.3) {
       setStatus({ kind: "idle" }); // короче 0.3 с — случайное нажатие
+      return;
+    }
+    if (peakOf(samples) < 0.01) {
+      // Тишина (проверено вживую: громкость 0%) — whisper на ней выдумывает «титры», не шлём
+      setStatus({ kind: "error", text: "Микрофон молчит — проверь, какой микрофон выбран в браузере и Windows" });
       return;
     }
     const wav = encodeWav(samples);
