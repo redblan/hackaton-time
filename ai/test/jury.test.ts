@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 import type { NpcRequest, StageId } from "@game/shared";
-import { createAi, createInMemoryStore } from "../src/index";
+import { createAi, createInMemoryStore, loadData } from "../src/index";
+import type { AiData } from "../src/data";
 import { detectInjection, looksBroken } from "../src/text";
 
 const offline = (async () => {
@@ -165,5 +166,28 @@ describe("повтор при ответе модели (прогон M4)", () =
     const second = await ai.say(ask("papa", "Что делать, если пахнет газом?"));
     expect(second.source).toBe("llm");
     expect(second.text).toBe("Я уже говорил. Перекрой кран и открой окна.");
+  });
+});
+
+describe("«Я уже говорил» только про то, что звучало (bench M19)", () => {
+  const real = loadData();
+  const data = {
+    facts: real.facts,
+    cards: new Map([
+      ["mihalych", {
+        id: "mihalych", name: "Михалыч", role: "сосед", personality: "", speech: "",
+        events: {
+          smoke_ahead: { goal: "", facts: ["smoke.pass"], templates: ["Т1", "Т2", "Т3"] },
+          route_hint: { goal: "", facts: ["smoke.pass", "route.collapse"], templates: ["Р1", "Р2", "Р3"] },
+        },
+      }],
+    ]),
+  } as AiData;
+
+  it("один из фактов новый — без приставки; все звучали — с приставкой", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), data, fetchImpl: llmSaying("Иди на четвёртый, через балкон во второй подъезд.") });
+    await ai.say(event("mihalych", "smoke_ahead"));
+    expect((await ai.say(event("mihalych", "route_hint"))).text).not.toMatch(/^Я уже говорил/);
+    expect((await ai.say(event("mihalych", "route_hint"))).text).toMatch(/^Я уже говорил/);
   });
 });

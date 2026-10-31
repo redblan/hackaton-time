@@ -61,7 +61,8 @@ export function createAi(opts: CreateAiOptions): Ai {
   const data = opts.data ?? loadData();
   const url = opts.ollamaUrl ?? "http://127.0.0.1:11434";
   const model = opts.model ?? "qwen2.5:7b-instruct";
-  const timeoutMs = opts.timeoutMs ?? 6000;
+  // Таймаут первого слова: опция → AI_TIMEOUT_MS из .env → 6 с (M19: рекомендация в DECISIONS)
+  const timeoutMs = opts.timeoutMs ?? envInt("AI_TIMEOUT_MS") ?? 6000;
   /** Кого игрок уже встретил в текущем прохождении: `${playerId}:${npcId}` */
   const metThisRun = new Set<string>();
   const queue = createLlmQueue({
@@ -272,7 +273,8 @@ export function createAi(opts: CreateAiOptions): Ai {
       if (!text) throw new Error("ollama: пустой ответ");
       if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
       // Повтор: модель 3B не всегда говорит «я уже говорил» — добавляем сами (прогон M4)
-      const repeat = !EMOTIONAL.has(req.npcId) && p.facts.some((f) => f.told > 0);
+      // Только если звучало всё, о чём ответ: иначе «Я уже говорил» перед новым (bench M19: рация про балкон)
+      const repeat = !EMOTIONAL.has(req.npcId) && p.facts.length > 0 && p.facts.every((f) => f.told > 0);
       if (repeat && !/уже\s+(говорил|объяснял|рассказывал)/i.test(text)) {
         const rest = text.replace(/^(позволю себе\s+)?(перефразирую|перефразировать|повторю)[^:.!]*[:.!]\s*/i, "");
         text = `Я уже говорил. ${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;
