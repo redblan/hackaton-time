@@ -4,6 +4,7 @@
  * и одинаковый на демо. На каждую реплику — `slots_complete` или `slot_missing:<первый недостающий>`.
  */
 import { teamKey } from "./team";
+import { numberWordsToDigits } from "./text";
 import { DISPATCHER_SLOTS, type DispatcherSlot, type NpcRequest, type NpcResponse, type PlayerId } from "@game/shared";
 
 export const SLOT_PATTERNS: Record<Exclude<DispatcherSlot, "address">, RegExp> = {
@@ -23,7 +24,8 @@ function addressParts(address: string): { street: string; house: string } | null
 }
 
 export function extractSlots(message: string, address?: string): Set<DispatcherSlot> {
-  const t = message.toLowerCase().replace(/ё/g, "е");
+  // Голос (whisper) пишет числа словами: «садовая четырнадцать» — тоже адрес
+  const t = numberWordsToDigits(message.toLowerCase().replace(/ё/g, "е"));
   const found = new Set<DispatcherSlot>();
   const parts = address ? addressParts(address) : null;
   if (parts) {

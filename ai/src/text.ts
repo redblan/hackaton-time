@@ -69,3 +69,45 @@ export function looksBroken(reply: string): boolean {
     reply,
   );
 }
+
+/**
+ * Числа словами → цифры («садовая четырнадцать» → «садовая 14», «в пятнадцать сорок» → «в 15 40»).
+ * Whisper пишет речь числами-словами, а диспетчер и доклад бригаде ищут цифры (голос, M12).
+ * Только 0–99: адреса домов, время, количество пострадавших.
+ */
+const UNITS: Record<string, number> = {
+  ноль: 0, нуль: 0, один: 1, одна: 1, одно: 1, одного: 1, два: 2, две: 2, двух: 2, три: 3, трех: 3, четыре: 4, четырех: 4,
+  пять: 5, пяти: 5, шесть: 6, шести: 6, семь: 7, семи: 7, восемь: 8, восьми: 8, девять: 9, девяти: 9,
+  десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15,
+  шестнадцать: 16, семнадцать: 17, восемнадцать: 18, девятнадцать: 19,
+};
+const TENS: Record<string, number> = {
+  двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50, шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90,
+};
+
+export function numberWordsToDigits(text: string): string {
+  const words = text.replace(/ё/g, "е").split(/(\s+)/);
+  const out: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]!;
+    const bare = w.toLowerCase().replace(/[.,!?;:]+$/, "");
+    const tail = w.slice(bare.length);
+    const tens = TENS[bare];
+    if (tens !== undefined) {
+      // «двадцать три» → 23: следующее слово (через пробел) — единицы 1–9
+      const next = words[i + 2]?.toLowerCase().replace(/[.,!?;:]+$/, "");
+      const unit = next !== undefined ? UNITS[next] : undefined;
+      if (!tail && unit !== undefined && unit >= 1 && unit <= 9) {
+        const nextTail = words[i + 2]!.slice(next!.length);
+        out.push(String(tens + unit) + nextTail);
+        i += 2;
+        continue;
+      }
+      out.push(String(tens) + tail);
+      continue;
+    }
+    const unit = UNITS[bare];
+    out.push(unit !== undefined ? String(unit) + tail : w);
+  }
+  return out.join("");
+}

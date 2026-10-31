@@ -59,12 +59,17 @@ const defaultRun = (bin: string, args: string[], timeoutMs: number) =>
     });
   });
 
+const HALLUCINATIONS =
+  /субтитр|продолжение следует|спасибо за просмотр|подписывайтесь|ставьте лайк|dimatorzok|редактор субтитров|корректор|до новых встреч|^\s*(спасибо|пока)[.!]?\s*$/i;
+
 /** Вывод whisper-cli без меток времени → одна строка текста */
 export function cleanTranscript(stdout: string): string {
   return stdout
     .split(/\r?\n/)
     .map((l) => l.replace(/^\s*\[[^\]]*\]\s*/, "").trim())
     .filter((l) => l && !/^\[(BLANK_AUDIO|музыка|Музыка)\]$/i.test(l) && !/^\(.*\)$/.test(l))
+    // Известные галлюцинации whisper на тишине/шуме (русская модель «дописывает» титры видео)
+    .filter((l) => !HALLUCINATIONS.test(l))
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();

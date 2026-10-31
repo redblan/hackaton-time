@@ -21,20 +21,21 @@ import { factsBySkill, type AiData } from "./data";
 import { SLOT_PATTERNS } from "./dispatcher";
 import { SKILL_NAMES } from "./prompt";
 import { partnerNames, teamKey } from "./team";
-import { stripLabel } from "./text";
+import { numberWordsToDigits, stripLabel } from "./text";
 
 const ITEM_PATTERNS: Record<HandoverItem, RegExp> = {
   victims: new RegExp(`${SLOT_PATTERNS.victims.source}|мужчин|женщин|подрост|ребен|девоч|парен|сосед`),
   condition: SLOT_PATTERNS.condition,
   actions: /жгут|перевяз|повязк|прижал|прижим|давил|реаним|слр|массаж|нажим|на бок|боков|положени|успоко|вывел|увел/,
-  tourniquet_time: /\d{1,2}\s*[:.]\s*\d{2}|в\s+\d{1,2}\s*(час|ч\b)|\d+\s*мин|минут\S*\s+назад|время\s+(жгута|наложен)\S*\s*\d/,
+  tourniquet_time: /\d{1,2}\s*[:.]\s*\d{2}|(жгут|время|наложил)\D{0,25}?\d{1,2}\s+\d{2}(\D|$)|в\s+\d{1,2}\s*(час|ч\b)|\d+\s*мин|минут\S*\s+назад|время\s+(жгута|наложен)\S*\s*\d/,
   trapped: SLOT_PATTERNS.trapped,
   fire: SLOT_PATTERNS.fire,
   hazard: SLOT_PATTERNS.hazard,
 };
 
 export function extractHandover(message: string): Set<HandoverItem> {
-  const t = message.toLowerCase().replace(/ё/g, "е");
+  // Голос: «жгут в пятнадцать сорок» → «жгут в 15 40»
+  const t = numberWordsToDigits(message.toLowerCase().replace(/ё/g, "е"));
   return new Set(HANDOVER_ITEMS.filter((i) => ITEM_PATTERNS[i].test(t)));
 }
 
