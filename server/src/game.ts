@@ -26,7 +26,7 @@ import {
 } from "@game/shared";
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
-import type { Stt } from "@game/ai";
+import type { Stt, Tts } from "@game/ai";
 import { checkLeftBehind, recordTrail, startEscort, stepEscort } from "./escort";
 import {
   canStart,
@@ -78,6 +78,7 @@ export class Game {
     private ai: AiModule,
     private chunks: ChunkStore,
     private stt?: Pick<Stt, "available" | "transcribe">,
+    private tts?: Pick<Tts, "available" | "speak">,
   ) {
     this.intervals.push(
       setInterval(() => this.safe(() => this.frame(POS_BROADCAST_MS)), POS_BROADCAST_MS),
@@ -447,6 +448,16 @@ export class Game {
     };
   }
 
+  /** D-70: озвучка догоняет текст, не блокирует ни реплику, ни outcome. Нет Piper / нечего озвучивать — молчим. */
+  private async speak(to: ReturnType<IO["to"]>, npcId: NpcRequest["npcId"], text: string) {
+    try {
+      const wav = await this.tts!.speak(npcId, text);
+      if (wav) to.emit("npc:audio", { npcId, wav: wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength) as ArrayBuffer });
+    } catch (e) {
+      console.error(`[tts] ${npcId}:`, (e as Error).message);
+    }
+  }
+
   private async npcSay(room: Room, playerId: PlayerId, req: NpcRequest) {
     const to = this.io.to(`p:${playerId}`);
     try {
@@ -462,6 +473,7 @@ export class Game {
         : await this.ai.say(req);
       to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source });
       if (res.outcome) sendOutcome(res.outcome);
+      if (res.text && this.tts?.available()) void this.speak(to, req.npcId, res.text);
     } catch (e) {
       console.error(`[ai] ${req.npcId}/${req.event} упал:`, e);
       to.emit("npc:done", { npcId: req.npcId, text: "…", source: "template" });

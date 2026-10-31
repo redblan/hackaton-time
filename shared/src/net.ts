@@ -71,6 +71,8 @@ export interface ServerToClient {
   "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" }) => void;
   "chat:msg": (p: { from: string; text: string; at: number }) => void;
   /** Что распознано из голоса (или почему не получилось) */
+  /** Озвучка реплики NPC (D-70): WAV Piper, только адресату, приходит после npc:done */
+  "npc:audio": (p: { npcId: NpcId; wav: ArrayBuffer }) => void;
   "voice:text": (p: { to: NpcId | "radio"; text: string } | { to: NpcId | "radio"; error: string }) => void;
   "run:end": (p: { summary: RunSummary; debrief: string }) => void;
 }

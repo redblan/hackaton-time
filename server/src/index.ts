@@ -6,7 +6,7 @@ import { networkInterfaces } from "node:os";
 import { join } from "node:path";
 import express from "express";
 import { Server } from "socket.io";
-import { createAi, createStt } from "@game/ai";
+import { createAi, createStt, createTts } from "@game/ai";
 import type { ClientToServer, ServerToClient } from "@game/shared";
 import { login, LoginLimiter, register, resolveToken, revokeToken, type AuthResult } from "./auth";
 import { ChunkStore } from "./chunks";
@@ -137,7 +137,9 @@ io.use(async (socket, next) => {
 
 const stt = createStt();
 console.log(stt.available() ? "[voice] распознавание голоса готово (whisper.cpp)" : "[voice] голос выключен: нет WHISPER_BIN / WHISPER_MODEL в .env");
-const game = new Game(io, store, ai, chunks, stt);
+const tts = createTts();
+console.log(tts.available() ? "[tts] озвучка NPC готова (Piper)" : "[tts] озвучка выключена: нет PIPER_BIN / PIPER_VOICES в .env");
+const game = new Game(io, store, ai, chunks, stt, tts);
 await game.restore();
 
 let stopping = false;

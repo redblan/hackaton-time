@@ -10,6 +10,7 @@ import { NPC_NAMES, ROLE_NAMES, STAGE_NAMES } from "./names";
 import { sample } from "./remote";
 import { nextKey, store, useStore } from "./store";
 import { Button } from "./ui";
+import { VoiceButton } from "../voice/VoiceButton";
 
 type Target = "radio" | NpcId;
 
@@ -51,6 +52,9 @@ function ChatBox() {
   const [target, setTarget] = useState<Target>("radio");
   const input = useRef<HTMLInputElement>(null);
   const npcTarget = nearNpc ?? lastNpc;
+
+  // Цель открытого чата — в стор, чтобы голос (client/src/voice) шёл тому же адресату
+  useEffect(() => store.set({ chatTarget: typing ? target : null }), [typing, target]);
 
   // Enter — открыть ввод (к NPC, если он рядом), Т — рация.
   // E рядом с человеком — тоже открывает разговор с ним, если E не занята действием (мини-игра, предмет);
@@ -323,6 +327,7 @@ export function Hud() {
       )}
       <NpcLines />
       <ChatBox />
+      <VoiceButton />
       <HangUp />
       <Partners />
       <Loading />

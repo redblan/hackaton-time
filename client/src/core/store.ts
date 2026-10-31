@@ -54,6 +54,8 @@ export interface State {
   runEnd: { summary: RunSummary; debrief: string } | null;
   locked: boolean;
   typing: boolean;
+  /** Кому говорим в открытом чате (D-70, для голоса); null — чат закрыт */
+  chatTarget: NpcId | "radio" | null;
   /**
    * Идёт толчок: до какого момента (performance.now()) и сила 0..1.
    * Для мира (Никита): `useStore((s) => s.quake)` — пыль, качание люстр, дрожание объектов.
@@ -87,6 +89,7 @@ const initial: State = {
   runEnd: null,
   locked: false,
   typing: false,
+  chatTarget: null,
   quake: null,
   help: false,
   debug: false,
