@@ -17,6 +17,7 @@ import {
   PlaneGeometry,
   Quaternion,
   SphereGeometry,
+  SRGBColorSpace,
   Vector3,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -142,6 +143,7 @@ export function labelAtlas(labels: { text: string; bg: string; fg: string; font?
     cells.push({ u0: cx / 512, u1: (cx + 256) / 512, v0: 1 - (cy + 128) / canvas.height, v1: 1 - cy / canvas.height });
   });
   const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = 4;
   return { texture, cells };
 }

@@ -139,4 +139,4 @@ let seq = 0;
 export const nextKey = () => ++seq;
 
 // Отладка в dev: window.__store.get() в консоли браузера
-if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __store: typeof store }).__store = store;
+if (typeof window !== "undefined" && import.meta.env.DEV) (window as unknown as { __store: typeof store }).__store = store;

@@ -5,7 +5,7 @@
  */
 import { Clone, Instance, Instances, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useMemo } from "react";
-import { Box3, CanvasTexture, DoubleSide, Vector3, type MeshStandardMaterial } from "three";
+import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 import { Character, npcColor } from "./Character";
 import { FxParticles, InteractMarker } from "./Effects";
@@ -27,7 +27,7 @@ function Sign({object}:{object:Extract<WorldObject,{kind:'sign'}>}) {
       if(ctx.measureText(line+word).width>940){ctx.fillText(line,32,y);y+=42;line='';}
       line+=word+' ';
     }
-    ctx.fillText(line,32,y);return new CanvasTexture(canvas);
+    ctx.fillText(line,32,y);const texture=new CanvasTexture(canvas);texture.colorSpace=SRGBColorSpace;return texture;
   },[object.text]);
   useEffect(()=>()=>texture.dispose(),[texture]);
   return <mesh position={object.pos} rotation-y={object.rotY??0}><planeGeometry args={[2.4,.6]}/><meshBasicMaterial map={texture} side={DoubleSide}/></mesh>;
@@ -49,7 +49,14 @@ function Model({ object }: { object: Extract<WorldObject,{kind:'model'}> }) {
     const scale: [number,number,number]=target?target.map((n,i)=>n/Math.max(size.getComponent(i),.001)) as [number,number,number]:[1,1,1];
     return {scale,offset:[-(bounds.min.x+bounds.max.x)/2,-bounds.min.y,-(bounds.min.z+bounds.max.z)/2] as [number,number,number]};
   },[scene,object.id]);
-  return <group position={object.pos} rotation-y={object.rotY??0} scale={object.scale??1}><group scale={fit.scale}><Clone object={scene} position={fit.offset} castShadow receiveShadow /></group></group>;
+  return <group dispose={null} position={object.pos} rotation-y={object.rotY??0} scale={object.scale??1}><group scale={fit.scale}><Clone object={scene} position={fit.offset} castShadow receiveShadow /></group></group>;
+}
+
+function ModelPlaceholder({object,objects}:{object:Extract<WorldObject,{kind:'model'}>;objects:WorldObject[]}) {
+  const box=objects.find(o=>o.kind==='box' && o.id===object.id.replace('visual:',''));
+  return box?.kind==='box' ? <mesh position={box.pos} rotation-y={box.rotY??0}>
+    <boxGeometry args={box.size}/><meshStandardMaterial color={box.color}/>
+  </mesh> : null;
 }
 
 function paintOnce(material: MeshStandardMaterial | null) {
@@ -76,7 +83,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return null;
           case "model":
             if (floor && OWN_MODELS.has(o.id.replace('visual:',''))) return null; // дверь, лифт, плита — в Interior
-            return <Suspense key={o.id} fallback={null}><Model object={o}/></Suspense>;
+            return <Suspense key={o.id} fallback={<ModelPlaceholder object={o} objects={objects}/>}><Model object={o}/></Suspense>;
           case "interactable":
             return <InteractMarker key={o.id} object={o} />;
           case "npc":

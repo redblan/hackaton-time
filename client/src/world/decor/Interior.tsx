@@ -390,7 +390,7 @@ function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; 
     [materials, labels],
   );
   return (
-    <group position={[origin[0]!, origin[1]!, origin[2]!]} name={`interior-${entrance}-${floor}`}>
+    <group dispose={null} position={[origin[0]!, origin[1]!, origin[2]!]} name={`interior-${entrance}-${floor}`}>
       <mesh geometry={solid} material={solidMaterial} castShadow receiveShadow />
       <mesh geometry={paper} material={materials.paper} />
       <mesh geometry={floors} material={materials.floor} receiveShadow />

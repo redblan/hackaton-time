@@ -8,7 +8,7 @@ import { PointerLockControls } from "@react-three/drei";
 import { Euler } from "three";
 import type { InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
 import { getColliders } from "../world/ChunkView";
-import { chunkAt, isActive, wantedChunks } from "./chunkMath";
+import { chunkAt, isActive, wantedChunks, movementChunksReady, transitionChunks } from "./chunkMath";
 import { local } from "./local";
 import { PHYS, stepBody, type Body } from "./physics";
 import { sample } from "./remote";
@@ -34,6 +34,7 @@ export function Player() {
   const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags)), [chunks, flags]);
   const body = useRef<Body>({ pos: local.pos, vy: 0, grounded: false });
   const lastSafe = useRef<Vec3 | null>(null);
+  const waitingAt = useRef<Vec3 | null>(null);
   const timers = useRef({ send: 0, chunks: 0, wanted: "", zones: new Set<ZoneId>() });
 
   // Клавиатура
@@ -92,8 +93,7 @@ export function Player() {
     if (!local.ready) return;
 
     const pos = local.pos;
-    const curChunk = chunkAt(pos);
-    const worldHere = Boolean(st.chunks[curChunk]);
+    const worldHere = movementChunksReady(pos,st.chunks);
 
     // --- движение ---
     const euler = new Euler().setFromQuaternion(camera.quaternion, "YXZ");
@@ -116,6 +116,14 @@ export function Player() {
 
     const b = body.current;
     b.pos = pos;
+    const next:Vec3=[pos[0]+dx,pos[1],pos[2]+dz];
+    if(!worldHere || !movementChunksReady(next,st.chunks)) {
+      waitingAt.current=!worldHere ? [...pos] : next;
+      b.vy=0;
+      stepState.current.moving=false;
+      return;
+    }
+    waitingAt.current=null;
     stepBody(b, dx, dz, colliders, dt, { gravity: worldHere, jump: keys.has("Space") && !busy });
     if (worldHere) {
       if (b.grounded) lastSafe.current = [pos[0], pos[1], pos[2]];
@@ -165,19 +173,15 @@ export function Player() {
       getSocket()?.emit("player:move", { pos: [pos[0], pos[1], pos[2]], rotY: yaw, anim: moving ? (running ? "run" : "walk") : "idle" });
     }
 
-    // --- менеджер чанков, подсказки, зоны: 4 раза в секунду ---
+    // Request missing support immediately, even while standing still at a seam.
+    const want = waitingAt.current ? transitionChunks(pos,waitingAt.current,st.chunks) : wantedChunks(pos,st.chunks);
+    const key = want.join(',');
+    if(local.resyncChunks) {local.resyncChunks=false;t.wanted='';}
+    if(key!==t.wanted) {t.wanted=key;getSocket()?.emit('chunk:want',{ids:want});}
+
+    // --- подсказки, зоны: 4 раза в секунду ---
     if (now - t.chunks > 250) {
       t.chunks = now;
-      const want = wantedChunks(pos, st.chunks);
-      const key = want.join(",");
-      if (local.resyncChunks) {
-        local.resyncChunks = false;
-        t.wanted = "";
-      }
-      if (key !== t.wanted) {
-        t.wanted = key;
-        getSocket()?.emit("chunk:want", { ids: want });
-      }
 
       let best: { target: string; label: string; d: number } | null = null;
       let npc: { id: NpcId; d: number } | null = null;

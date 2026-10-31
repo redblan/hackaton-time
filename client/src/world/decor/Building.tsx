@@ -208,7 +208,7 @@ export function Building({ loaded }: { loaded: ReadonlySet<string> }) {
     return out;
   }, []);
   return (
-    <group name="building">
+    <group name="building" dispose={null}>
       {segments.map((s) => (
         <Segment key={`${s.entrance}-${s.floor}`} entrance={s.entrance} floor={s.floor} hidden={loaded.has(`e${s.entrance}f${s.floor}`)} />
       ))}

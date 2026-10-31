@@ -3,10 +3,11 @@
  * до выхода из подъезда и детской площадки, с обвалом 4→3 и без. Гонять после правок world/.
  */
 import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from 'node:url';
 import { isObjectActive, type Aabb, type ChunkData, type Vec3 } from "@game/shared";
 import { getColliders } from "../client/src/world/ChunkView";
 import { stepBody, type Body } from "../client/src/core/physics";
-const dir = new URL("../world/chunks", import.meta.url).pathname;
+const dir = fileURLToPath(new URL("../world/chunks", import.meta.url));
 const chunks: ChunkData[] = readdirSync(dir).map((f) => JSON.parse(readFileSync(`${dir}/${f}`, "utf8")));
 for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya", "neighbor_valentina", "wire", "collapse_f4", "fire_f5"]]) {
   const cl: Aabb[] = chunks.flatMap((c) => getColliders(c, FLAGS));
