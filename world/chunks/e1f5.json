@@ -1323,6 +1323,19 @@
       "label": "Вызвать лифт"
     },
     {
+      "id": "elevator_shaft",
+      "kind": "interactable",
+      "target": "elevator_shaft",
+      "pos": [
+        10,
+        12,
+        3.5
+      ],
+      "radius": 1.5,
+      "label": "Поговорить с человеком в лифте",
+      "when": "vanya_f5"
+    },
+    {
       "id": "hall-end",
       "kind": "box",
       "pos": [
@@ -1437,6 +1450,17 @@
       ],
       "size": 0.6,
       "when": "fire_f5"
+    },
+    {
+      "id": "vanya",
+      "kind": "npc",
+      "npcId": "vanya",
+      "pos": [
+        10,
+        12,
+        4.5
+      ],
+      "when": "vanya_f5"
     },
     {
       "id": "floor-sign",
