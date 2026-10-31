@@ -206,6 +206,7 @@ export const DIALOG_OUTCOMES = [
   "left_behind", // игрок бросил Валентину: шлёт СЕРВЕР, не ИИ (D-26)
   "slots_complete", // диспетчер 112 получил всё
   "handover_complete", // бригада получила всё
+  "call_ended", // игрок сам завершил звонок кнопкой: шлёт СЕРВЕР, не ИИ (D-62)
 ] as const;
 export type DialogOutcome =
   | (typeof DIALOG_OUTCOMES)[number]

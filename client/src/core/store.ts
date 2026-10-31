@@ -55,6 +55,11 @@ export interface State {
   locked: boolean;
   typing: boolean;
   quake: { until: number; strength: number } | null;
+  /** Окно помощи (F1 / H) и отладка для жюри (F3 / `) */
+  help: boolean;
+  debug: boolean;
+  /** Чувствительность мыши, множитель */
+  sensitivity: number;
 }
 
 const initial: State = {
@@ -77,7 +82,28 @@ const initial: State = {
   locked: false,
   typing: false,
   quake: null,
+  help: false,
+  debug: false,
+  sensitivity: readSensitivity(),
 };
+
+function readSensitivity() {
+  try {
+    const v = Number(localStorage.getItem("toltchok.sensitivity"));
+    return v > 0.1 && v < 5 ? v : 1;
+  } catch {
+    return 1;
+  }
+}
+
+export function setSensitivity(v: number) {
+  store.set({ sensitivity: v });
+  try {
+    localStorage.setItem("toltchok.sensitivity", String(v));
+  } catch {
+    /* ignore */
+  }
+}
 
 let state: State = initial;
 const listeners = new Set<() => void>();
@@ -90,7 +116,7 @@ export const store = {
   },
   /** Сбросить всё, кроме входа */
   resetGame() {
-    store.set({ ...initial, auth: state.auth, connected: state.connected });
+    store.set({ ...initial, auth: state.auth, connected: state.connected, sensitivity: state.sensitivity });
   },
   subscribe(l: () => void) {
     listeners.add(l);

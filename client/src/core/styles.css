@@ -82,6 +82,16 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 .minigame { display: grid; place-items: center; width: 100%; height: 100%; }
 .debrief { background: #f1f5f9; padding: 12px; border-radius: 12px; }
 
+.hud-hangup { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); pointer-events: auto; text-shadow: none; }
+.loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; background: #0f172a; color: #fff; font-size: 18px; pointer-events: none; }
+.spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid rgba(255,255,255,.2); border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.debug { position: absolute; top: 70px; right: 16px; width: min(520px, 50vw); max-height: 70vh; overflow: auto; background: rgba(15,23,42,.85); color: #e2e8f0; font: 12px/1.5 ui-monospace, Menlo, monospace; padding: 10px 12px; border-radius: 10px; display: grid; gap: 4px; text-shadow: none; }
+.help-goal { background: #fff7ed; padding: 10px 12px; border-radius: 10px; }
+.help-keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 16px; margin: 12px 0; }
+.help-key { display: flex; gap: 10px; align-items: center; }
+.help-key kbd { background: #f1f5f9; border: 1px solid var(--line); min-width: 64px; }
+
 /* Песочница */
 .sandbox { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: #f8fafc; }
 .sandbox-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; }

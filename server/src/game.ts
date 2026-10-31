@@ -128,6 +128,7 @@ export class Game {
     s.on("game:event", (e) => this.safe(() => this.onGameEvent(s, e)));
     s.on("npc:talk", (p) => this.safe(() => this.onNpcTalk(s, p)));
     s.on("chat:send", (p) => this.safe(() => this.onChat(s, p?.text)));
+    s.on("npc:hangup", (p) => this.safe(() => this.onHangup(s, p?.npcId)));
     s.on("disconnect", () => this.safe(() => this.onDisconnect(s)));
   }
 
@@ -466,6 +467,13 @@ export class Game {
       playerMessage: text,
       context: this.npcContext(room, s.data.playerId),
     });
+  }
+
+  /** D-62: «Завершить звонок» — сценарий сам решит, что с недостающими слотами */
+  private onHangup(s: Sock, npcId: unknown) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room?.run || npcId !== "dispatcher") return;
+    this.dispatch(room, { type: "dialogOutcome", at: this.now(room), playerId: s.data.playerId, npcId, outcome: "call_ended" });
   }
 
   private onChat(s: Sock, text: unknown) {

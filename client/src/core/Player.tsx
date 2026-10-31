@@ -26,6 +26,7 @@ const isTypingTarget = (t: EventTarget | null) =>
 
 export function Player() {
   const chunks = useStore((s) => s.chunks);
+  const sensitivity = useStore((s) => s.sensitivity);
   const flags = useStore((s) => s.flags);
   const controls = useRef<{ lock: () => void; unlock: () => void; isLocked: boolean } | null>(null);
   const { camera } = useThree();
@@ -59,7 +60,7 @@ export function Player() {
   }, []);
 
   // Мини-игра или ввод текста — отпускаем мышь
-  const busy = useStore((s) => Boolean(s.minigame || s.typing || s.runEnd));
+  const busy = useStore((s) => Boolean(s.minigame || s.typing || s.runEnd || s.help));
   useEffect(() => {
     if (busy) {
       controls.current?.unlock();
@@ -213,6 +214,7 @@ export function Player() {
     <PointerLockControls
       ref={controls as never}
       selector="#scene"
+      pointerSpeed={sensitivity}
       onLock={() => store.set({ locked: true })}
       onUnlock={() => store.set({ locked: false })}
     />

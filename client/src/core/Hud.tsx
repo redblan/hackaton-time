@@ -1,7 +1,10 @@
 /** HUD поверх сцены: этап, чанки, подсказка «E — …», реплики NPC (стрим), рация и ввод для NPC. */
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { NpcId } from "@game/shared";
-import { MAX_CHUNKS, TOTAL_CHUNKS } from "./chunkMath";
+import { chunkAt, MAX_CHUNKS, TOTAL_CHUNKS } from "./chunkMath";
+import { DebugOverlay } from "./DebugOverlay";
+import { Help } from "./Help";
+import { local } from "./local";
 import { getSocket, leaveRoom } from "./net";
 import { NPC_NAMES, STAGE_NAMES } from "./names";
 import { nextKey, store, useStore } from "./store";
@@ -164,7 +167,59 @@ function RunEnd() {
   );
 }
 
+/** F1/H — помощь, F3/` — отладка для жюри */
+function useHotkeys() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (store.get().minigame) return;
+      if (e.code === "F1" || e.code === "KeyH") {
+        e.preventDefault();
+        document.exitPointerLock?.();
+        store.set((s) => ({ help: !s.help }));
+      }
+      if (e.code === "F3" || e.code === "Backquote") {
+        e.preventDefault();
+        store.set((s) => ({ debug: !s.debug }));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+}
+
+/** Пока под ногами нет мира — экран загрузки (иначе игрок висит в небе) */
+function Loading() {
+  const chunks = useStore((s) => s.chunks);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 300);
+    return () => clearInterval(t);
+  }, []);
+  const here = local.ready && Boolean(chunks[chunkAt(local.pos)]);
+  if (here) return null;
+  return (
+    <div className="loading">
+      <div className="spinner" />
+      Загружаем мир… {Object.keys(chunks).length}/{MAX_CHUNKS}
+    </div>
+  );
+}
+
+/** D-62: на этапе звонка 112 можно положить трубку */
+function HangUp() {
+  const stage = useStore((s) => s.stage?.stage);
+  if (stage !== "call_112") return null;
+  return (
+    <Button variant="danger" className="hud-hangup" onClick={() => getSocket()?.emit("npc:hangup", { npcId: "dispatcher" })}>
+      Завершить звонок
+    </Button>
+  );
+}
+
 export function Hud() {
+  useHotkeys();
   const stage = useStore((s) => s.stage);
   const prompt = useStore((s) => s.prompt);
   const locked = useStore((s) => s.locked);
@@ -208,10 +263,14 @@ export function Hud() {
         </div>
       )}
       {showClick && (
-        <div className="hud-click">Кликните по сцене, чтобы управлять · WASD, мышь, Shift — бег · Esc — отпустить мышь</div>
+        <div className="hud-click">Кликните по сцене, чтобы управлять · F1 — как играть · Esc — отпустить мышь</div>
       )}
       <NpcLines />
       <ChatBox />
+      <HangUp />
+      <Loading />
+      <DebugOverlay />
+      <Help />
       <RunEnd />
     </div>
   );

@@ -180,3 +180,22 @@ describe("перезаход в мини-игру (D-53)", () => {
     expect(third).toEqual([]); // результат пришёл — больше не открываем
   }, 15_000);
 });
+
+describe("завершить звонок (D-62)", () => {
+  it("npc:hangup → dialogOutcome call_ended от диспетчера, чужие NPC игнорируются", async () => {
+    const store = new MemStore();
+    const r = await login(store, "Звонок", "pw");
+    if (!r.ok) throw new Error(r.error);
+    const srv = await boot(store);
+    cleanup.push(srv.stop);
+    const a = client(srv.url, r.token);
+    a.c.emit("room:join", { mode: "solo" });
+    await until(() => a.log.rooms.some((x) => x.started));
+    const before = seen.length;
+    a.c.emit("npc:hangup", { npcId: "papa" });
+    a.c.emit("npc:hangup", { npcId: "dispatcher" });
+    await until(() => seen.slice(before).some((e) => e.type === "dialogOutcome"));
+    const outs = seen.slice(before).filter((e) => e.type === "dialogOutcome");
+    expect(outs).toEqual([expect.objectContaining({ npcId: "dispatcher", outcome: "call_ended", playerId: r.playerId })]);
+  }, 10_000);
+});

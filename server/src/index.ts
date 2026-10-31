@@ -78,6 +78,18 @@ app.get("/api/chunks/:id", (req, res) => {
   else res.status(404).json({ error: "Нет такого чанка" });
 });
 
+// Оверлей для жюри (F3): что NPC помнят об игроке и его профиль навыков. Только про себя, по токену.
+app.get("/api/debug/me", async (req, res) => {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
+  const player = token ? await store.getSession(token).catch(() => null) : null;
+  if (!player) {
+    res.status(401).json({ error: "Нужен вход" });
+    return;
+  }
+  const [memory, profile] = await Promise.all([store.getMemory(player.id), store.getProfile(player.id)]);
+  res.json({ name: player.name, db: store.kind, memory, profile });
+});
+
 app.use("/assets", express.static(config.assetsDir, { maxAge: "1h" }));
 
 // Собранный клиент (npm run build). В dev клиент отдаёт Vite.

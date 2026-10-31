@@ -41,6 +41,8 @@ export interface ClientToServer {
   "game:event": (e: Extract<GameEvent, { type: "interact" | "enterZone" | "minigameResult" }>) => void;
   /** Игрок пишет NPC */
   "npc:talk": (p: { npcId: NpcId; text: string }) => void;
+  /** Игрок сам завершил разговор кнопкой (звонок 112, D-62) → dialogOutcome `call_ended` */
+  "npc:hangup": (p: { npcId: NpcId }) => void;
   /** Чат между игроками (рация) */
   "chat:send": (p: { text: string }) => void;
 }
