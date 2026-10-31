@@ -1,0 +1,28 @@
+{
+  "source": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+  "revision": "672074b73ba276876a19e8816ecdc5241817ab47",
+  "license": "CC0-1.0",
+  "models": [
+    {
+      "id": "mage",
+      "url": "/assets/characters/mage.glb",
+      "bytes": 627812,
+      "sha256": "4eec62f722d5c35954e0f7a6b4f22fc7f18e22e51903cfcccc97e2fece50f8c6"
+    },
+    {
+      "id": "rogue",
+      "url": "/assets/characters/rogue.glb",
+      "bytes": 654396,
+      "sha256": "98c6ad144addd0b6f577e8e994681e5f1d84ae5c42b64b990bbe22da2c95147f"
+    }
+  ],
+  "animations": {
+    "idle": "Idle",
+    "walk": "Walking_A",
+    "run": "Running_A",
+    "lie": "Lie_Idle",
+    "sit": "Sit_Floor_Idle",
+    "interact": "Interact",
+    "cheer": "Cheer"
+  }
+}
