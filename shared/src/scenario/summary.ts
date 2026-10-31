@@ -21,13 +21,12 @@ export function summarize(state: RunState): RunSummary {
 
   const perPlayer = state.players.map(({ id }) => {
     const own = state.journal.filter((e) => e.playerId === id);
-    const entry = {
+    return {
       playerId: id,
       score: journalScore(own) + bonus,
       ok: [...new Set(own.filter((e) => e.outcome === "ok").map((e) => e.skill))] as SkillId[],
       mistakes: own.filter((e) => e.outcome !== "ok").map((e) => ({ skill: e.skill, note: e.note })),
     };
-    return entry;
   });
 
   return { score: journalScore(state.journal) + bonus, durationMs, perPlayer };

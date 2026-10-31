@@ -108,9 +108,42 @@ describe("прохождение", () => {
     expect(state.journal.filter((e) => e.outcome !== "ok").map((e) => [e.skill, e.outcome])).toEqual([
       ["cover", "mistake"],
       ["gas", "mistake"],
-      ["call_112", "missed"],
+      ["call_112", "mistake"],
       ["bleeding", "mistake"],
     ]);
+  });
+
+  it("повторное slot_missing пишется один раз, slots_complete даёт ok", () => {
+    const call = PERFECT.findIndex((s) => s.outcome === "slots_complete");
+    const missing = talk("dispatcher", "slot_missing:fire");
+    const steps = [...PERFECT.slice(0, call), missing, missing, ...PERFECT.slice(call)];
+    const calls = play(FULL, steps).state.journal.filter((e) => e.skill === "call_112");
+    expect(calls.map((e) => e.outcome)).toEqual(["mistake", "ok"]);
+  });
+
+  it("ошибки сопровождения: left_behind и козырёк по одному разу, без ok", () => {
+    const agreed = PERFECT.findIndex((s) => s.outcome === "agreed_to_go");
+    const left = talk("valentina", "left_behind");
+    const steps = [
+      ...PERFECT.slice(0, agreed + 1),
+      left,
+      left,
+      zone("z_canopy_danger"),
+      ...PERFECT.slice(agreed + 1),
+    ];
+    const escort = play(FULL, steps).state.journal.filter((e) => e.skill === "escort");
+    expect(escort.map((e) => e.outcome)).toEqual(["mistake", "mistake"]);
+  });
+
+  it("сортировка отдаёт группы только из присутствующих пострадавших", () => {
+    const config: RunConfig = { ...FULL, victims: ["scared", "cpr", "bleeding"] };
+    const dispatched = PERFECT.findIndex((s) => s.outcome === "slots_complete");
+    const { effects } = play(config, PERFECT.slice(0, dispatched + 1));
+    expect(effects[effects.length - 1]).toMatchObject({
+      type: "openMinigame",
+      game: "triage",
+      params: { order: [["bleeding"], ["cpr"], ["scared"]] },
+    });
   });
 
   it("без укрытия за 10 секунд: пропуск и переход к сборам", () => {

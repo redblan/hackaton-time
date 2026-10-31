@@ -1,5 +1,17 @@
 import { addFact, hasFact, hasFlag, log, logOkIfClean, say, type Ctx } from "../context";
+import type { GameEvent } from "../types";
 import type { StageDef } from "./types";
+
+/** Ошибки сопровождения Валентины: убежал вперёд или повёл её под козырёк. */
+export function trackEscort(ctx: Ctx, event: GameEvent) {
+  if (!hasFact(ctx.state, "valentina_agreed")) return;
+  if (event.type === "dialogOutcome" && event.npcId === "valentina" && event.outcome === "left_behind") {
+    log(ctx, "escort", "mistake", "Убежал вперёд и оставил соседку позади", "escort_left_behind");
+  }
+  if (event.type === "enterZone" && event.zone === "z_canopy_danger") {
+    log(ctx, "escort", "mistake", "Повёл соседку под треснувший козырёк", "escort_canopy");
+  }
+}
 
 function leaveNeighbor(ctx: Ctx) {
   if (!hasFact(ctx.state, "valentina_agreed")) {
@@ -109,6 +121,7 @@ export const exitBuilding: StageDef = {
   hint: "Не задерживайся у стены, сразу отходи на открытое место",
   enter: (ctx) => say(ctx, "mihalych", "exit_warning"),
   on(ctx, event) {
+    trackEscort(ctx, event);
     if (event.type !== "enterZone") return;
     if (event.zone === "z_canopy_danger") {
       log(ctx, "exit_building", "mistake", "Задержался под треснувшим козырьком", "canopy");

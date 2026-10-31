@@ -25,6 +25,8 @@ export const SLOT_NOTES: Record<string, string> = {
 
 export const HANDOVER_NOTES: Record<string, string> = {
   victims: "Не рассказал бригаде о пострадавших",
+  condition: "Не описал бригаде состояние пострадавших",
+  actions: "Не сказал бригаде, какая помощь уже оказана",
   tourniquet_time: "Не передал время наложения жгута",
   trapped: "Не сообщил бригаде о человеке в лифте",
   fire: "Не сообщил бригаде о пожаре",

@@ -13,13 +13,14 @@ import {
 } from "../context";
 import { HANDOVER_NOTES, SLOT_NOTES } from "../notes";
 import type { VictimKind } from "../types";
+import { trackEscort } from "./building";
 import type { StageDef } from "./types";
 
 const AFTERSHOCK_LIMIT_MS = 10_000;
 const DEBRIEF_MS = 60_000;
 
-/** Временная заглушка от лида, финальный порядок даст Матвей по официальному алгоритму. */
-const TRIAGE_ORDER: VictimKind[] = ["bleeding", "cpr", "unconscious", "scared", "light_injury"];
+/** Временные группы сортировки из D-20, до ответа по Q-01. */
+const TRIAGE_GROUPS: VictimKind[][] = [["bleeding"], ["cpr", "unconscious"], ["scared"], ["light_injury"]];
 
 const VICTIM_GAMES: Partial<Record<VictimKind, MinigameId>> = {
   bleeding: "tourniquet",
@@ -53,6 +54,7 @@ export const yardAssess: StageDef = {
     say(ctx, "mihalych", "yard_hazard");
   },
   on(ctx, event) {
+    trackEscort(ctx, event);
     if (event.type !== "enterZone") return;
     if (event.zone === "z_wire_danger") {
       log(ctx, "yard_hazard", "mistake", "Подошёл к опасному месту во дворе", "yard_hazard");
@@ -60,7 +62,7 @@ export const yardAssess: StageDef = {
     if (event.zone === "z_safe_area") {
       logOkIfClean(ctx, "yard_hazard", "Обошёл опасность во дворе");
       if (hasFact(ctx.state, "valentina_agreed")) {
-        log(ctx, "escort", "ok", "Довёл соседку до безопасного места");
+        logOkIfClean(ctx, "escort", "Довёл соседку до безопасного места");
       }
       ctx.advance();
     }
@@ -77,11 +79,11 @@ export const call112: StageDef = {
   on(ctx, event) {
     if (event.type !== "dialogOutcome" || event.npcId !== "dispatcher") return;
     if (event.outcome === "slots_complete") {
-      logOkIfClean(ctx, "call_112", "Передал диспетчеру всё нужное");
+      log(ctx, "call_112", "ok", "Передал диспетчеру всё нужное");
       ctx.advance();
     } else if (event.outcome.startsWith("slot_missing:")) {
       const slot = event.outcome.slice("slot_missing:".length);
-      log(ctx, "call_112", "missed", SLOT_NOTES[slot] ?? `Не сообщил: ${slot}`, `slot:${slot}`);
+      log(ctx, "call_112", "mistake", SLOT_NOTES[slot] ?? `Не сообщил: ${slot}`, `slot:${slot}`);
     }
   },
 };
@@ -93,7 +95,9 @@ export const triage: StageDef = {
     say(ctx, "mihalych", "triage_start");
     openMinigame(ctx, "triage", {
       victims,
-      order: TRIAGE_ORDER.filter((kind) => victims.includes(kind)),
+      order: TRIAGE_GROUPS.map((group) => group.filter((kind) => victims.includes(kind))).filter(
+        (group) => group.length > 0,
+      ),
     });
   },
   on(ctx, event) {
