@@ -3,12 +3,13 @@
  * Для Юры (мини-игры) и Никиты (чанки).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { MINIGAMES, type ChunkData, type MinigameId, type MinigameResult } from "@game/shared";
 import { minigames } from "../minigames";
 import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView, getColliders } from "../world/ChunkView";
+import { Building } from "../world/decor/Building";
 import { Landscape } from "../world/Landscape";
 import { MINIGAME_NAMES, MinigameHost } from "./MinigameHost";
 import { Button } from "./ui";
@@ -62,12 +63,40 @@ function MinigamesTab() {
   );
 }
 
+/** Ракурсы для проверки картинки: снаружи, из квартиры, из коридора, с лестницы (локально к чанку). */
+const VIEWS: Record<string, { eye: [number, number, number]; look: [number, number, number] }> = {
+  "снаружи": { eye: [14, 12, 14], look: [6, 1.5, 6] },
+  "квартира": { eye: [1.2, 1.5, 5.6], look: [3.5, 1.0, 11] },
+  "кухня": { eye: [6.4, 1.5, 9.6], look: [11, 0.9, 11.4] },
+  "коридор": { eye: [8.6, 1.6, 3.3], look: [1, 1.2, 4.5] },
+  "лестница": { eye: [11.2, 1.7, 2.7], look: [5, 0.0, 0.8] },
+  "двор": { eye: [10, 3, -16], look: [6, 4, 0] },
+  "дом целиком": { eye: [-18, 16, -34], look: [10, 9, 4] },
+};
+
+function CameraRig({ view, origin }: { view: string; origin: [number, number, number] }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as { target: { set: (x: number, y: number, z: number) => void }; update: () => void } | null;
+  useEffect(() => {
+    const v = VIEWS[view];
+    if (!v) return;
+    camera.position.set(origin[0] + v.eye[0], origin[1] + v.eye[1], origin[2] + v.eye[2]);
+    controls?.target.set(origin[0] + v.look[0], origin[1] + v.look[1], origin[2] + v.look[2]);
+    controls?.update();
+  }, [view, origin, camera, controls]);
+  return null;
+}
+
 function ChunksTab() {
   const [ids, setIds] = useState<string[]>([]);
   const [id, setId] = useState<string | null>(null);
   const [chunk, setChunk] = useState<ChunkData | null>(null);
   const [flags, setFlags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState("снаружи");
+  const [building, setBuilding] = useState(true);
+  const loaded = useMemo(() => new Set(chunk ? [chunk.id] : []), [chunk]);
+  const origin = useMemo(() => (chunk ? ([...chunk.bounds.min] as [number, number, number]) : ([0, 0, 0] as [number, number, number])), [chunk]);
 
   useEffect(() => {
     fetch("/api/chunks")
@@ -104,6 +133,18 @@ function ChunksTab() {
             ))}
           </select>
         </label>
+        <label className="small">
+          Ракурс
+          <select value={view} onChange={(e) => setView(e.target.value)}>
+            {Object.keys(VIEWS).map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="small check">
+          <input type="checkbox" checked={building} onChange={(e) => setBuilding(e.target.checked)} />
+          силуэт дома (Building)
+        </label>
         {allFlags.length > 0 && <h3>Флаги</h3>}
         {allFlags.map((f) => (
           <label key={f} className="small check">
@@ -125,8 +166,10 @@ function ChunksTab() {
         <Canvas shadows camera={{ position: [center[0] + 14, center[1] + 12, center[2] + 14], fov: 50, far: 600 }}>
           <Atmosphere />
           <Landscape />
+          {building && <Building loaded={loaded} />}
           {chunk && <ChunkView chunk={chunk} flags={flags} />}
           <OrbitControls target={center} makeDefault />
+          <CameraRig view={view} origin={origin} />
         </Canvas>
       </div>
     </div>

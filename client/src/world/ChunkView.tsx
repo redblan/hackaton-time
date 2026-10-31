@@ -9,7 +9,11 @@ import { Box3, CanvasTexture, DoubleSide, Vector3, type MeshStandardMaterial } f
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 import { Character, npcColor } from "./Character";
 import { FxParticles, InteractMarker } from "./Effects";
+import { Interior, parseFloorId } from "./decor/Interior";
 import { paintSurface } from "./style";
+
+/** Модели, которые рисует декор этажа (decor/Interior) своими low-poly пропами вместо GLB. */
+const OWN_MODELS = new Set(["door", "lift", "stove"]);
 
 const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 
@@ -58,7 +62,8 @@ function paintOnce(material: MeshStandardMaterial | null) {
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const objects = props.chunk.objects.filter((o) => active(o, props.flags));
   const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
-  const boxes=objects.filter((o):o is Extract<WorldObject,{kind:'box'}>=>o.kind==='box'&&!replaced.has(o.id)&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
+  const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
+  const boxes=objects.filter((o):o is Extract<WorldObject,{kind:'box'}>=>o.kind==='box'&&!replaced.has(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
   return (
     <group name={props.chunk.id}>
       <Instances key={`${props.chunk.id}:${boxes.length}`} limit={Math.max(1,boxes.length)} range={boxes.length} castShadow receiveShadow frustumCulled={false}>
@@ -70,6 +75,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
           case "box":
             return null;
           case "model":
+            if (floor && OWN_MODELS.has(o.id.replace('visual:',''))) return null; // дверь, лифт, плита — в Interior
             return <Suspense key={o.id} fallback={null}><Model object={o}/></Suspense>;
           case "interactable":
             return <InteractMarker key={o.id} object={o} />;
@@ -87,6 +93,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return null; // zone, spawn — невидимые
         }
       })}
+      {floor && <Interior chunk={props.chunk} />}
     </group>
   );
 }

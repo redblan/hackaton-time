@@ -5,6 +5,7 @@ import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView } from "../world/ChunkView";
 import { QuakeDust } from "../world/QuakeDust";
 import { Landscape } from "../world/Landscape";
+import { Building } from "../world/decor/Building";
 import { Hud } from "./Hud";
 import { MinigameOverlay } from "./MinigameHost";
 import { Player } from "./Player";
@@ -23,8 +24,11 @@ function World() {
       (c): ChunkData => ({ ...c, objects: c.objects.filter((o) => o.kind !== "npc" || !moving.has(o.npcId)) }),
     );
   }, [chunks, npcs]);
+  // Силуэт всего дома: не данные мира, лимит 3/30 не занимает; сегменты загруженных чанков гаснут
+  const loaded = useMemo(() => new Set(Object.keys(chunks)), [chunks]);
   return (
     <>
+      <Building loaded={loaded} />
       {visible.map((c) => (
         <ChunkView key={c.id} chunk={c} flags={flags} />
       ))}
