@@ -75,6 +75,13 @@ export function cleanTranscript(stdout: string): string {
     .trim();
 }
 
+/** Пиковая громкость записи 0..100% — сразу видно, пришла ли тишина */
+export function peak(wav: Buffer): string {
+  let max = 0;
+  for (let i = 44; i + 1 < wav.length; i += 2) max = Math.max(max, Math.abs(wav.readInt16LE(i)));
+  return `${Math.round((max / 32768) * 100)}%`;
+}
+
 export function createStt(opts: SttOptions = {}) {
   const bin = opts.bin ?? process.env.WHISPER_BIN ?? "";
   const model = opts.model ?? process.env.WHISPER_MODEL ?? "";
@@ -98,7 +105,16 @@ export function createStt(opts: SttOptions = {}) {
       try {
         // -nt: без меток времени, -np: без служебного вывода, -l ru: русский
         const out = await run(bin, ["-m", model, "-f", file, "-l", opts.language ?? "ru", "-nt", "-np"], timeoutMs);
-        return cleanTranscript(out);
+        const text = cleanTranscript(out);
+        // Отладка голоса: STT_DEBUG_DIR=C:\whisper\debug в .env — сохраняем запись и пишем, что ответил whisper
+        const debugDir = process.env.STT_DEBUG_DIR;
+        if (debugDir) {
+          await mkdir(debugDir, { recursive: true });
+          const saved = join(debugDir, `voice-${Date.now()}.wav`);
+          await writeFile(saved, audio);
+          console.log(`[stt] ${saved} · ${(audio.length / 32000).toFixed(1)} с · громкость ${peak(audio)} · whisper: ${JSON.stringify(out.trim().slice(0, 200))} → «${text}»`);
+        }
+        return text;
       } finally {
         await rm(file, { force: true });
       }
