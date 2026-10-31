@@ -3,14 +3,15 @@
  * Локальные GLB, инстансинг архитектуры, частицы и таблички без внешних ресурсов.
  * Модели visual:X заменяют только вид коробок; физика остаётся в getColliders.
  */
-import { Clone, Instance, Instances, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useMemo } from "react";
-import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type MeshStandardMaterial } from "three";
+import { Clone, useGLTF } from "@react-three/drei";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 import { Character, npcColor } from "./Character";
 import { FxParticles, InteractMarker } from "./Effects";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { paintSurface } from "./style";
+import { uploadStaticBoxes, type StaticBox } from './staticBoxes';
 
 /** Модели, которые рисует декор этажа (decor/Interior) своими low-poly пропами вместо GLB. */
 const OWN_MODELS = new Set(["door", "lift", "stove"]);
@@ -67,16 +68,15 @@ function paintOnce(material: MeshStandardMaterial | null) {
 }
 
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
-  const objects = props.chunk.objects.filter((o) => active(o, props.flags));
-  const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
   const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
-  const boxes=objects.filter((o):o is Extract<WorldObject,{kind:'box'}>=>o.kind==='box'&&!replaced.has(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
+  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)),[props.chunk,props.flags]);
+  const boxes=useMemo(()=>{
+    const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
+    return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
+  },[objects,Boolean(floor)]);
   return (
     <group name={props.chunk.id}>
-      <Instances key={`${props.chunk.id}:${boxes.length}`} limit={Math.max(1,boxes.length)} range={boxes.length} castShadow receiveShadow frustumCulled={false}>
-        <boxGeometry /><meshStandardMaterial ref={paintOnce} roughness={.85}/>
-        {boxes.map(o=><Instance key={o.id} position={o.pos} scale={o.size} rotation-y={o.rotY??0} color={o.color}/>)}
-      </Instances>
+      <StaticBoxes boxes={boxes}/>
       {objects.map((o) => {
         switch (o.kind) {
           case "box":
@@ -103,6 +103,14 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
       {floor && <Interior chunk={props.chunk} />}
     </group>
   );
+}
+
+function StaticBoxes({boxes}:{boxes:StaticBox[]}) {
+  const mesh=useRef<InstancedMesh>(null);
+  useLayoutEffect(()=>{if(mesh.current) uploadStaticBoxes(mesh.current,boxes);},[boxes]);
+  return <instancedMesh ref={mesh} args={[undefined,undefined,Math.max(1,boxes.length)]} castShadow receiveShadow>
+    <boxGeometry/><meshStandardMaterial ref={paintOnce} roughness={.85}/>
+  </instancedMesh>;
 }
 
 /** Коробки для столкновений. Объекты с `when` не из flags не сталкиваются. */

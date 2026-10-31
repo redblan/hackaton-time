@@ -7,13 +7,14 @@
  *   лестница z 0..3 (площадка x 8..12), коридор z 3.05..4.925, квартира z 5.075..11.8,
  *   проём квартиры x 4..6 на z = 5, лифт (10, 4), перегородка комнат x = 6, окна на z = 11.8.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, DoubleSide, MeshStandardMaterial, type Group } from "three";
 import type { ChunkData } from "@game/shared";
 import { useStore } from "../../core/store";
 import { paintSurface } from "../style";
-import { Builder, labelAtlas, labelQuad, mergeQuads, rng, useBuilt } from "./build";
+import { Builder, labelAtlas, labelQuad, mergeQuads, rng } from "./build";
+import { ResourceCache } from './resourceCache';
 import { parquetMaterial, wallpaperMaterial } from "./patterns";
 import * as P from "./props";
 import { apartmentNumber, floorTheme, type FloorTheme, type HallProp } from "./themes";
@@ -74,7 +75,7 @@ function hallProp(kind: HallProp) {
 }
 
 /** Вся «твёрдая» часть декора этажа одной геометрией (один draw call). */
-function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
+function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doorFrame: BufferGeometry) {
   const b = new Builder();
   const random = rng(theme.seed * 7);
   const hallSkirt = "#4f4a46";
@@ -164,7 +165,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme) {
   // ---------- двери ----------
   for (const d of floorDoors(entrance, floor)) {
     // двустворчатая дверь квартиры: коробка здесь, створки — отдельно, они открываются/закрываются (AnimatedDoor)
-    if (d.double) b.add(P.doorParts(theme, d).frame, { x: d.x, y: 0, z: d.z, ry: d.ry });
+    if (d.double) b.add(doorFrame, { x: d.x, y: 0, z: d.z, ry: d.ry });
     else b.add(P.door(theme, d), { x: d.x, y: 0, z: d.z, ry: d.ry });
     if (d.open === 0) b.add(P.doormat(["#7a5a3a", "#4f6b8f", "#8a4a3e"][Math.floor(random() * 3)]!), { x: d.x, y: 0, z: 4.55 });
   }
@@ -289,8 +290,7 @@ function buildHallFloor(floor: number) {
 }
 
 /** Надписи: номера квартир на дверях и табло лифта — один атлас, одна геометрия. */
-function useLabels(entrance: number, floor: number) {
-  return useMemo(() => {
+function buildLabels(entrance: number, floor: number) {
     const doors = floorDoors(entrance, floor).filter((d) => d.slot !== undefined);
     const { texture, cells } = labelAtlas([
       ...doors.map((d) =>
@@ -318,20 +318,12 @@ function useLabels(entrance: number, floor: number) {
     // табло лифта: корпус на y 2.56, лицо в сторону −z (лифт повёрнут на π)
     quads.push(labelQuad(0.42, 0.18, cells[doors.length]!, { x: 10, y: 2.56, z: LIFT_Z - 0.105, ry: Math.PI }));
     return { texture, geometry: mergeQuads(quads), plate };
-  }, [entrance, floor]);
 }
 
 /** Створки двери квартиры: E на «Дверь квартиры» закрывает/открывает (store.doors по чанку), поворот с анимацией. */
-function AnimatedDoor({ chunkId, theme, spec, plate, plateMaterial }: { chunkId: string; theme: FloorTheme; spec: DoorSpec; plate: BufferGeometry; plateMaterial: MeshStandardMaterial }) {
+function AnimatedDoor({ chunkId, parts, spec, plate, plateMaterial }: { chunkId: string; parts: ReturnType<typeof P.doorParts>; spec: DoorSpec; plate: BufferGeometry; plateMaterial: MeshStandardMaterial }) {
   const open = useStore((s) => s.doors[chunkId] ?? true);
-  const parts = useMemo(() => P.doorParts(theme, spec), [theme, spec]);
-  useEffect(
-    () => () => {
-      parts.frame.dispose();
-      parts.leaves.forEach((l) => l.geometry.dispose());
-    },
-    [parts],
-  );
+  const initialOpen = useRef(open);
   const leaves = useRef<(Group | null)[]>([]);
   useFrame((_, dt) => {
     parts.leaves.forEach((l, i) => {
@@ -344,7 +336,7 @@ function AnimatedDoor({ chunkId, theme, spec, plate, plateMaterial }: { chunkId:
   return (
     <group position={[spec.x, 0, spec.z]} rotation-y={spec.ry}>
       {parts.leaves.map((l, i) => (
-        <group key={i} ref={(el) => void (leaves.current[i] = el)} position={[l.hinge, 0, 0]} rotation-y={l.s * spec.open}>
+        <group key={i} ref={(el) => void (leaves.current[i] = el)} position={[l.hinge, 0, 0]} rotation-y={initialOpen.current ? l.s * spec.open : 0}>
           <mesh geometry={l.geometry} material={solidMaterial} castShadow />
           {i === parts.leaves.length - 1 && <mesh geometry={plate} material={plateMaterial} />}
         </group>
@@ -362,33 +354,52 @@ export function Interior({ chunk }: { chunk: ChunkData }) {
   return <FloorInterior chunkId={chunk.id} entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} />;
 }
 
-function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; entrance: number; floor: number; origin: readonly number[] }) {
-  const theme = useMemo(() => floorTheme(entrance, floor), [entrance, floor]);
-  const mainDoor = useMemo(() => floorDoors(entrance, floor).find((d) => d.double)!, [entrance, floor]);
-  const solid = useBuilt(() => buildFloorDecor(entrance, floor, theme), [entrance, floor, theme]);
-  const paper = useBuilt(buildWallpaper, []);
-  const floors = useBuilt(buildApartmentFloor, []);
-  const hall = useBuilt(() => buildHallFloor(floor), [floor]);
-  const ceiling = useBuilt(buildCeiling, []);
-  const labels = useLabels(entrance, floor);
-  const materials = useMemo(
-    () => ({
+export function buildFloorResources(entrance:number,floor:number) {
+  const theme=floorTheme(entrance,floor);
+  const mainDoor=floorDoors(entrance,floor).find(d=>d.double)!;
+  const parts=P.doorParts(theme,mainDoor);
+  const solid=buildFloorDecor(entrance,floor,theme,parts.frame);
+  const paper=buildWallpaper(),floors=buildApartmentFloor(),hall=buildHallFloor(floor),ceiling=buildCeiling();
+  const labels=buildLabels(entrance,floor);
+  const materials={
       paper: wallpaperMaterial(theme.wallpaper, theme.wallpaperAccent, theme.pattern),
       floor: parquetMaterial(theme.floor, theme.floorAlt, true),
       hall: parquetMaterial(theme.hallFloor, theme.band, false),
       label: new MeshStandardMaterial({ map: labels.texture, roughness: 0.6, side: DoubleSide }),
-    }),
-    [theme, labels],
-  );
-  useEffect(
-    () => () => {
-      Object.values(materials).forEach((m) => m.dispose());
-      labels.texture.dispose();
-      labels.geometry.dispose();
-      labels.plate.dispose();
-    },
-    [materials, labels],
-  );
+  };
+  return {mainDoor,parts,solid,paper,floors,hall,ceiling,labels,materials};
+}
+
+type FloorResources=ReturnType<typeof buildFloorResources>;
+const geometries=(r:FloorResources)=>[r.solid,r.paper,r.floors,r.hall,r.ceiling,r.labels.geometry,r.labels.plate,r.parts.frame,...r.parts.leaves.map(l=>l.geometry)];
+export function floorResourceBytes(r:FloorResources):number {
+  const arrays=new Set<ArrayBufferLike>();
+  for(const g of geometries(r)) {
+    for(const a of Object.values(g.attributes)) arrays.add(a.array.buffer);
+    if(g.index) arrays.add(g.index.array.buffer);
+  }
+  const image=r.labels.texture.image as {width:number;height:number};
+  return [...arrays].reduce((sum,a)=>sum+a.byteLength,0)+Math.ceil(image.width*image.height*4*4/3);
+}
+export function disposeFloorResources(r:FloorResources) {
+  geometries(r).forEach(g=>g.dispose());
+  Object.values(r.materials).forEach(m=>m.dispose());
+  r.labels.texture.dispose();
+}
+// Max six cached floors / ~32 MiB of buffers+label mipmaps; active floors stay pinned.
+export const floorResourceCache=new ResourceCache<FloorResources>({entries:6,bytes:32*1024*1024},floorResourceBytes,disposeFloorResources);
+
+function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; entrance: number; floor: number; origin: readonly number[] }) {
+  const key=`${entrance}:${floor}`;
+  const [resource,setResource]=useState<{key:string;value:FloorResources}|null>(null);
+  // Acquire at commit, not during render: StrictMode/abandoned renders must not leak leases.
+  useLayoutEffect(()=>{
+    const lease=floorResourceCache.acquire(key,()=>buildFloorResources(entrance,floor));
+    setResource({key,value:lease.value});
+    return lease.release;
+  },[key,entrance,floor]);
+  if(!resource || resource.key!==key) return null;
+  const {solid,paper,floors,hall,ceiling,labels,materials,mainDoor,parts}=resource.value;
   return (
     <group dispose={null} position={[origin[0]!, origin[1]!, origin[2]!]} name={`interior-${entrance}-${floor}`}>
       <mesh geometry={solid} material={solidMaterial} castShadow receiveShadow />
@@ -397,7 +408,7 @@ function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; 
       <mesh geometry={hall} material={materials.hall} receiveShadow />
       <mesh geometry={ceiling} material={solidMaterial} />
       <mesh geometry={labels.geometry} material={materials.label} />
-      <AnimatedDoor chunkId={chunkId} theme={theme} spec={mainDoor} plate={labels.plate} plateMaterial={materials.label} />
+      <AnimatedDoor chunkId={chunkId} parts={parts} spec={mainDoor} plate={labels.plate} plateMaterial={materials.label} />
     </group>
   );
 }
