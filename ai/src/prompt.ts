@@ -1,6 +1,7 @@
 /** Сборка промпта: карточка + цель события + факты из базы + память игрока + последние реплики. */
 import type { NpcRequest, PlayerMemory, SkillId, StageId } from "@game/shared";
 import type { ChatMessage } from "./ollama";
+import { stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard, NpcEventCard } from "./types";
 
 /** NPC, у которых тон игрока даёт outcome calmed / panicked (DECISIONS D-25). Они не учат игрока сами. */
@@ -111,20 +112,34 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
   if (plan.weakSkills.length > 0) {
     lines.push(`Раньше игрок ошибался в темах: ${plan.weakSkills.map((s) => SKILL_NAMES[s]).join(", ")}. Заранее напомни об этом одной фразой.`);
   }
-  if (plan.tone === "rude") lines.push("Игрок грубит или торопит. Отреагируй в характере.");
-  if (plan.tone === "panic") lines.push("Игрок паникует. Отреагируй в характере.");
-  if (plan.tone === "calm") lines.push("Игрок говорит спокойно и поддерживает тебя. Отреагируй в характере.");
+  // Маленькой модели нужен пример реакции, а не «отреагируй в характере» (прогон M4 на qwen2.5:3b)
+  const example = (list?: string[]) => (list?.length ? ` Например: «${list[0]}»` : "");
+  if (plan.tone === "rude" || plan.tone === "panic") {
+    lines.push(
+      EMOTIONAL.has(card.id)
+        ? `Игрок ${plan.tone === "rude" ? "грубит и кричит" : "паникует"}. Тебе становится ещё страшнее, ты обижаешься и нервничаешь сильнее.${example(card.reactions?.panicked)}`
+        : `Игрок ${plan.tone === "rude" ? "грубит" : "паникует"}. Ответь в характере и верни его к делу.`,
+    );
+  }
+  if (plan.tone === "calm") {
+    lines.push(
+      EMOTIONAL.has(card.id)
+        ? `Игрок говорит спокойно и поддерживает тебя. Ты понемногу успокаиваешься и начинаешь ему доверять.${example(card.reactions?.calmed)}`
+        : "Игрок говорит спокойно. Ответь в характере.",
+    );
+  }
   if (plan.facts.length > 0 && EMOTIONAL.has(card.id)) {
     lines.push("Как игрок ДОЛЖЕН с тобой обращаться (сам это не произноси, просто реагируй: делает так — успокаивайся, не делает — нервничай):");
     for (const p of plan.facts) lines.push(`- ${p.fact.fact}`);
   } else if (plan.facts.length > 0) {
     lines.push("Факты, которые нужно донести:");
     for (const p of plan.facts) {
-      const how = p.fact.explanations[p.explanation] ?? p.fact.fact;
+      // Без меток «Правило:/Пример:» — модель 3B копирует их в речь
+      const how = stripLabel(p.fact.explanations[p.explanation] ?? p.fact.fact);
       if (p.told > 0) {
-        lines.push(`- ${p.fact.fact} (Ты УЖЕ говорил это игроку ${p.told} раз. Не повторяй слово в слово: скажи «я уже говорил» и объясни короче, вот так: ${how})`);
+        lines.push(`- Это ты УЖЕ говорил. Начни со слов «Я уже говорил» и скажи короче, другими словами. Мысль: ${how}`);
       } else {
-        lines.push(`- ${p.fact.fact} (Можно пояснить так: ${how})`);
+        lines.push(`- ${p.fact.fact} Пояснение своими словами: ${how}`);
       }
     }
   }
@@ -139,9 +154,15 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
   return messages;
 }
 
-/** Убрать кавычки, обрезанное предложение в конце и лишнюю длину. */
+/** Убрать кавычки, служебные метки, обрезанное предложение в конце и лишнюю длину. Пустышку — в "". */
 export function cleanReply(text: string): string {
   let t = text.trim().replace(/^["«]|["»]$/g, "").trim();
+  // «Правило: …», «я уже говорил: Пример: …» — метки из базы знаний, вслух их не говорим
+  t = t.replace(/(^|[.!?:]\s*)(Правило|Пример|Что будет, если)\s*[:.]\s*/gi, (_m, pre: string) => pre.replace(/:\s*$/, ": "));
+  t = t.replace(/\s+/g, " ").trim();
+  t = (t.charAt(0).toUpperCase() + t.slice(1)).replace(/([.!?]\s+)([а-яё])/g, (_m, a: string, b: string) => a + b.toUpperCase());
+  // Осталась пустышка вроде «Я уже говорил:» — пусть ответит шаблон
+  if (t.replace(/[^а-яёa-z]/gi, "").length < 12 || /:\s*\.?$/.test(t)) return "";
   if (t.length > 400) t = t.slice(0, 400);
   const lastEnd = Math.max(t.lastIndexOf("."), t.lastIndexOf("!"), t.lastIndexOf("?"), t.lastIndexOf("…"));
   if (lastEnd > 20 && lastEnd < t.length - 1) t = t.slice(0, lastEnd + 1);
