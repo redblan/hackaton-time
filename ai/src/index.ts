@@ -22,8 +22,9 @@ export { createDispatcher, extractSlots, requiredSlots } from "./dispatcher";
 export { createGromov, extractHandover, requiredHandover } from "./gromov";
 export { createLlmQueue, QueueSkip, type QueueStats } from "./queue";
 export { createStt, SttError, type Stt } from "./stt";
+export { createTts, DEFAULT_VOICES, speakable, type Tts } from "./tts";
 export { loadData, unverifiedFacts } from "./data";
-export type { KnowledgeFact, NpcCard } from "./types";
+export type { KnowledgeFact, NpcCard, NpcVoice } from "./types";
 
 export interface CreateAiOptions extends AiOptions {
   /** Свои данные вместо ai/knowledge и ai/npcs — для тестов */

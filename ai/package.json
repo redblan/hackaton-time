@@ -11,6 +11,7 @@
     "chat": "tsx src/cli/chat.ts",
     "bench": "tsx src/cli/bench.ts",
     "stt": "tsx src/cli/stt.ts",
+    "tts": "tsx src/cli/tts.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },

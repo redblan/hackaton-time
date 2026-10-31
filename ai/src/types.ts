@@ -27,6 +27,12 @@ export interface NpcEventCard {
   templates: string[];
 }
 
+/** Голос озвучки (Piper): ru_RU-<name>-medium.onnx, speed > 1 — быстрее */
+export interface NpcVoice {
+  name: "irina" | "denis" | "dmitri" | "ruslan";
+  speed?: number;
+}
+
 /** Карточка персонажа ai/npcs/<npcId>.json */
 export interface NpcCard {
   id: NpcId;
@@ -36,6 +42,8 @@ export interface NpcCard {
   speech: string;
   /** Темы, о которых NPC может говорить в свободном разговоре */
   skills?: SkillId[];
+  /** Голос озвучки; нет — берётся DEFAULT_VOICES из tts.ts */
+  voice?: NpcVoice;
   /** Фразы, если NPC встречал игрока в прошлом прохождении */
   recognize?: string[];
   /** Реакции на тон игрока (Ваня, Валентина, напуганный пострадавший) */
