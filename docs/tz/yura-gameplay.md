@@ -74,3 +74,17 @@ export const minigames: Record<MinigameId, React.FC<MinigameProps>> = { go_bag: 
 ## Промпт для агента (Claude Code / Codex)
 
 > Ты работаешь в монорепе игры-хакатона. Твоя зона — ТОЛЬКО `shared/src/scenario/` (кроме `types.ts`). Прочитай `AGENTS.md`, `docs/tz/README.md`, `docs/tz/yura-gameplay.md`, `shared/src/scenario/types.ts`, `shared/src/scenario/index.ts`, `shared/src/ids.ts`. Реализуй Часть 1 ТЗ: детерминированный генератор `generateRun` с адаптацией под профили, чистый редьюсер `initRun`/`reduce` с обработчиком на каждый этап одиночного режима (wake → cover → pack → exit_apartment → elevator → smoke → collapse → neighbor → exit_building → yard_assess → call_112 → triage → first_aid → aftershock → handover → debrief → done) по сценарию из ТЗ, и `summarize`. Сигнатуры в `index.ts` и все типы в `types.ts` не меняй. Никаких Date.now, Math.random, сети и мутаций. Напиши vitest-тесты из раздела «Как проверить сам» в `shared/test/`. В конце запусти `npm run check` из корня.
+
+## Следующие задачи (31.10, вечер) — по порядку
+
+Сценарий solo смержен (PR #1) и работает в живой игре на сервере: толчок → укрытие → рюкзак → газ → дверь → лестница → дым… Дальше:
+
+1. **D-40 (контракт уже в main):** перенеси таймеры из `facts` в `RunState.timers` (`getTimer`/`setTimer` в `context.ts`, там стоит TODO). `initRun` уже отдаёт `timers: {}`.
+2. **Мини-игры — Часть 2 твоего ТЗ, теперь главное.** Хост и песочница готовы: реестр `client/src/minigames/index.ts` (сейчас пустой, хост показывает заглушку «Засчитать/Провалить»), страница `/sandbox` → «Мини-игры» запускает любую игру и показывает `MinigameResult` в JSON (поле params — JSON для `openMinigame`). Порядок: `go_bag` → `tourniquet` → `cpr` → `triage` → `recovery_position`.
+   - `go_bag`: в `result.data.items` — массив `ItemId` (сценарий кладёт их в инвентарь; `water` нужна для дыма, D-45). Не забудь `bandage` (D-30).
+   - `triage`: в `params` приходят `victims` и `order` (группы, D-20). Ошибка — только по правилу D-22.
+   - Стиль: крупно, ярко, мультяшно, HTML/CSS поверх сцены, клавиатура + мышь. Мини-игра ничего не шлёт сама — только `onDone(result)` один раз.
+3. **Q-03 (ждём решения Егора):** как закончить звонок 112, если игрок не называет слот.
+4. **Завтра утром (D-51):** кооп — этапы роли `outside` для coop2, точки синхронизации через `facts`. Сеть и синхронизацию делает Егор.
+
+Проверка: `npm run check`, мини-игры — в `/sandbox`, сценарий целиком — в игре (`npm run dev`, режим «Одиночная игра»).

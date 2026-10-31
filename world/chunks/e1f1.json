@@ -1,0 +1,1169 @@
+{
+  "id": "e1f1",
+  "bounds": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      12,
+      3,
+      12
+    ]
+  },
+  "neighbors": [
+    "y00",
+    "e1f2"
+  ],
+  "objects": [
+    {
+      "id": "slab",
+      "kind": "box",
+      "pos": [
+        6,
+        0.05,
+        7.5
+      ],
+      "size": [
+        12,
+        0.1,
+        9
+      ],
+      "color": "#d9c9b0",
+      "collide": true
+    },
+    {
+      "id": "landing",
+      "kind": "box",
+      "pos": [
+        6,
+        0.05,
+        1.5
+      ],
+      "size": [
+        4,
+        0.1,
+        3
+      ],
+      "color": "#d9c9b0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-0",
+      "kind": "box",
+      "pos": [
+        1,
+        -2.85,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-0",
+      "kind": "box",
+      "pos": [
+        8,
+        -1.35,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-1",
+      "kind": "box",
+      "pos": [
+        1.3,
+        -2.7,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-1",
+      "kind": "box",
+      "pos": [
+        8.3,
+        -1.2000000000000002,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-2",
+      "kind": "box",
+      "pos": [
+        1.6,
+        -2.5500000000000003,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-2",
+      "kind": "box",
+      "pos": [
+        8.6,
+        -1.05,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-3",
+      "kind": "box",
+      "pos": [
+        1.9,
+        -2.4000000000000004,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-3",
+      "kind": "box",
+      "pos": [
+        8.9,
+        -0.9000000000000001,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-4",
+      "kind": "box",
+      "pos": [
+        2.2,
+        -2.25,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-4",
+      "kind": "box",
+      "pos": [
+        9.2,
+        -0.7500000000000001,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-5",
+      "kind": "box",
+      "pos": [
+        2.5,
+        -2.1,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-5",
+      "kind": "box",
+      "pos": [
+        9.5,
+        -0.6000000000000001,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-6",
+      "kind": "box",
+      "pos": [
+        2.8,
+        -1.9500000000000002,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-6",
+      "kind": "box",
+      "pos": [
+        9.8,
+        -0.4500000000000002,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-7",
+      "kind": "box",
+      "pos": [
+        3.1,
+        -1.8,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-7",
+      "kind": "box",
+      "pos": [
+        10.1,
+        -0.30000000000000004,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-8",
+      "kind": "box",
+      "pos": [
+        3.4,
+        -1.6500000000000001,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-8",
+      "kind": "box",
+      "pos": [
+        10.4,
+        -0.15000000000000013,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-a-9",
+      "kind": "box",
+      "pos": [
+        3.6999999999999997,
+        -1.5000000000000002,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-b-9",
+      "kind": "box",
+      "pos": [
+        10.7,
+        -2.220446049250313e-16,
+        1.5
+      ],
+      "size": [
+        0.3,
+        0.3,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "half-landing",
+      "kind": "box",
+      "pos": [
+        6,
+        -1.5,
+        1.5
+      ],
+      "size": [
+        4,
+        0.2,
+        2
+      ],
+      "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "back-wall",
+      "kind": "box",
+      "pos": [
+        6,
+        1.5,
+        11.9
+      ],
+      "size": [
+        12,
+        3,
+        0.2
+      ],
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "side-west",
+      "kind": "box",
+      "pos": [
+        0.1,
+        1.5,
+        7.5
+      ],
+      "size": [
+        0.2,
+        3,
+        9
+      ],
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "side-east",
+      "kind": "box",
+      "pos": [
+        11.9,
+        1.5,
+        7.5
+      ],
+      "size": [
+        0.2,
+        3,
+        9
+      ],
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "room-divider",
+      "kind": "box",
+      "pos": [
+        6,
+        1.5,
+        9
+      ],
+      "size": [
+        0.15,
+        3,
+        6
+      ],
+      "color": "#e9cba9",
+      "collide": true
+    },
+    {
+      "id": "hall-wall-left",
+      "kind": "box",
+      "pos": [
+        2,
+        1.5,
+        5
+      ],
+      "size": [
+        4,
+        3,
+        0.15
+      ],
+      "color": "#edcba4",
+      "collide": true
+    },
+    {
+      "id": "hall-wall-right",
+      "kind": "box",
+      "pos": [
+        9,
+        1.5,
+        5
+      ],
+      "size": [
+        6,
+        3,
+        0.15
+      ],
+      "color": "#edcba4",
+      "collide": true
+    },
+    {
+      "id": "table-top",
+      "kind": "box",
+      "pos": [
+        3,
+        0.9,
+        8
+      ],
+      "size": [
+        2,
+        0.16,
+        1.2
+      ],
+      "color": "#bc8055",
+      "collide": true
+    },
+    {
+      "id": "leg--0.8--0.4",
+      "kind": "box",
+      "pos": [
+        2.2,
+        0.45,
+        7.6
+      ],
+      "size": [
+        0.12,
+        0.9,
+        0.12
+      ],
+      "color": "#956944",
+      "collide": true
+    },
+    {
+      "id": "leg--0.8-0.4",
+      "kind": "box",
+      "pos": [
+        2.2,
+        0.45,
+        8.4
+      ],
+      "size": [
+        0.12,
+        0.9,
+        0.12
+      ],
+      "color": "#956944",
+      "collide": true
+    },
+    {
+      "id": "leg-0.8--0.4",
+      "kind": "box",
+      "pos": [
+        3.8,
+        0.45,
+        7.6
+      ],
+      "size": [
+        0.12,
+        0.9,
+        0.12
+      ],
+      "color": "#956944",
+      "collide": true
+    },
+    {
+      "id": "leg-0.8-0.4",
+      "kind": "box",
+      "pos": [
+        3.8,
+        0.45,
+        8.4
+      ],
+      "size": [
+        0.12,
+        0.9,
+        0.12
+      ],
+      "color": "#956944",
+      "collide": true
+    },
+    {
+      "id": "bed",
+      "kind": "box",
+      "pos": [
+        2,
+        0.35,
+        10.5
+      ],
+      "size": [
+        2,
+        0.7,
+        1.5
+      ],
+      "color": "#7fa7ae",
+      "collide": true
+    },
+    {
+      "id": "wardrobe",
+      "kind": "box",
+      "pos": [
+        0.6,
+        1.1,
+        6.5
+      ],
+      "size": [
+        0.8,
+        2.2,
+        1.6
+      ],
+      "color": "#b78159",
+      "collide": true
+    },
+    {
+      "id": "kitchen",
+      "kind": "box",
+      "pos": [
+        10.9,
+        0.5,
+        9
+      ],
+      "size": [
+        1.5,
+        1,
+        4
+      ],
+      "color": "#81a99c",
+      "collide": true
+    },
+    {
+      "id": "lift",
+      "kind": "box",
+      "pos": [
+        10,
+        1.25,
+        4
+      ],
+      "size": [
+        2,
+        2.5,
+        0.25
+      ],
+      "color": "#9da5ad",
+      "collide": true
+    },
+    {
+      "id": "cover_table",
+      "kind": "interactable",
+      "target": "cover_table",
+      "pos": [
+        3,
+        0,
+        8
+      ],
+      "radius": 1.5,
+      "label": "Укрыться под столом"
+    },
+    {
+      "id": "cover_wall",
+      "kind": "interactable",
+      "target": "cover_wall",
+      "pos": [
+        5,
+        0,
+        10
+      ],
+      "radius": 1.5,
+      "label": "Укрыться у внутренней стены"
+    },
+    {
+      "id": "cover_window",
+      "kind": "interactable",
+      "target": "cover_window",
+      "pos": [
+        8,
+        0,
+        11
+      ],
+      "radius": 1.5,
+      "label": "Подойти к окну"
+    },
+    {
+      "id": "cover_wardrobe",
+      "kind": "interactable",
+      "target": "cover_wardrobe",
+      "pos": [
+        1.5,
+        0,
+        6.5
+      ],
+      "radius": 1.5,
+      "label": "Встать у шкафа"
+    },
+    {
+      "id": "cover_run_out",
+      "kind": "interactable",
+      "target": "cover_run_out",
+      "pos": [
+        5,
+        0,
+        5.5
+      ],
+      "radius": 1.5,
+      "label": "Выбежать из квартиры"
+    },
+    {
+      "id": "prop-documents",
+      "kind": "box",
+      "pos": [
+        7,
+        1,
+        7
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_documents",
+      "kind": "interactable",
+      "target": "item_documents",
+      "pos": [
+        7,
+        1,
+        7
+      ],
+      "radius": 1.5,
+      "label": "Документы"
+    },
+    {
+      "id": "prop-phone",
+      "kind": "box",
+      "pos": [
+        8,
+        1,
+        7
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_phone",
+      "kind": "interactable",
+      "target": "item_phone",
+      "pos": [
+        8,
+        1,
+        7
+      ],
+      "radius": 1.5,
+      "label": "Телефон"
+    },
+    {
+      "id": "prop-first_aid_kit",
+      "kind": "box",
+      "pos": [
+        9,
+        1,
+        7
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_first_aid_kit",
+      "kind": "interactable",
+      "target": "item_first_aid_kit",
+      "pos": [
+        9,
+        1,
+        7
+      ],
+      "radius": 1.5,
+      "label": "Аптечка"
+    },
+    {
+      "id": "prop-water",
+      "kind": "box",
+      "pos": [
+        7,
+        1,
+        8
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_water",
+      "kind": "interactable",
+      "target": "item_water",
+      "pos": [
+        7,
+        1,
+        8
+      ],
+      "radius": 1.5,
+      "label": "Вода"
+    },
+    {
+      "id": "prop-flashlight",
+      "kind": "box",
+      "pos": [
+        8,
+        1,
+        8
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_flashlight",
+      "kind": "interactable",
+      "target": "item_flashlight",
+      "pos": [
+        8,
+        1,
+        8
+      ],
+      "radius": 1.5,
+      "label": "Фонарик"
+    },
+    {
+      "id": "prop-warm_clothes",
+      "kind": "box",
+      "pos": [
+        9,
+        1,
+        8
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_warm_clothes",
+      "kind": "interactable",
+      "target": "item_warm_clothes",
+      "pos": [
+        9,
+        1,
+        8
+      ],
+      "radius": 1.5,
+      "label": "Тёплая одежда"
+    },
+    {
+      "id": "prop-bandage",
+      "kind": "box",
+      "pos": [
+        7,
+        1,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_bandage",
+      "kind": "interactable",
+      "target": "item_bandage",
+      "pos": [
+        7,
+        1,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Бинт"
+    },
+    {
+      "id": "prop-laptop",
+      "kind": "box",
+      "pos": [
+        8,
+        1,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#8b96ac",
+      "collide": true
+    },
+    {
+      "id": "item_laptop",
+      "kind": "interactable",
+      "target": "item_laptop",
+      "pos": [
+        8,
+        1,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Ноутбук"
+    },
+    {
+      "id": "prop-console",
+      "kind": "box",
+      "pos": [
+        9,
+        1,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#8b96ac",
+      "collide": true
+    },
+    {
+      "id": "item_console",
+      "kind": "interactable",
+      "target": "item_console",
+      "pos": [
+        9,
+        1,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Приставка"
+    },
+    {
+      "id": "prop-mugs",
+      "kind": "box",
+      "pos": [
+        7,
+        1,
+        10
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#8b96ac",
+      "collide": true
+    },
+    {
+      "id": "item_mugs",
+      "kind": "interactable",
+      "target": "item_mugs",
+      "pos": [
+        7,
+        1,
+        10
+      ],
+      "radius": 1.5,
+      "label": "Кружки"
+    },
+    {
+      "id": "gas_valve",
+      "kind": "interactable",
+      "target": "gas_valve",
+      "pos": [
+        10,
+        1,
+        10
+      ],
+      "radius": 1.5,
+      "label": "Перекрыть газ"
+    },
+    {
+      "id": "light_switch",
+      "kind": "interactable",
+      "target": "light_switch",
+      "pos": [
+        6.2,
+        1.2,
+        5.2
+      ],
+      "radius": 1.5,
+      "label": "Выключатель света"
+    },
+    {
+      "id": "apartment_door",
+      "kind": "interactable",
+      "target": "apartment_door",
+      "pos": [
+        5,
+        0,
+        5
+      ],
+      "radius": 1.5,
+      "label": "Дверь квартиры"
+    },
+    {
+      "id": "elevator_call",
+      "kind": "interactable",
+      "target": "elevator_call",
+      "pos": [
+        8.5,
+        1,
+        4
+      ],
+      "radius": 1.5,
+      "label": "Вызвать лифт"
+    },
+    {
+      "id": "elevator_shaft",
+      "kind": "interactable",
+      "target": "elevator_shaft",
+      "pos": [
+        10,
+        0,
+        3.5
+      ],
+      "radius": 1.5,
+      "label": "Поговорить с человеком в лифте"
+    },
+    {
+      "id": "hall-end",
+      "kind": "box",
+      "pos": [
+        11.9,
+        1.5,
+        4
+      ],
+      "size": [
+        0.2,
+        3,
+        2
+      ],
+      "color": "#f3ddbd",
+      "collide": true
+    },
+    {
+      "id": "z_apartment",
+      "kind": "zone",
+      "zone": "z_apartment",
+      "min": [
+        0.2,
+        0,
+        5.2
+      ],
+      "max": [
+        11.8,
+        3,
+        11.8
+      ]
+    },
+    {
+      "id": "z_hall",
+      "kind": "zone",
+      "zone": "z_hall",
+      "min": [
+        0,
+        0,
+        3
+      ],
+      "max": [
+        12,
+        3,
+        5
+      ]
+    },
+    {
+      "id": "z_stairs",
+      "kind": "zone",
+      "zone": "z_stairs",
+      "min": [
+        0,
+        -3,
+        0
+      ],
+      "max": [
+        12,
+        3,
+        3
+      ]
+    },
+    {
+      "id": "z_elevator",
+      "kind": "zone",
+      "zone": "z_elevator",
+      "min": [
+        8,
+        0,
+        3
+      ],
+      "max": [
+        11,
+        3,
+        4.5
+      ]
+    },
+    {
+      "id": "z_smoke",
+      "kind": "zone",
+      "zone": "z_smoke",
+      "min": [
+        3,
+        0,
+        3
+      ],
+      "max": [
+        7,
+        3,
+        5
+      ],
+      "when": "fire_f1"
+    },
+    {
+      "id": "smoke",
+      "kind": "fx",
+      "fx": "smoke",
+      "pos": [
+        5,
+        1,
+        4
+      ],
+      "size": 2,
+      "when": "fire_f1"
+    },
+    {
+      "id": "vanya",
+      "kind": "npc",
+      "npcId": "vanya",
+      "pos": [
+        10,
+        0,
+        4
+      ],
+      "when": "lift_vanya"
+    },
+    {
+      "id": "z_exit_door",
+      "kind": "zone",
+      "zone": "z_exit_door",
+      "min": [
+        4,
+        0,
+        0
+      ],
+      "max": [
+        8,
+        3,
+        1
+      ]
+    },
+    {
+      "id": "floor-sign",
+      "kind": "sign",
+      "pos": [
+        7,
+        2,
+        5
+      ],
+      "text": "Подъезд 1 · Этаж 1"
+    }
+  ]
+}

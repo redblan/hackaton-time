@@ -1,0 +1,208 @@
+{
+  "id": "y12",
+  "bounds": {
+    "min": [
+      12,
+      0,
+      -36
+    ],
+    "max": [
+      24,
+      6,
+      -24
+    ]
+  },
+  "neighbors": [
+    "y11",
+    "y13",
+    "y02",
+    "y22"
+  ],
+  "objects": [
+    {
+      "id": "ground",
+      "kind": "box",
+      "pos": [
+        18,
+        -0.1,
+        -30
+      ],
+      "size": [
+        12,
+        0.2,
+        12
+      ],
+      "color": "#8dab80",
+      "collide": true
+    },
+    {
+      "id": "path",
+      "kind": "box",
+      "pos": [
+        18,
+        0.01,
+        -30
+      ],
+      "size": [
+        4,
+        0.02,
+        12
+      ],
+      "color": "#d7c8ac",
+      "collide": true
+    },
+    {
+      "id": "z_yard",
+      "kind": "zone",
+      "zone": "z_yard",
+      "min": [
+        12,
+        0,
+        -36
+      ],
+      "max": [
+        24,
+        4,
+        -24
+      ]
+    },
+    {
+      "id": "tree-trunk",
+      "kind": "box",
+      "pos": [
+        14,
+        1.3,
+        -33
+      ],
+      "size": [
+        0.4,
+        2.6,
+        0.4
+      ],
+      "color": "#957353",
+      "collide": true
+    },
+    {
+      "id": "tree-crown",
+      "kind": "box",
+      "pos": [
+        14,
+        3.2,
+        -33
+      ],
+      "size": [
+        2.5,
+        2,
+        2.5
+      ],
+      "color": "#609577",
+      "collide": true
+    },
+    {
+      "id": "bench",
+      "kind": "box",
+      "pos": [
+        21,
+        0.5,
+        -28
+      ],
+      "size": [
+        2,
+        0.2,
+        0.6
+      ],
+      "color": "#dcaa69",
+      "collide": true
+    },
+    {
+      "id": "z_safe_area",
+      "kind": "zone",
+      "zone": "z_safe_area",
+      "min": [
+        12,
+        0,
+        -36
+      ],
+      "max": [
+        24,
+        4,
+        -24
+      ]
+    },
+    {
+      "id": "sandbox",
+      "kind": "box",
+      "pos": [
+        15,
+        0.15,
+        -32
+      ],
+      "size": [
+        4,
+        0.3,
+        4
+      ],
+      "color": "#efd58e",
+      "collide": true
+    },
+    {
+      "id": "play-platform",
+      "kind": "box",
+      "pos": [
+        21,
+        1,
+        -32
+      ],
+      "size": [
+        2,
+        0.2,
+        2
+      ],
+      "color": "#efb36d",
+      "collide": true
+    },
+    {
+      "id": "spawn-outside",
+      "kind": "spawn",
+      "role": "outside",
+      "pos": [
+        18,
+        0,
+        -30
+      ]
+    },
+    {
+      "id": "mihalych",
+      "kind": "npc",
+      "npcId": "mihalych",
+      "pos": [
+        17,
+        0,
+        -28
+      ]
+    },
+    {
+      "id": "neighbor_leg",
+      "kind": "npc",
+      "npcId": "neighbor_leg",
+      "pos": [
+        20,
+        0,
+        -31
+      ],
+      "pose": "lie"
+    },
+    {
+      "id": "interact-neighbor_leg",
+      "kind": "interactable",
+      "target": "neighbor_leg",
+      "pos": [
+        20,
+        0,
+        -31
+      ],
+      "radius": 2,
+      "label": "Помочь пострадавшему"
+    }
+  ]
+}
