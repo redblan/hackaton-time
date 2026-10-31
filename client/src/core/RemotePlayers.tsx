@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Group } from "three";
+import { Character, npcColor } from "../world/Character";
 import { NPC_NAMES } from "./names";
 import { sample } from "./remote";
 import { useStore } from "./store";
@@ -37,6 +38,7 @@ function Nameplate({ name }: { name: string }) {
 
 function Avatar({ id, name, color }: { id: string; name: string; color: string }) {
   const ref = useRef<Group>(null);
+  const [anim, setAnim] = useState<"idle" | "walk" | "run">("idle");
   useFrame(() => {
     const s = sample(id);
     const g = ref.current;
@@ -44,17 +46,12 @@ function Avatar({ id, name, color }: { id: string; name: string; color: string }
     g.visible = true;
     g.position.set(s.pos[0], s.pos[1], s.pos[2]);
     g.rotation.y = s.rotY;
+    const next = s.anim === "run" ? "run" : s.anim === "walk" ? "walk" : "idle";
+    if (next !== anim) setAnim(next);
   });
   return (
     <group ref={ref} visible={false}>
-      <mesh position={[0, 0.85, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 1.0, 4, 10]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[0, 1.5, -0.25]}>
-        <boxGeometry args={[0.3, 0.12, 0.1]} />
-        <meshStandardMaterial color="#1f2937" />
-      </mesh>
+      <Character color={color} anim={anim} />
       <Nameplate name={name} />
     </group>
   );
@@ -66,7 +63,7 @@ export function RemotePlayers() {
   return (
     <>
       {npcs.map((n) => (
-        <Avatar key={`npc:${n.npcId}`} id={`npc:${n.npcId}`} name={NPC_NAMES[n.npcId]} color="#60a5fa" />
+        <Avatar key={`npc:${n.npcId}`} id={`npc:${n.npcId}`} name={NPC_NAMES[n.npcId]} color={npcColor(n.npcId)} />
       ))}
       {others.map((p) => (
         <Avatar key={p.id} id={p.id} name={p.name} color={p.role ? ROLE_COLORS[p.role] : "#94a3b8"} />
