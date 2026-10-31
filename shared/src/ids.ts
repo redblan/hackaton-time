@@ -180,9 +180,14 @@ export const DISPATCHER_SLOTS = [
 ] as const;
 export type DispatcherSlot = (typeof DISPATCHER_SLOTS)[number];
 
-/** Что игрок должен сообщить бригаде (Громову) при передаче. */
+/**
+ * Что игрок должен сообщить бригаде (Громову) при передаче.
+ * Условность — D-23/D-24: trapped/fire/hazard по флагам, tourniquet_time — если накладывали жгут.
+ */
 export const HANDOVER_ITEMS = [
-  "victims", // кто пострадал и что с ними сделали
+  "victims", // сколько пострадавших и кто они
+  "condition", // их состояние
+  "actions", // что уже сделали (жгут, СЛР, восстановительное положение)
   "tourniquet_time", // время наложения жгута
   "trapped", // кто остался в здании / в лифте
   "fire", // где пожар
@@ -198,6 +203,7 @@ export const DIALOG_OUTCOMES = [
   "calmed", // NPC успокоился (Ваня, Валентина, пострадавший)
   "panicked", // NPC запаниковал от грубости/паники игрока
   "agreed_to_go", // NPC согласился идти с игроком (Валентина)
+  "left_behind", // игрок бросил Валентину: шлёт СЕРВЕР, не ИИ (D-26)
   "slots_complete", // диспетчер 112 получил всё
   "handover_complete", // бригада получила всё
 ] as const;

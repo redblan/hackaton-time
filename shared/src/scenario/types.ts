@@ -76,6 +76,8 @@ export interface RunState {
   victims: Record<string, { kind: VictimKind; state: "untreated" | "in_progress" | "stable" }>;
   journal: JournalEntry[];
   startedAt: number;
+  /** Таймеры сценария (D-40): имя → момент старта, мс игрового времени. В facts таймеры не храним */
+  timers: Record<string, number>;
   finished: boolean;
 }
 
