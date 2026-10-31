@@ -149,8 +149,10 @@ export function yardChunk(col:number,row:number,address='ул. Садовая, 1
     zone('z_canopy_danger',[3,0,8],[9,3,12]);
     interact('address_plate',[8,1.7,11.8],'Прочитать адрес');
     objects.push({id:'address',kind:'sign',pos:p(8,2,11.8),text:address});
-    interact('building_plan',[3,1.5,11.8],'Посмотреть план эвакуации');
-    objects.push({id:'plan',kind:'sign',pos:p(3,2,11.8),text:'План эвакуации: спуск по лестнице. Переход в соседний подъезд — этаж 4. Место сбора — детская площадка. Лифтом не пользоваться.'});
+    // On the facade beside the canopy, facing the yard (-Z). Reading the plan
+    // must not require entering z_canopy_danger or obstruct the exit x=4..8.
+    interact('building_plan',[1.7,1.5,11.65],'План: лестницы, переход на 4-м этаже, место сбора');
+    model('evacuation-plan',`signs/evacuation-e${col+1}.glb`,[1.7,.8,11.82],1,Math.PI);
   } else {
     box('tree-trunk',[2,1.3,3],[.4,2.6,.4],'#957353');
     box('tree-crown',[2,3.2,3],[2.5,2,2.5],'#609577');
