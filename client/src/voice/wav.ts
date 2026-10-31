@@ -3,6 +3,10 @@
  * Чистые функции: ресемплинг и упаковка — без браузерных API, можно проверять тестами.
  */
 
+/** Лимит записи и размера: сервер принимает до 520 КБ (MAX_VOICE_BYTES в server/src/game.ts) ≈ 15 с */
+export const MAX_SECONDS = 15;
+export const MAX_WAV_BYTES = 520_000;
+
 /** Склеить куски записи в один массив */
 export function concat(chunks: Float32Array[]): Float32Array {
   const out = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));

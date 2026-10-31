@@ -1,53 +1,79 @@
 /**
- * Голос (D-69): зажал V — говоришь NPC рядом (или в рацию, если рядом никого), отпустил — отправка.
- * Запись → WAV 16 кГц моно → voice:say → сервер (whisper.cpp) → voice:text → дальше как текст игрока.
- * Микрофон браузер даёт только по HTTPS или на localhost. Нет голоса на сервере — подсказка, игра не ломается.
+ * Голос (D-69). ВЛАДЕЛЕЦ: Матвей (client/src/voice/).
+ * Удерживаешь V (или кнопку микрофона мышкой) — запись, отпустил — отправка.
+ * Микрофон → WAV 16 кГц моно 16 бит (wav.ts) → voice:say { to, wav } → сервер (whisper.cpp) →
+ * voice:text { to, text } → текст в ленту как реплика игрока; дальше сервер ведёт его как npc:talk / рацию.
+ * Нет whisper на сервере — тихое «голос недоступен», текстовый чат работает как раньше.
+ * Микрофон браузер даёт только по https:// (или на localhost).
  */
 import { useEffect, useRef, useState } from "react";
 import type { NpcId } from "@game/shared";
 import { getSocket } from "../core/net";
-import { store, useStore } from "../core/store";
-import { concat, downsample, encodeWav, level } from "./wav";
+import { store, useStore, type State } from "../core/store";
+import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES } from "./wav";
 import "./voice.css";
 
-const MAX_MS = 15_000;
 type To = NpcId | "radio";
-type State = { kind: "idle" } | { kind: "rec"; to: To; level: number } | { kind: "wait"; to: To } | { kind: "error"; text: string };
+type Status =
+  | { kind: "idle" }
+  | { kind: "rec"; to: To; level: number }
+  | { kind: "wait"; to: To }
+  | { kind: "error"; text: string }
+  | { kind: "off" };
 
-// Ключи реплик голоса — из своего диапазона, чтобы не пересечься с ключами HUD
+/** Ключи реплик голоса — из своего диапазона, чтобы не пересечься с ключами HUD */
 let nextVoiceKey = 1_000_000;
 
+/**
+ * Кому говорим — так же, как HUD выбирает цель чата: звонок 112 → рация (диспетчер);
+ * иначе NPC рядом; иначе последний NPC, который говорил; иначе рация.
+ * TODO: когда цель открытого чата будет в сторе — брать её (сейчас она в useState HUD).
+ */
+export function voiceTarget(s: Pick<State, "stage" | "nearNpc" | "npcLines">): To {
+  if (s.stage?.stage === "call_112") return "radio";
+  return s.nearNpc ?? s.npcLines.findLast((l) => !l.fromPlayer)?.npcId ?? "radio";
+}
+
+/** Сообщение сервера «голос выключен» → тихо прячем голос до конца сессии */
+const isVoiceOff = (error: string) => /whisper|выключен|недоступ|не настро/i.test(error);
+
 export function VoiceButton() {
-  const [state, setState] = useState<State>({ kind: "idle" });
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
   const rec = useRef<{ ctx: AudioContext; stream: MediaStream; node: ScriptProcessorNode; chunks: Float32Array[]; to: To; timer: number } | null>(null);
-  const nearNpc = useStore((s) => s.nearNpc);
+  const starting = useRef(false);
+  const connected = useStore((s) => s.connected);
+  const target = useStore((s) => voiceTarget(s));
 
   async function start() {
-    if (rec.current || store.get().typing || store.get().minigame) return;
-    const to: To = store.get().nearNpc ?? "radio";
+    const st = store.get();
+    if (rec.current || starting.current || st.minigame || status.kind === "off") return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      setState({ kind: "error", text: "Микрофон доступен только по https:// или на localhost" });
+      setStatus({ kind: "error", text: "Микрофон работает только по https://" });
       return;
     }
+    starting.current = true;
+    const to = voiceTarget(st);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
       const ctx = new AudioContext();
       const src = ctx.createMediaStreamSource(stream);
-      // ScriptProcessor устарел, но работает везде и не требует отдельного файла воркера
+      // ScriptProcessor устарел, но работает во всех браузерах и не требует отдельного файла воркера
       const node = ctx.createScriptProcessor(4096, 1, 1);
       const chunks: Float32Array[] = [];
       node.onaudioprocess = (e) => {
         const ch = new Float32Array(e.inputBuffer.getChannelData(0));
         chunks.push(ch);
-        setState({ kind: "rec", to, level: level(ch) });
+        setStatus({ kind: "rec", to, level: level(ch) });
       };
       src.connect(node);
       node.connect(ctx.destination);
-      const timer = window.setTimeout(() => void stop(), MAX_MS);
+      const timer = window.setTimeout(() => void stop(), MAX_SECONDS * 1000);
       rec.current = { ctx, stream, node, chunks, to, timer };
-      setState({ kind: "rec", to, level: 0 });
+      setStatus({ kind: "rec", to, level: 0 });
     } catch {
-      setState({ kind: "error", text: "Нет доступа к микрофону — разреши его в адресной строке" });
+      setStatus({ kind: "error", text: "Нет доступа к микрофону — разреши его в адресной строке" });
+    } finally {
+      starting.current = false;
     }
   }
 
@@ -60,40 +86,51 @@ export function VoiceButton() {
     r.stream.getTracks().forEach((t) => t.stop());
     const rate = r.ctx.sampleRate;
     await r.ctx.close();
-    const samples = downsample(concat(r.chunks), rate);
+    const samples = downsample(concat(r.chunks), rate).subarray(0, 16000 * MAX_SECONDS);
     if (samples.length < 16000 * 0.3) {
-      setState({ kind: "idle" }); // короче 0.3 с — случайное нажатие
+      setStatus({ kind: "idle" }); // короче 0.3 с — случайное нажатие
       return;
     }
-    setState({ kind: "wait", to: r.to });
-    getSocket()?.emit("voice:say", { to: r.to, wav: encodeWav(samples) });
+    const wav = encodeWav(samples);
+    if (wav.byteLength > MAX_WAV_BYTES) {
+      setStatus({ kind: "error", text: "Слишком длинно — до 15 секунд" });
+      return;
+    }
+    const s = getSocket();
+    if (!s) {
+      setStatus({ kind: "error", text: "Нет связи с сервером" });
+      return;
+    }
+    setStatus({ kind: "wait", to: r.to });
+    s.emit("voice:say", { to: r.to, wav });
   }
 
-  // Распознанный текст: в ленту как реплика игрока (NPC) — сервер уже передал его дальше
+  // Ответ сервера: текст → в ленту как реплика игрока; ошибка → подсказка или тихое «недоступен»
   useEffect(() => {
     const s = getSocket();
     if (!s) return;
     const onText = (p: { to: To; text: string } | { to: To; error: string }) => {
       if ("error" in p) {
-        setState({ kind: "error", text: p.error });
+        setStatus(isVoiceOff(p.error) ? { kind: "off" } : { kind: "error", text: p.error });
         return;
       }
-      setState({ kind: "idle" });
-      if (p.to !== "radio" && p.text) {
-        store.set((st) => ({
-          npcLines: [...st.npcLines, { key: nextVoiceKey++, npcId: p.to as NpcId, text: `🎙 ${p.text}`, done: true, fromPlayer: true }].slice(-30),
-        }));
-      }
+      setStatus({ kind: "idle" });
+      if (!p.text) return;
+      if (p.to === "radio") return; // рация: сервер сам разошлёт реплику в общий чат
+      store.set((st) => ({
+        npcLines: [...st.npcLines, { key: nextVoiceKey++, npcId: p.to as NpcId, text: `🎙 ${p.text}`, done: true, fromPlayer: true }].slice(-30),
+      }));
     };
     s.on("voice:text", onText);
     return () => {
       s.off("voice:text", onText);
     };
-  }, []);
+  }, [connected]);
 
+  // V — только когда не печатаем в чат (иначе это буква); в чате — кнопка мышкой
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === "KeyV" && !e.repeat) void start();
+      if (e.code === "KeyV" && !e.repeat && !store.get().typing) void start();
     };
     const up = (e: KeyboardEvent) => {
       if (e.code === "KeyV") void stop();
@@ -104,25 +141,40 @@ export function VoiceButton() {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, []);
+  });
 
   useEffect(() => {
-    if (state.kind !== "error") return;
-    const t = window.setTimeout(() => setState({ kind: "idle" }), 4000);
+    if (status.kind !== "error") return;
+    const t = window.setTimeout(() => setStatus({ kind: "idle" }), 4000);
     return () => window.clearTimeout(t);
-  }, [state]);
+  }, [status]);
 
-  const who = (to: To) => (to === "radio" ? "в рацию" : "рядом стоящему");
+  if (status.kind === "off") return <div className="voice voice-off">голос недоступен</div>;
+
+  const who = (to: To) => (to === "radio" ? "в рацию" : "NPC");
   return (
-    <div className={`voice voice-${state.kind}`} aria-live="polite">
-      {state.kind === "idle" && <span className="voice-hint">V — сказать голосом {nearNpc ? "NPC рядом" : "в рацию"}</span>}
-      {state.kind === "rec" && (
+    <div className={`voice voice-${status.kind}`} aria-live="polite">
+      <button
+        type="button"
+        className="voice-mic"
+        title="Удерживай, чтобы сказать голосом (или клавиша V)"
+        onPointerDown={(e) => {
+          e.preventDefault(); // не забирать фокус у поля чата
+          void start();
+        }}
+        onPointerUp={() => void stop()}
+        onPointerLeave={() => void stop()}
+      >
+        🎙
+      </button>
+      {status.kind === "idle" && <span className="voice-hint">V — сказать голосом {who(target)}</span>}
+      {status.kind === "rec" && (
         <span>
-          🎙 Говори {who(state.to)}… <span className="voice-level" style={{ width: `${Math.round(state.level * 60)}px` }} />
+          Слушаю… <span className="voice-level" style={{ width: `${Math.round(status.level * 60)}px` }} />
         </span>
       )}
-      {state.kind === "wait" && <span>Распознаю…</span>}
-      {state.kind === "error" && <span className="voice-error">{state.text}</span>}
+      {status.kind === "wait" && <span>Распознаю…</span>}
+      {status.kind === "error" && <span className="voice-error">{status.text}</span>}
     </div>
   );
 }

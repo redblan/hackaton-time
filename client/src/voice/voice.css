@@ -1,5 +1,5 @@
 /* Индикатор голоса (D-69): внизу по центру, над чатом */
-.voice { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 20; pointer-events: none;
+.voice { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px;
   font: 14px/1.3 system-ui, sans-serif; color: #fff; padding: 6px 12px; border-radius: 999px; background: rgba(20, 30, 40, .55); }
 .voice-idle { opacity: .6; }
 .voice-rec { background: rgba(231, 111, 81, .9); animation: voice-pulse 1s ease-in-out infinite; }
@@ -7,3 +7,7 @@
 .voice-error { color: #ffd6cc; }
 .voice-level { display: inline-block; height: 6px; margin-left: 8px; vertical-align: middle; border-radius: 3px; background: #fff; transition: width .08s; }
 @keyframes voice-pulse { 50% { box-shadow: 0 0 0 8px rgba(231, 111, 81, .25); } }
+.voice-off { opacity: .45; font-size: 12px; }
+.voice-mic { pointer-events: auto; border: 0; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 15px;
+  background: rgba(255, 255, 255, .9); touch-action: none; user-select: none; }
+.voice-rec .voice-mic { background: #fff; transform: scale(1.1); }
