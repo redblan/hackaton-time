@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "chat": "tsx src/cli/chat.ts",
+    "bench": "tsx src/cli/bench.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": { "@game/shared": "*" }
+  "dependencies": {
+    "@game/shared": "*"
+  }
 }
