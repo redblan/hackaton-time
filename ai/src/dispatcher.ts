@@ -5,7 +5,7 @@
  */
 import { DISPATCHER_SLOTS, type DispatcherSlot, type NpcRequest, type NpcResponse, type PlayerId } from "@game/shared";
 
-const SLOT_PATTERNS: Record<Exclude<DispatcherSlot, "address">, RegExp> = {
+export const SLOT_PATTERNS: Record<Exclude<DispatcherSlot, "address">, RegExp> = {
   what: /землетряс|толч|тряс|обруш|рухну|разруш|трещин|сейсм/,
   victims: /(\d+|один|одна|двое|два|две|трое|три|четверо|четыре|пятеро|пять|несколько|много)\s*(\S+\s+)?(пострадав|ранен|человек|люд|раненых|лежат|мужчин|женщин|ребен|ребён|подрост)|(пострадав|раненых)\S*\s*(\d+|один|одна|двое|два|две|трое|три|четверо|четыре|пятеро|пять)/,
   condition: /кровотеч|кров|не дыш|дыш|сознан|перелом|травм|ранен|обморок|без чувств|не отвеча|сердц/,
