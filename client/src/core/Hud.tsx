@@ -39,6 +39,9 @@ function NpcLines() {
   );
 }
 
+/** Взаимодействия-разговоры: E отправляет их на сервер и сразу открывает ввод к NPC. */
+const TALK_INTERACTS = new Set(["elevator_shaft", "neighbor_door"]);
+
 function ChatBox() {
   const chat = useStore((s) => s.chat);
   const nearNpc = useStore((s) => s.nearNpc);
@@ -49,10 +52,21 @@ function ChatBox() {
   const input = useRef<HTMLInputElement>(null);
   const npcTarget = nearNpc ?? lastNpc;
 
-  // Enter — открыть ввод (к NPC, если он рядом), Т — рация
+  // Enter — открыть ввод (к NPC, если он рядом), Т — рация.
+  // E рядом с человеком — тоже открывает разговор с ним, если E не занята действием (мини-игра, предмет);
+  // «поговорить»-взаимодействия (лифт, дверь соседки) уходят на сервер из Player и открывают ввод здесь.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (store.get().typing || store.get().minigame) return;
+      if (e.code === "KeyE" && !e.repeat) {
+        const st = store.get();
+        if (!st.nearNpc || (st.prompt && !TALK_INTERACTS.has(st.prompt.target))) return;
+        e.preventDefault(); // иначе «e» попадёт в поле ввода
+        setTarget(st.nearNpc);
+        document.exitPointerLock?.();
+        input.current?.focus();
+        return;
+      }
       if (e.code === "Enter" || e.code === "KeyT") {
         e.preventDefault();
         const n = store.get().nearNpc ?? store.get().npcLines.findLast((l) => !l.fromPlayer)?.npcId ?? null;
@@ -109,7 +123,7 @@ function ChatBox() {
         <input
           ref={input}
           value={text}
-          placeholder={typing ? "Enter — отправить, Tab — кому, Esc — назад" : "Enter — сказать NPC, T — рация"}
+          placeholder={typing ? "Enter — отправить, Tab — кому, Esc — назад" : "E или Enter — сказать NPC рядом, T — рация"}
           maxLength={300}
           onChange={(e) => setText(e.target.value)}
           onFocus={() => store.set({ typing: true })}
@@ -258,6 +272,7 @@ export function Hud() {
   useHotkeys();
   const stage = useStore((s) => s.stage);
   const prompt = useStore((s) => s.prompt);
+  const nearNpc = useStore((s) => s.nearNpc);
   const locked = useStore((s) => s.locked);
   const typing = useStore((s) => s.typing);
   const connected = useStore((s) => s.connected);
@@ -296,6 +311,11 @@ export function Hud() {
       {prompt && (
         <div className="hud-prompt">
           <kbd>E</kbd> — {prompt.label}
+        </div>
+      )}
+      {!prompt && nearNpc && (
+        <div className="hud-prompt">
+          <kbd>E</kbd> — поговорить: {NPC_NAMES[nearNpc]}
         </div>
       )}
       {showClick && (
