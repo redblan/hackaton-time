@@ -228,7 +228,7 @@ export function createAi(opts: CreateAiOptions): Ai {
     memory.recent = memory.recent.slice(-RECENT_LIMIT);
   }
 
-  async function respond(req: NpcRequest, onToken?: (t: string) => void): Promise<NpcResponse> {
+  async function respond(req: NpcRequest, onToken?: (t: string) => void, onOutcome?: (outcome: string) => void): Promise<NpcResponse> {
     // Диспетчер 112 и доклад/разбор Громова — конечные автоматы без модели: отвечают сразу и одинаково
     const fsm =
       req.npcId === "dispatcher"
@@ -241,6 +241,8 @@ export function createAi(opts: CreateAiOptions): Ai {
     if (fsm) {
       const memory = await opts.memory.get(req.playerId);
       const res = fsm(memory);
+      // D-68: итог — в сценарий сразу, ещё до текста реплики
+      if (res.outcome) onOutcome?.(res.outcome);
       onToken?.(res.text);
       const now = Date.now();
       if (req.playerMessage) memory.recent.push({ npcId: req.npcId, from: "player", text: req.playerMessage, at: now });
@@ -252,6 +254,8 @@ export function createAi(opts: CreateAiOptions): Ai {
     const memory = await opts.memory.get(req.playerId);
     const p = plan(req, memory);
     const outcome = outcomeOf(req, p, memory);
+    // D-68: итог известен до модели (тон игрока) — отдаём сразу, один раз; в ответе он тот же
+    if (outcome) onOutcome?.(outcome);
 
     let text: string;
     let source: NpcResponse["source"];
@@ -294,7 +298,7 @@ export function createAi(opts: CreateAiOptions): Ai {
   return {
     llmStats: () => queue.stats(),
     say: (req) => respond(req),
-    sayStream: (req, onToken) => respond(req, onToken),
+    sayStream: (req, onToken, onOutcome) => respond(req, onToken, onOutcome),
     resetRun(playerId: PlayerId) {
       dispatcher.reset(playerId);
       gromov.reset(playerId);

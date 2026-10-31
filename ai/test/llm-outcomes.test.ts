@@ -51,3 +51,43 @@ describe("outcome при ответах модели (M4)", () => {
     expect(llmCalls).toBe(0);
   });
 });
+
+describe("итог диалога сразу, до текста (D-68)", () => {
+  /** Модель отвечает с задержкой — как живая */
+  const slow = (async () => {
+    await new Promise((r) => setTimeout(r, 80));
+    const body = JSON.stringify({ message: { content: "Ладно... ладно, дышу. Ты правда скажешь спасателям?" }, done: false }) + "\n" + JSON.stringify({ done: true }) + "\n";
+    return new Response(body, { status: 200 });
+  }) as unknown as typeof fetch;
+
+  it("onOutcome вызывается один раз и раньше первого слова модели; в ответе тот же outcome", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: slow });
+    const order: string[] = [];
+    const res = await ai.sayStream!(
+      talk("vanya", "Спокойно, я рядом, сообщу спасателям"),
+      () => order.push("token"),
+      (o) => order.push(`outcome:${o}`),
+    );
+    expect(order[0]).toBe("outcome:calmed");
+    expect(order.filter((x) => x.startsWith("outcome")).length).toBe(1);
+    expect(res.outcome).toBe("calmed");
+    expect(res.source).toBe("llm");
+  });
+
+  it("диспетчер: итог тоже сразу и один раз", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: slow });
+    const outcomes: string[] = [];
+    await ai.sayStream!({ ...talk("dispatcher", ""), event: "dispatcher_open", playerMessage: undefined }, () => {}, (o) => outcomes.push(o));
+    expect(outcomes).toEqual([]);
+    const r = await ai.sayStream!(talk("dispatcher", "Землетрясение"), () => {}, (o) => outcomes.push(o));
+    expect(outcomes).toEqual(["slot_missing:address"]);
+    expect(r.outcome).toBe("slot_missing:address");
+  });
+
+  it("нет итога — onOutcome не зовётся", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: slow });
+    let called = false;
+    await ai.sayStream!(talk("papa", "Что делать, если пахнет газом?"), () => {}, () => (called = true));
+    expect(called).toBe(false);
+  });
+});
