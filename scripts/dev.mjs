@@ -8,7 +8,7 @@ const procs = [
 ];
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const children = procs.map(({ name, color, args }) => {
-  const child = spawn(npm, args, { stdio: ["inherit", "pipe", "pipe"], env: process.env });
+  const child = spawn(npm, args, { stdio: ["inherit", "pipe", "pipe"], env: process.env, shell: process.platform === "win32" });
   const prefix = `\x1b[${color}m[${name}]\x1b[0m `;
   const pipe = (stream, out) => {
     let buf = "";
