@@ -19,7 +19,7 @@ import type { StageDef } from "./types";
 const AFTERSHOCK_LIMIT_MS = 10_000;
 const DEBRIEF_MS = 60_000;
 
-/** Временные группы сортировки из D-20, до ответа по Q-01. */
+/** Временные группы сортировки из D-20. TODO(Q-01): заменить на подтверждённый порядок. */
 const TRIAGE_GROUPS: VictimKind[][] = [["bleeding"], ["cpr", "unconscious"], ["scared"], ["light_injury"]];
 
 const VICTIM_GAMES: Partial<Record<VictimKind, MinigameId>> = {
@@ -78,6 +78,7 @@ export const call112: StageDef = {
     }),
   on(ctx, event) {
     if (event.type !== "dialogOutcome" || event.npcId !== "dispatcher") return;
+    // TODO(Q-03): других способов закончить звонок нет, поэтому `missed` из D-17 пока недостижим.
     if (event.outcome === "slots_complete") {
       log(ctx, "call_112", "ok", "Передал диспетчеру всё нужное");
       ctx.advance();
@@ -124,6 +125,7 @@ export const firstAid: StageDef = {
       const entry = Object.entries(ctx.state.victims).find(
         ([, v]) => VICTIM_GAMES[v.kind] === event.result.game,
       );
+      if (event.result.game === "tourniquet") addFact(ctx.state, "tourniquet_applied");
       if (entry) stabilize(ctx, entry[0]);
     }
     if (event.type === "dialogOutcome" && event.npcId === "victim_scared") {
@@ -164,7 +166,11 @@ export const aftershock: StageDef = {
 
 export const handover: StageDef = {
   hint: "Расскажи бригаде: кто, в каком состоянии, что сделано",
-  enter: (ctx) => say(ctx, "gromov", "brigade_arrived"),
+  enter: (ctx) =>
+    say(ctx, "gromov", "brigade_arrived", {
+      flags: ctx.state.config.flags,
+      tourniquetApplied: hasFact(ctx.state, "tourniquet_applied"),
+    }),
   on(ctx, event) {
     if (event.type !== "dialogOutcome" || event.npcId !== "gromov") return;
     if (event.outcome === "handover_complete") {

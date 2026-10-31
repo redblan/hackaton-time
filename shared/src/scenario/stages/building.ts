@@ -29,7 +29,7 @@ export const elevator: StageDef = {
       (event.type === "enterZone" && event.zone === "z_elevator")
     ) {
       log(ctx, "elevator", "mistake", "Хотел спуститься на лифте", "elevator_call");
-      say(ctx, "mihalych", "mistake", { mistake: "elevator_call" });
+      say(ctx, "mihalych", "mistake", { mistake: { skill: "elevator", code: "elevator_call" } });
       return;
     }
     if (event.type === "interact" && event.target === "elevator_shaft" && hasFlag(state, "lift_vanya")) {
@@ -126,7 +126,7 @@ export const exitBuilding: StageDef = {
     if (event.zone === "z_canopy_danger") {
       log(ctx, "exit_building", "mistake", "Задержался под треснувшим козырьком", "canopy");
     }
-    if (event.zone === "z_yard") {
+    if (event.zone === "z_yard" || event.zone === "z_safe_area") {
       logOkIfClean(ctx, "exit_building", "Быстро отошёл от здания");
       ctx.advance();
     }

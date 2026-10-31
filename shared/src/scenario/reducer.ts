@@ -111,7 +111,13 @@ function handle(ctx: Ctx, event: GameEvent) {
     ctx.goTo("aftershock");
     return;
   }
-  STAGE_DEFS[ctx.state.stage[ctx.playerId]!].on?.(ctx, event);
+  let stage = ctx.state.stage[ctx.playerId]!;
+  STAGE_DEFS[stage].on?.(ctx, event);
+  // Вход в зону не повторится, поэтому новый этап тоже должен её увидеть.
+  while (event.type === "enterZone" && ctx.state.stage[ctx.playerId] !== stage) {
+    stage = ctx.state.stage[ctx.playerId]!;
+    STAGE_DEFS[stage].on?.(ctx, event);
+  }
 }
 
 export function initRun(config: RunConfig, players: { id: PlayerId; role: Role }[]): RunState {

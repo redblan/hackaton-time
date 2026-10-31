@@ -178,6 +178,73 @@ describe("прохождение", () => {
   });
 });
 
+describe("устойчивость прохождения", () => {
+  /** Универсальное прохождение: шаги, которых нет в этом конфиге, редьюсер просто игнорирует. */
+  const walkthrough = (victims: RunConfig["victims"]): Step[] => {
+    const aid = victims.flatMap((kind): Step[] => {
+      if (kind === "scared") return [interact("victim_scared"), talk("victim_scared", "calmed")];
+      if (kind === "bleeding") return [interact("victim_bleeding"), tourniquetDone];
+      if (kind === "cpr") return [interact("victim_cpr"), result(game("cpr", "cpr"))];
+      return [interact("victim_unconscious"), result(game("recovery_position", "recovery_position"))];
+    });
+    return [
+      ...PERFECT.slice(0, 19),
+      ...aid,
+      zone("z_safe_area"),
+      talk("gromov", "handover_complete"),
+      interact("brigade"),
+    ];
+  };
+
+  it("любой сгенерированный конфиг проходится до done без ошибок", () => {
+    for (let seed = 0; seed < 300; seed++) {
+      const config = generateRun({ mode: "solo", profiles: [], seed });
+      const { state } = play({ ...config, aftershockAfterMs: config.aftershockAfterMs && 3_600_000 }, walkthrough(config.victims));
+      expect(state.stage[P], `seed ${seed}`).toBe("done");
+      expect(state.journal.filter((e) => e.outcome !== "ok"), `seed ${seed}`).toEqual([]);
+    }
+  });
+
+  it("соседку бросили и сразу вышли во двор: этап выхода не зависает", () => {
+    const leave = PERFECT.findIndex((s) => s.outcome === "agreed_to_go");
+    const steps = [...PERFECT.slice(0, leave), zone("z_yard")];
+    const { state } = play(FULL, steps);
+    expect(state.stage[P]).toBe("yard_assess");
+    expect(state.journal).toContainEqual(expect.objectContaining({ skill: "escort", outcome: "missed" }));
+  });
+
+  it("из подъезда сразу на площадку: приходим к звонку 112", () => {
+    const yard = PERFECT.findIndex((s) => s.zone === "z_yard");
+    const { state } = play(FULL, [...PERFECT.slice(0, yard), zone("z_safe_area")]);
+    expect(state.stage[P]).toBe("call_112");
+  });
+
+  it("ошибка в реплике NPC приходит в формате контракта", () => {
+    const { effects } = play(FULL, [{ type: "start" }, tick, tick, tick, interact("cover_run_out")]);
+    expect(effects).toContainEqual(
+      expect.objectContaining({
+        event: "mistake",
+        context: { mistake: { skill: "cover", code: "cover_run_out" } },
+      }),
+    );
+  });
+
+  it("бригада знает, накладывали ли жгут", () => {
+    const { effects } = play(FULL, PERFECT);
+    expect(effects).toContainEqual(
+      expect.objectContaining({
+        event: "brigade_arrived",
+        context: expect.objectContaining({ tourniquetApplied: true }),
+      }),
+    );
+  });
+
+  it("после конца прохождения события игнорируются", () => {
+    const { state } = play(FULL, PERFECT);
+    expect(reduce(state, { type: "tick", at: 999_999 }).state).toBe(state);
+  });
+});
+
 describe("генератор", () => {
   it("одинаковый seed даёт одинаковый конфиг", () => {
     const input = { mode: "solo" as const, profiles: [], seed: 42 };

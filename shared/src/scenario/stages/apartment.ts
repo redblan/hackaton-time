@@ -55,7 +55,7 @@ export const cover: StageDef = {
         break;
       case "cover_run_out":
         log(ctx, "cover", "mistake", "Побежал на лестницу во время толчка");
-        say(ctx, "papa", "mistake", { mistake: "cover_run_out" });
+        say(ctx, "papa", "mistake", { mistake: { skill: "cover", code: "cover_run_out" } });
         break;
       default:
         return;
@@ -82,7 +82,7 @@ export const pack: StageDef = {
     if (event.type !== "interact" || hasFact(ctx.state, "minigame_open")) return;
     if (event.target === "light_switch") {
       log(ctx, "gas", "mistake", "Потянулся к выключателю при запахе газа", "gas_switch");
-      say(ctx, "papa", "mistake", { mistake: "gas_light_switch" });
+      say(ctx, "papa", "mistake", { mistake: { skill: "gas", code: "gas_light_switch" } });
     }
     if (event.target === "gas_valve") {
       addFact(ctx.state, "gas_closed");

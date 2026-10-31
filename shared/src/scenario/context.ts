@@ -28,7 +28,7 @@ export function removeFact(state: RunState, fact: string) {
   state.facts = state.facts.filter((f) => f !== fact);
 }
 
-/** В RunState нет поля для таймеров, поэтому они лежат в facts как `timer:имя:мс`. */
+/** TODO(D-40): перенести в `RunState.timers`, когда поле появится в контракте. */
 export function getTimer(state: RunState, name: string): number | null {
   const prefix = `timer:${name}:`;
   const fact = state.facts.find((f) => f.startsWith(prefix));
@@ -82,6 +82,7 @@ export function say(ctx: Ctx, npcId: NpcId, event: NpcEvent, context?: Record<st
 }
 
 export function openMinigame(ctx: Ctx, game: MinigameId, params?: Record<string, unknown>) {
+  // TODO(Q-04): после перезахода сервер должен заново открыть мини-игру, иначе этап заблокирован.
   addFact(ctx.state, "minigame_open");
   ctx.effects.push({
     type: "openMinigame",
