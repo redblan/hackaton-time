@@ -1455,10 +1455,11 @@
       "kind": "sign",
       "pos": [
         19,
-        17,
-        5
+        17.55,
+        4.82
       ],
-      "text": "Подъезд 2 · Этаж 6"
+      "text": "Подъезд 2 · Этаж 6 · Квартиры 29–30",
+      "rotY": 3.141592653589793
     },
     {
       "id": "facade-window-2",
@@ -1612,6 +1613,300 @@
       "color": "#d1a582",
       "collide": false,
       "rotY": 0
+    },
+    {
+      "id": "detail-door-0",
+      "kind": "box",
+      "pos": [
+        14,
+        16.05,
+        4.87
+      ],
+      "size": [
+        1.05,
+        2.1,
+        0.08
+      ],
+      "color": "#678781",
+      "collide": false
+    },
+    {
+      "id": "detail-door-0-jamb--1",
+      "kind": "box",
+      "pos": [
+        13.43,
+        16.1,
+        4.84
+      ],
+      "size": [
+        0.09,
+        2.2,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-0-jamb-1",
+      "kind": "box",
+      "pos": [
+        14.57,
+        16.1,
+        4.84
+      ],
+      "size": [
+        0.09,
+        2.2,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-0-lintel",
+      "kind": "box",
+      "pos": [
+        14,
+        17.16,
+        4.84
+      ],
+      "size": [
+        1.23,
+        0.1,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-0-handle",
+      "kind": "box",
+      "pos": [
+        14.36,
+        16,
+        4.8
+      ],
+      "size": [
+        0.12,
+        0.07,
+        0.06
+      ],
+      "color": "#c7bd9f",
+      "collide": false
+    },
+    {
+      "id": "detail-door-0-peephole",
+      "kind": "box",
+      "pos": [
+        14,
+        16.62,
+        4.81
+      ],
+      "size": [
+        0.045,
+        0.045,
+        0.03
+      ],
+      "color": "#283c3a",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1",
+      "kind": "box",
+      "pos": [
+        19,
+        16.05,
+        4.87
+      ],
+      "size": [
+        1.05,
+        2.1,
+        0.08
+      ],
+      "color": "#91664f",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1-jamb--1",
+      "kind": "box",
+      "pos": [
+        18.43,
+        16.1,
+        4.84
+      ],
+      "size": [
+        0.09,
+        2.2,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1-jamb-1",
+      "kind": "box",
+      "pos": [
+        19.57,
+        16.1,
+        4.84
+      ],
+      "size": [
+        0.09,
+        2.2,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1-lintel",
+      "kind": "box",
+      "pos": [
+        19,
+        17.16,
+        4.84
+      ],
+      "size": [
+        1.23,
+        0.1,
+        0.1
+      ],
+      "color": "#d6bc92",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1-handle",
+      "kind": "box",
+      "pos": [
+        19.36,
+        16,
+        4.8
+      ],
+      "size": [
+        0.12,
+        0.07,
+        0.06
+      ],
+      "color": "#c7bd9f",
+      "collide": false
+    },
+    {
+      "id": "detail-door-1-peephole",
+      "kind": "box",
+      "pos": [
+        19,
+        16.62,
+        4.81
+      ],
+      "size": [
+        0.045,
+        0.045,
+        0.03
+      ],
+      "color": "#283c3a",
+      "collide": false
+    },
+    {
+      "id": "detail-window-crack-0",
+      "kind": "box",
+      "pos": [
+        19.1,
+        16.1,
+        11.77
+      ],
+      "size": [
+        0.18,
+        0.035,
+        0.015
+      ],
+      "color": "#685e55",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "detail-window-plaster-0",
+      "kind": "box",
+      "pos": [
+        18.9,
+        15.025,
+        11.3
+      ],
+      "size": [
+        0.18,
+        0.04,
+        0.13
+      ],
+      "color": "#e4d3bc",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "detail-window-crack-1",
+      "kind": "box",
+      "pos": [
+        19.23,
+        16.25,
+        11.77
+      ],
+      "size": [
+        0.18,
+        0.035,
+        0.015
+      ],
+      "color": "#685e55",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "detail-window-plaster-1",
+      "kind": "box",
+      "pos": [
+        19.2,
+        15.025,
+        11.3
+      ],
+      "size": [
+        0.18,
+        0.04,
+        0.13
+      ],
+      "color": "#e4d3bc",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "detail-window-crack-2",
+      "kind": "box",
+      "pos": [
+        19.36,
+        16.4,
+        11.77
+      ],
+      "size": [
+        0.18,
+        0.035,
+        0.015
+      ],
+      "color": "#685e55",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "detail-window-plaster-2",
+      "kind": "box",
+      "pos": [
+        19.5,
+        15.025,
+        11.3
+      ],
+      "size": [
+        0.18,
+        0.04,
+        0.13
+      ],
+      "color": "#e4d3bc",
+      "collide": false,
+      "when": "window_broken"
     }
   ]
 }
