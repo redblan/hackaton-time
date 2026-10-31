@@ -7,3 +7,7 @@
 .route-legend { font-size: 13px; line-height: 1.5; }
 .route-error { border-left: 4px solid #cf342c; padding: 10px; background: #fff0e7; }
 .route-results { max-height: 92vh; overflow-y: auto; pointer-events: auto; }
+.route-scene { height: 440px; width: 100%; position: relative; margin: 12px 0; touch-action: none; }
+.route-review .route-floor-label { white-space: nowrap; font-size: 11px; padding: 3px 7px; border: 1px solid #799b8f; border-radius: 5px; color: #203c37; background: #ffffffe8; }
+.route-review button[aria-pressed=true] { background: #d5e9ff; outline: 2px solid #2563eb; }
+@media(max-width:600px) { .route-scene { height: 340px; } }
