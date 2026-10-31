@@ -21,7 +21,7 @@
       "kind": "box",
       "pos": [
         18,
-        24.05,
+        23.95,
         7.5
       ],
       "size": [
@@ -37,7 +37,7 @@
       "kind": "box",
       "pos": [
         18,
-        24.05,
+        23.95,
         1.5
       ],
       "size": [
@@ -59,7 +59,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -75,7 +75,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -91,7 +91,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -107,7 +107,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -123,7 +123,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -139,7 +139,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -155,7 +155,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -171,7 +171,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -187,7 +187,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -203,7 +203,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -219,7 +219,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -235,7 +235,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -251,7 +251,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -267,7 +267,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -283,7 +283,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -299,7 +299,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -315,7 +315,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -331,7 +331,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -347,7 +347,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -363,7 +363,7 @@
       "size": [
         0.3,
         0.3,
-        2
+        3
       ],
       "color": "#b8aaa0",
       "collide": true
@@ -379,9 +379,41 @@
       "size": [
         4,
         0.2,
-        2
+        3
       ],
       "color": "#b8aaa0",
+      "collide": true
+    },
+    {
+      "id": "stair-end-rail-0.4",
+      "kind": "box",
+      "pos": [
+        12.4,
+        24,
+        1.5
+      ],
+      "size": [
+        0.8,
+        3,
+        3
+      ],
+      "color": "#acb8b7",
+      "collide": true
+    },
+    {
+      "id": "stair-end-rail-11.4",
+      "kind": "box",
+      "pos": [
+        23.4,
+        24,
+        1.5
+      ],
+      "size": [
+        0.8,
+        3,
+        3
+      ],
+      "color": "#acb8b7",
       "collide": true
     },
     {
@@ -623,6 +655,123 @@
       ],
       "color": "#9da5ad",
       "collide": true
+    },
+    {
+      "id": "visual:table-top",
+      "kind": "model",
+      "src": "furniture/table.glb",
+      "pos": [
+        15,
+        24,
+        8
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:bed",
+      "kind": "model",
+      "src": "furniture/bedDouble.glb",
+      "pos": [
+        14,
+        24,
+        10.5
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:wardrobe",
+      "kind": "model",
+      "src": "furniture/bookcaseClosedDoors.glb",
+      "pos": [
+        12.6,
+        24,
+        6.5
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:kitchen",
+      "kind": "model",
+      "src": "furniture/kitchenCabinet.glb",
+      "pos": [
+        22.9,
+        24,
+        9
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:stove",
+      "kind": "model",
+      "src": "furniture/kitchenStove.glb",
+      "pos": [
+        22.2,
+        24,
+        10.5
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:lift",
+      "kind": "model",
+      "src": "furniture/doorwayFront.glb",
+      "pos": [
+        22,
+        24,
+        4
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:door",
+      "kind": "model",
+      "src": "furniture/doorwayOpen.glb",
+      "pos": [
+        17,
+        24,
+        5
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:stairs-a",
+      "kind": "model",
+      "src": "furniture/stairs.glb",
+      "pos": [
+        14.35,
+        21,
+        1.5
+      ],
+      "scale": 1,
+      "rotY": 1.5707963267948966,
+      "collide": false
+    },
+    {
+      "id": "visual:stairs-b",
+      "kind": "model",
+      "src": "furniture/stairs.glb",
+      "pos": [
+        21.35,
+        22.5,
+        1.5
+      ],
+      "scale": 1,
+      "rotY": 1.5707963267948966,
+      "collide": false
     },
     {
       "id": "cover_table",

@@ -115,6 +115,32 @@
       "collide": true
     },
     {
+      "id": "visual:tree",
+      "kind": "model",
+      "src": "city/tree-large.glb",
+      "pos": [
+        14,
+        0,
+        -21
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:bench",
+      "kind": "model",
+      "src": "furniture/bench.glb",
+      "pos": [
+        21,
+        0,
+        -16
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
       "id": "victim_cpr",
       "kind": "npc",
       "npcId": "victim_cpr",

@@ -111,6 +111,32 @@
       ],
       "color": "#dcaa69",
       "collide": true
+    },
+    {
+      "id": "visual:tree",
+      "kind": "model",
+      "src": "city/tree-large.glb",
+      "pos": [
+        26,
+        0,
+        -45
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:bench",
+      "kind": "model",
+      "src": "furniture/bench.glb",
+      "pos": [
+        33,
+        0,
+        -40
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
     }
   ]
 }
