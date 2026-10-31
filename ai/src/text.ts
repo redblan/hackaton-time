@@ -63,6 +63,8 @@ export function detectInjection(message: string | undefined): boolean {
 export function looksBroken(reply: string): boolean {
   // qwen2.5:3b иногда переходит на китайский посреди фразы («Открой дверь с另一边») — прогон e2e
   if (/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(reply)) return true;
+  // Модель вышла в роль ассистента («алло, чем я могу помочь?» — Ваня в лифте, прогон на qwen2.5:3b)
+  if (/чем\s+(я\s+)?(могу|можем)\s+(вам\s+|тебе\s+)?помочь|как\s+я\s+могу\s+помочь|рад(а)?\s+помочь|обращайтесь|чем\s+могу\s+быть\s+полезен|задавайте\s+вопросы|я\s+здесь,\s+чтобы\s+помочь/i.test(reply)) return true;
   return /как\s+(ии|искусственн\S*\s+интеллект|языков\S*\s+модель)|я\s*(—|-)?\s*(ии|бот|языков\S*\s+модель|нейросеть|искусственн)|language\s+model|as\s+an\s+ai|openai|qwen|alibaba|<\|im_|\bassistant\b|\buser\b:/i.test(
     reply,
   );

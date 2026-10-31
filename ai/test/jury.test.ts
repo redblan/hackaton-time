@@ -115,6 +115,15 @@ describe("защита: NPC не ломается (M9)", () => {
     expect(r.text).not.toMatch(/[\u4e00-\u9fff]/);
   });
 
+  it("ответ в роли ассистента («чем могу помочь») — заменяем шаблоном в характере", async () => {
+    expect(looksBroken("Алло, чем я могу помочь?")).toBe(true);
+    expect(looksBroken("Помогите! Я застрял, вытащи меня!")).toBe(false);
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Алло, чем я могу помочь?") });
+    const r = await ai.say(ask("vanya", "Алло"));
+    expect(r.source).toBe("template");
+    expect(r.text).not.toMatch(/могу помочь/);
+  });
+
   it("медицинский вопрос вне базы — не выдумывает, а отправляет к спасателям", async () => {
     const ai = createAi({ memory: createInMemoryStore(), fetchImpl: offline });
     const r = await ai.say(ask("mihalych", "Какие таблетки пить от давления?"));
