@@ -3,6 +3,9 @@ import type { NpcRequest, PlayerMemory, SkillId } from "@game/shared";
 import type { ChatMessage } from "./ollama";
 import type { KnowledgeFact, NpcCard, NpcEventCard } from "./types";
 
+/** NPC, у которых тон игрока даёт outcome calmed / panicked (DECISIONS D-25). Они не учат игрока сами. */
+export const EMOTIONAL: ReadonlySet<string> = new Set(["vanya", "valentina", "victim_bleeding", "victim_cpr", "victim_unconscious", "victim_scared", "neighbor_leg"]);
+
 export interface PlannedFact {
   fact: KnowledgeFact;
   /** Сколько раз игроку это уже рассказывали */
@@ -66,7 +69,10 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
   if (plan.tone === "rude") lines.push("Игрок грубит или торопит. Отреагируй в характере.");
   if (plan.tone === "panic") lines.push("Игрок паникует. Отреагируй в характере.");
   if (plan.tone === "calm") lines.push("Игрок говорит спокойно и поддерживает тебя. Отреагируй в характере.");
-  if (plan.facts.length > 0) {
+  if (plan.facts.length > 0 && EMOTIONAL.has(card.id)) {
+    lines.push("Как игрок ДОЛЖЕН с тобой обращаться (сам это не произноси, просто реагируй: делает так — успокаивайся, не делает — нервничай):");
+    for (const p of plan.facts) lines.push(`- ${p.fact.fact}`);
+  } else if (plan.facts.length > 0) {
     lines.push("Факты, которые нужно донести:");
     for (const p of plan.facts) {
       const how = p.fact.explanations[p.explanation] ?? p.fact.fact;

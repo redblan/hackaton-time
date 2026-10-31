@@ -132,6 +132,15 @@ describe("ИИ-движок", () => {
     expect(rude.text).toContain("Не ори!");
   });
 
+  it("Ваня не произносит учебные факты и не считает их рассказанными", async () => {
+    const memory = createInMemoryStore();
+    const ai = createAi({ memory, data, fetchImpl: offline });
+    const res = await ai.say(req({ npcId: "vanya", event: "free_talk", playerMessage: "почему у окна опасно?" }));
+    expect(res.factIds).toEqual([]);
+    expect(res.text).not.toContain("Правило");
+    expect((await memory.get("p1")).toldFacts["cover.where"]).toBeUndefined();
+  });
+
   it("с Ollama отвечает моделью стримом", async () => {
     const ai = createAi({ memory: createInMemoryStore(), data, fetchImpl: ollamaReplying("Под стол, быстро!") });
     const tokens: string[] = [];

@@ -9,7 +9,7 @@ import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemo
 import { factsBySkill, loadData, type AiData } from "./data";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
-import { buildMessages, cleanReply, type Plan, type PlannedFact } from "./prompt";
+import { buildMessages, cleanReply, EMOTIONAL, type Plan, type PlannedFact } from "./prompt";
 import { detectTone, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
@@ -24,8 +24,6 @@ export interface CreateAiOptions extends AiOptions {
   fetchImpl?: typeof fetch;
 }
 
-/** NPC, у которых тон игрока даёт outcome calmed / panicked (DECISIONS D-25) */
-const EMOTIONAL = new Set(["vanya", "valentina", "victim_bleeding", "victim_cpr", "victim_unconscious", "victim_scared", "neighbor_leg"]);
 
 /** Ключ шаблона в memory.toldFacts: так помним, какие шаблоны игрок уже слышал. */
 const tplKey = (npcId: string, event: string, i: number) => `tpl:${npcId}.${event}.${i}`;
@@ -119,8 +117,11 @@ export function createAi(opts: CreateAiOptions): AiModule {
     if (p.mistakeNote) parts.push(p.mistakeNote);
     // Свободный разговор и факты, которых нет в шаблоне, — из базы знаний с неиспользованным объяснением
     if (req.event === "free_talk" || templates.length === 0) {
-      const f = p.facts[0];
-      if (f) parts.push(`${f.told > 0 ? "Я уже говорил, коротко: " : ""}${stripLabel(f.fact.explanations[f.explanation] ?? f.fact.fact)}`);
+      // Ваня, Валентина, пострадавшие сами не учат: их факты — подсказка игроку, как с ними говорить
+      const f = EMOTIONAL.has(req.npcId) ? undefined : p.facts[0];
+      if (reaction?.length && !f) {
+        // реакция на тон уже прозвучала
+      } else if (f) parts.push(`${f.told > 0 ? "Я уже говорил, коротко: " : ""}${stripLabel(f.fact.explanations[f.explanation] ?? f.fact.fact)}`);
       else if (templates.length > 0) {
         const t = pickLeastUsed(memory, req.npcId, req.event, templates);
         parts.push(t.text);
@@ -140,8 +141,11 @@ export function createAi(opts: CreateAiOptions): AiModule {
     return { text: list[best] ?? "", key };
   }
 
+  /** Факты, которые NPC действительно произнёс (у эмоциональных NPC факты — только подсказка для модели) */
+  const spoken = (req: NpcRequest, p: Plan): PlannedFact[] => (EMOTIONAL.has(req.npcId) ? [] : p.facts);
+
   function remember(req: NpcRequest, p: Plan, memory: PlayerMemory, text: string, outcome?: string): void {
-    for (const f of p.facts) {
+    for (const f of spoken(req, p)) {
       memory.toldFacts[f.fact.id] = (memory.toldFacts[f.fact.id] ?? 0) + 1;
       const used = memory.usedExplanations[f.fact.id] ?? [];
       if (!used.includes(f.explanation)) used.push(f.explanation);
@@ -194,7 +198,7 @@ export function createAi(opts: CreateAiOptions): AiModule {
 
     remember(req, p, memory, text, outcome);
     await opts.memory.save(memory);
-    return { text, factIds: p.facts.map((f) => f.fact.id), outcome, source };
+    return { text, factIds: spoken(req, p).map((f) => f.fact.id), outcome, source };
   }
 
   return {
