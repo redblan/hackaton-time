@@ -971,18 +971,6 @@
       "label": "Вызвать лифт"
     },
     {
-      "id": "elevator_shaft",
-      "kind": "interactable",
-      "target": "elevator_shaft",
-      "pos": [
-        22,
-        0,
-        3.5
-      ],
-      "radius": 1.5,
-      "label": "Поговорить с человеком в лифте"
-    },
-    {
       "id": "hall-end",
       "kind": "box",
       "pos": [

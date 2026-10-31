@@ -971,18 +971,6 @@
       "label": "Вызвать лифт"
     },
     {
-      "id": "elevator_shaft",
-      "kind": "interactable",
-      "target": "elevator_shaft",
-      "pos": [
-        10,
-        0,
-        3.5
-      ],
-      "radius": 1.5,
-      "label": "Поговорить с человеком в лифте"
-    },
-    {
       "id": "hall-end",
       "kind": "box",
       "pos": [
@@ -1097,17 +1085,6 @@
       ],
       "size": 0.6,
       "when": "fire_f1"
-    },
-    {
-      "id": "vanya",
-      "kind": "npc",
-      "npcId": "vanya",
-      "pos": [
-        10,
-        0,
-        4
-      ],
-      "when": "lift_vanya"
     },
     {
       "id": "z_exit_door",

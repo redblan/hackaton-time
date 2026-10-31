@@ -101,7 +101,8 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   interact('light_switch',[6.2,1.2,5.2],'Выключатель света');
   interact('apartment_door',[5,0,5],'Дверь квартиры');
   interact('elevator_call',[8.5,1,4],'Вызвать лифт');
-  interact('elevator_shaft',[10,0,3.5],'Поговорить с человеком в лифте');
+  // Застрявший в лифте — только на 7-м этаже 1-го подъезда
+  if(entrance===1 && floor===7) objects.push({id:'elevator_shaft',kind:'interactable',target:'elevator_shaft',pos:p(10,0,3.5),radius:1.5,label:'Поговорить с человеком в лифте',when:'lift_vanya'});
   if(floor===4) interact('balcony_door',[entrance===1?11.5:.5,0,4.5],'Переход в соседний подъезд');
   else box('hall-end',[entrance===1?11.9:.1,1.5,4],[.2,3,2],'#f3ddbd');
   zone('z_apartment',[.2,0,5.2],[11.8,3,11.8]);
@@ -121,7 +122,7 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   objects.push({id:'smoke',kind:'fx',fx:'smoke',pos:p(5,1,4),size:2,when:`fire_f${floor}`});
   objects.push({id:'fire',kind:'fx',fx:'fire',pos:p(3.5,.1,4.6),size:.6,when:`fire_f${floor}`});
   if(entrance===1) {
-    objects.push({id:'vanya',kind:'npc',npcId:'vanya',pos:p(10,0,4),when:'lift_vanya'});
+    if(floor===7) objects.push({id:'vanya',kind:'npc',npcId:'vanya',pos:p(10,0,4),when:'lift_vanya'});
     if(floor>=6) objects.push({id:'spawn-top',kind:'spawn',role:'inside_top',pos:p(3,0,6),rotY:Math.PI},{id:'papa',kind:'npc',npcId:'papa',pos:p(4,0,9),unless:'papa_left'});
     if(floor===3) {
       interact('neighbor_door',[7,0,5.5],'Постучать соседке');
