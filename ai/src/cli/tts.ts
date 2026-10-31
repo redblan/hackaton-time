@@ -1,5 +1,5 @@
 /**
- * Проверка озвучки: `npm run tts -w ai -- papa "Под стол, быстро!"` → tts-papa.wav в текущей папке.
+ * Проверка озвучки: `npm run tts -w ai -- papa "Под стол, быстро!"` → ai/tts-papa.wav (путь печатается).
  * Без текста — озвучит первую реплику NPC на его первое событие. Нужны PIPER_BIN и PIPER_VOICES (.env в корне).
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -36,6 +36,7 @@ if (!wav) {
   console.error("Озвучить не получилось — см. сообщение [tts] выше");
   process.exit(1);
 }
-const out = `tts-${npcId}.wav`;
+// Рядом с ai/ (npm -w запускает из ai/), в git не попадает — ai/.gitignore
+const out = join(AI_ROOT, `tts-${npcId}.wav`);
 writeFileSync(out, wav);
-console.log(`→ ${out}, ${Math.round(wav.length / 1024)} КБ, ${Date.now() - t0} мс. Повтор той же фразы — из кеша.`);
+console.log(`→ ${out}\n  ${Math.round(wav.length / 1024)} КБ, ${Date.now() - t0} мс. Послушать: start "${out}"`);
