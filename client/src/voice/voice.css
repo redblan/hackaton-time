@@ -11,3 +11,7 @@
 .voice-mic { pointer-events: auto; border: 0; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 15px;
   background: rgba(255, 255, 255, .9); touch-action: none; user-select: none; }
 .voice-rec .voice-mic { background: #fff; transform: scale(1.1); }
+/* Кнопка «голоса NPC» (M20): справа внизу, не мешает чату */
+.npc-audio { position: fixed; right: 16px; bottom: 16px; z-index: 20; border: 0; border-radius: 999px; padding: 6px 12px;
+  font: 13px/1.2 system-ui, sans-serif; color: #fff; background: rgba(20, 30, 40, .55); cursor: pointer; }
+.npc-audio:hover { background: rgba(20, 30, 40, .8); }

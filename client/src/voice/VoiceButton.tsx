@@ -25,11 +25,11 @@ type Status =
 let nextVoiceKey = 1_000_000;
 
 /**
- * Кому говорим — так же, как HUD выбирает цель чата: звонок 112 → рация (диспетчер);
- * иначе NPC рядом; иначе последний NPC, который говорил; иначе рация.
- * TODO: когда цель открытого чата будет в сторе — брать её (сейчас она в useState HUD).
+ * Кому говорим (D-70): открыт чат — тому, с кем он открыт (chatTarget); иначе как HUD по Enter:
+ * звонок 112 → рация (диспетчер); NPC рядом; последний NPC, который говорил; рация.
  */
-export function voiceTarget(s: Pick<State, "stage" | "nearNpc" | "npcLines">): To {
+export function voiceTarget(s: Pick<State, "chatTarget" | "stage" | "nearNpc" | "npcLines">): To {
+  if (s.chatTarget) return s.chatTarget;
   if (s.stage?.stage === "call_112") return "radio";
   return s.nearNpc ?? s.npcLines.findLast((l) => !l.fromPlayer)?.npcId ?? "radio";
 }

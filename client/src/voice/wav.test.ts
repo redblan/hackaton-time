@@ -27,7 +27,9 @@ describe("голос: WAV для сервера (D-69)", () => {
 });
 
 describe("голос: кому говорим", () => {
-  const base = { stage: null, nearNpc: null, npcLines: [] };
+  const base = { chatTarget: null, stage: null, nearNpc: null, npcLines: [] };
+  it("открыт чат — тому, с кем он открыт", () => expect(voiceTarget({ ...base, chatTarget: "valentina", nearNpc: "vanya" })).toBe("valentina"));
+  it("открыт чат рации — в рацию", () => expect(voiceTarget({ ...base, chatTarget: "radio", nearNpc: "vanya" })).toBe("radio"));
   it("звонок 112 → рация", () => expect(voiceTarget({ ...base, nearNpc: "vanya", stage: { stage: "call_112", hint: "" } })).toBe("radio"));
   it("NPC рядом", () => expect(voiceTarget({ ...base, nearNpc: "vanya" })).toBe("vanya"));
   it("никого рядом — последний, кто говорил", () =>
