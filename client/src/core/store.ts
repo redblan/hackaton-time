@@ -1,6 +1,6 @@
 /** Состояние клиента: маленький стор на useSyncExternalStore (без лишних зависимостей). */
 import { useSyncExternalStore } from "react";
-import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, PlayerPublic, RunSummary, StageId } from "@game/shared";
+import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId } from "@game/shared";
 
 export interface Auth {
   token: string;
@@ -41,6 +41,8 @@ export interface State {
   /** Другие игроки (без меня). Позиции для интерполяции — в remote.ts */
   others: { id: string; name: string; role: PlayerPublic["role"] }[];
   chunks: Record<ChunkId, ChunkData>;
+  /** Подвижные NPC (без позиций — они в remote.ts под id `npc:<npcId>`) */
+  npcs: Pick<NpcPublic, "npcId" | "following">[];
   flags: string[];
   stage: { stage: StageId; hint: string } | null;
   inventory: ItemId[];
@@ -62,6 +64,7 @@ const initial: State = {
   room: null,
   others: [],
   chunks: {},
+  npcs: [],
   flags: [],
   stage: null,
   inventory: [],

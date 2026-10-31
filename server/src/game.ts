@@ -26,7 +26,21 @@ import {
 } from "@game/shared";
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
-import { canStart, findOpenRoom, gameNow, newRoom, pauseClock, pickRole, resumeClock, toPublic, type Room } from "./rooms";
+import { checkLeftBehind, recordTrail, startEscort, stepEscort } from "./escort";
+import {
+  canStart,
+  findOpenRoom,
+  fromSnapshot,
+  gameNow,
+  newRoom,
+  pauseClock,
+  pickRole,
+  publicNpcs,
+  resumeClock,
+  toPublic,
+  toSnapshot,
+  type Room,
+} from "./rooms";
 
 export interface SocketData {
   playerId: PlayerId;
@@ -39,7 +53,10 @@ type Sock = Socket<ClientToServer, ServerToClient, Record<string, never>, Socket
 const POS_BROADCAST_MS = 100; // ~10 Гц
 const TICK_MS = 1000;
 const SAVE_EVERY_MS = 5000;
-const ROOM_TTL_MS = 10 * 60_000;
+const ROOM_TTL_MS = 30 * 60_000;
+const SAVE_ROOMS_MS = 3000;
+/** Сколько ждём игроков после перезапуска сервера */
+const RESTORE_MAX_AGE_MS = 3 * 60 * 60_000;
 const ANIMS = new Set<PlayerPublic["anim"]>(["idle", "walk", "run", "crouch", "carry"]);
 
 const isVec3 = (v: unknown): v is Vec3 =>
@@ -50,6 +67,7 @@ const includes = <T extends string>(list: readonly T[], v: unknown): v is T =>
 export class Game {
   private rooms = new Map<string, Room>();
   private roomOf = new Map<PlayerId, string>();
+  private intervals: NodeJS.Timeout[] = [];
 
   constructor(
     private io: IO,
@@ -57,9 +75,38 @@ export class Game {
     private ai: AiModule,
     private chunks: ChunkStore,
   ) {
-    setInterval(() => this.broadcastPositions(), POS_BROADCAST_MS);
-    setInterval(() => this.cleanup(), 60_000);
+    this.intervals.push(
+      setInterval(() => this.safe(() => this.frame(POS_BROADCAST_MS)), POS_BROADCAST_MS),
+      setInterval(() => this.cleanup(), 60_000),
+      setInterval(() => void this.saveRooms(), SAVE_ROOMS_MS),
+    );
     io.on("connection", (s) => this.onConnection(s));
+  }
+
+  /** Поднять незаконченные комнаты из БД (после перезапуска сервера). Игроки вернутся сами при перезаходе. */
+  async restore() {
+    let snaps;
+    try {
+      snaps = await this.store.loadRooms(RESTORE_MAX_AGE_MS);
+    } catch (e) {
+      console.error("[restore] комнаты не загрузились:", (e as Error).message);
+      return;
+    }
+    for (const snap of snaps) {
+      const room = fromSnapshot(snap);
+      room.emptySince = Date.now();
+      this.rooms.set(room.id, room);
+      for (const id of room.players.keys()) this.roomOf.set(id, room.id);
+      this.startTicking(room);
+      console.log(`[restore] комната ${room.id} (${room.mode}), игроков ${room.players.size}, ждём перезахода`);
+    }
+  }
+
+  /** Сохранить всё и остановить таймеры (тесты, выключение) */
+  async dispose() {
+    this.intervals.forEach(clearInterval);
+    for (const room of this.rooms.values()) room.timers.forEach(clearInterval);
+    await this.saveRooms();
   }
 
   // ---------- подключение ----------
@@ -94,6 +141,7 @@ export class Game {
     if (room.started) {
       s.emit("run:flags", { flags: [...room.flags] });
       s.emit("players:update", { players: this.publicPlayers(room) });
+      if (room.npcs.size) s.emit("npcs:update", { npcs: publicNpcs(room) });
       if (me.lastStage) s.emit("game:effect", me.lastStage);
     }
   }
@@ -171,6 +219,11 @@ export class Game {
 
   private destroy(room: Room) {
     room.timers.forEach(clearInterval);
+    if (room.started && !room.finished) {
+      // Брошенная комната больше не восстанавливается
+      room.finished = true;
+      void this.store.saveRoom(toSnapshot(room, Date.now())).catch(() => {});
+    }
     this.rooms.delete(room.id);
     for (const id of room.players.keys()) if (this.roomOf.get(id) === room.id) this.roomOf.delete(id);
   }
@@ -208,7 +261,12 @@ export class Game {
     this.io.to(`r:${room.id}`).emit("run:flags", { flags: [...room.flags] });
     this.io.to(`r:${room.id}`).emit("players:update", { players: this.publicPlayers(room) });
     resumeClock(room, Date.now());
+    room.dirty = true;
     this.dispatch(room, { type: "start", at: this.now(room) });
+    this.startTicking(room);
+  }
+
+  private startTicking(room: Room) {
     room.timers.push(
       setInterval(() => {
         if (room.clock.runningSince !== null) this.safe(() => this.dispatch(room, { type: "tick", at: this.now(room) }));
@@ -225,13 +283,29 @@ export class Game {
     me.pos = p.pos;
     me.rotY = p.rotY;
     me.anim = ANIMS.has(p.anim as PlayerPublic["anim"]) ? (p.anim as PlayerPublic["anim"]) : "idle";
+    for (const e of room.npcs.values()) if (e.playerId === me.id) recordTrail(e, me.pos);
+    if (room.started) room.dirty = true;
     if (room.started && Date.now() - (me.lastSavedAt ?? 0) > SAVE_EVERY_MS) void this.saveProgress(room, me.id);
   }
 
-  private broadcastPositions() {
+  /** ~10 Гц: шаг подвижных NPC, проверка left_behind, рассылка позиций */
+  private frame(dtMs: number) {
     for (const room of this.rooms.values()) {
       if (!room.started || room.finished) continue;
-      this.io.to(`r:${room.id}`).volatile.emit("players:update", { players: this.publicPlayers(room) });
+      const running = room.clock.runningSince !== null;
+      for (const e of room.npcs.values()) {
+        const leader = e.playerId ? room.players.get(e.playerId) : undefined;
+        if (!running || !leader?.online) continue;
+        stepEscort(e, leader.pos, dtMs);
+        if (checkLeftBehind(e, leader.pos, this.now(room))) {
+          this.dispatch(room, { type: "dialogOutcome", at: this.now(room), playerId: leader.id, npcId: e.npcId, outcome: "left_behind" });
+        }
+      }
+      const to = this.io.to(`r:${room.id}`);
+      // volatile: устаревшую позицию не жалко потерять. NPC — обычным сообщением: два volatile подряд
+      // в одном тике второе теряется (транспорт ещё занят первым)
+      to.volatile.emit("players:update", { players: this.publicPlayers(room) });
+      if (room.npcs.size) to.emit("npcs:update", { npcs: publicNpcs(room) });
     }
   }
 
@@ -268,7 +342,33 @@ export class Game {
       return;
     }
     room.run = result.state;
+    room.dirty = true;
+    this.trackEscort(room, event);
     for (const eff of result.effects) this.safe(() => this.execute(room, eff));
+  }
+
+  /**
+   * Сопровождение Валентины (D-26, D-45): после `agreed_to_go` она идёт за игроком,
+   * у места сбора (`z_safe_area`) останавливается.
+   */
+  private trackEscort(room: Room, event: GameEvent) {
+    if (event.type === "dialogOutcome" && event.npcId === "valentina" && event.outcome === "agreed_to_go") {
+      const cur = room.npcs.get("valentina");
+      if (cur?.playerId === event.playerId) return;
+      const player = room.players.get(event.playerId);
+      const from = cur?.pos ?? this.chunks.findNpc("valentina", room.flags) ?? player?.pos;
+      if (!from) return;
+      room.npcs.set("valentina", startEscort("valentina", event.playerId, from));
+      console.log(`[escort] valentina идёт за ${player?.name ?? event.playerId}`);
+    }
+    if (event.type === "enterZone" && event.zone === "z_safe_area") {
+      for (const e of room.npcs.values()) {
+        if (e.playerId === event.playerId) {
+          e.playerId = null;
+          e.trail = [];
+        }
+      }
+    }
   }
 
   private execute(room: Room, eff: Effect) {
@@ -367,6 +467,8 @@ export class Game {
     room.finished = true;
     room.timers.forEach(clearInterval);
     room.timers = [];
+    room.dirty = true;
+    void this.saveRooms();
     for (const p of room.players.values()) {
       const profile = await this.store.getProfile(p.id).catch(() => null);
       if (profile) await this.store.saveProfile({ ...profile, runs: profile.runs + 1 }).catch(() => {});
@@ -388,6 +490,20 @@ export class Game {
   }
 
   // ---------- БД ----------
+
+  private async saveRooms() {
+    const now = Date.now();
+    for (const room of this.rooms.values()) {
+      if (!room.dirty || !room.started) continue;
+      room.dirty = false;
+      try {
+        await this.store.saveRoom(toSnapshot(room, now));
+      } catch (e) {
+        room.dirty = true;
+        console.error("[db] комната не сохранена:", (e as Error).message);
+      }
+    }
+  }
 
   private async recordSkill(playerId: PlayerId, skill: string, ok: boolean) {
     try {

@@ -108,7 +108,18 @@ io.use(async (socket, next) => {
   }
 });
 
-new Game(io, store, ai, chunks);
+const game = new Game(io, store, ai, chunks);
+await game.restore();
+
+let stopping = false;
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, async () => {
+    if (stopping) return;
+    stopping = true;
+    await game.dispose(); // последний снимок комнат в БД
+    process.exit(0);
+  });
+}
 
 server.listen(config.port, config.host, () => {
   const proto = cert ? "https" : "http";

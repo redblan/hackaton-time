@@ -7,6 +7,8 @@ export const local = {
   /** Позиция пришла с сервера (спаун/восстановление) — контроллер должен телепортироваться */
   teleport: false,
   ready: false,
+  /** Переподключились — заново сообщить серверу, какие чанки держим */
+  resyncChunks: false,
 };
 
 export function teleport(pos: Vec3, rotY: number) {

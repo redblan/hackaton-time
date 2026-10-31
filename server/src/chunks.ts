@@ -1,7 +1,7 @@
 /** Мир: читает world/chunks/*.json, следит за изменениями (npm run world пересобирает на лету). */
 import { existsSync, readdirSync, readFileSync, watch } from "node:fs";
 import { join } from "node:path";
-import type { ChunkData, ChunkId, Role, Vec3 } from "@game/shared";
+import type { ChunkData, ChunkId, NpcId, Role, Vec3 } from "@game/shared";
 
 /** Сколько чанков клиент держит одновременно (≤ 10% от 30) */
 export const MAX_CHUNKS_PER_CLIENT = 3;
@@ -9,9 +9,12 @@ export const MAX_CHUNKS_PER_CLIENT = 3;
 export class ChunkStore {
   private chunks = new Map<ChunkId, ChunkData>();
 
-  constructor(private dir: string) {
+  constructor(
+    private dir: string,
+    watchDir = true,
+  ) {
     this.reload();
-    if (existsSync(dir)) {
+    if (watchDir && existsSync(dir)) {
       let timer: NodeJS.Timeout | undefined;
       watch(dir, () => {
         clearTimeout(timer);
@@ -35,6 +38,16 @@ export class ChunkStore {
     }
     this.chunks = next;
     console.log(`[world] чанков загружено: ${next.size}`);
+  }
+
+  /** Где стоит NPC в мире (с учётом флагов `when`) */
+  findNpc(npcId: NpcId, flags: ReadonlySet<string>): Vec3 | null {
+    for (const c of this.chunks.values()) {
+      for (const o of c.objects) {
+        if (o.kind === "npc" && o.npcId === npcId && (!o.when || flags.has(o.when))) return o.pos;
+      }
+    }
+    return null;
   }
 
   get(id: ChunkId) {

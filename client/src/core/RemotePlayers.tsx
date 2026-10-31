@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Group } from "three";
+import { NPC_NAMES } from "./names";
 import { sample } from "./remote";
 import { useStore } from "./store";
 
@@ -61,8 +62,12 @@ function Avatar({ id, name, color }: { id: string; name: string; color: string }
 
 export function RemotePlayers() {
   const others = useStore((s) => s.others);
+  const npcs = useStore((s) => s.npcs);
   return (
     <>
+      {npcs.map((n) => (
+        <Avatar key={`npc:${n.npcId}`} id={`npc:${n.npcId}`} name={NPC_NAMES[n.npcId]} color="#60a5fa" />
+      ))}
       {others.map((p) => (
         <Avatar key={p.id} id={p.id} name={p.name} color={p.role ? ROLE_COLORS[p.role] : "#94a3b8"} />
       ))}

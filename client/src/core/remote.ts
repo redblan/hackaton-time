@@ -1,6 +1,8 @@
 /** Буфер позиций других игроков для интерполяции (вне React — обновляется 10 раз в секунду). */
 import type { PlayerPublic, Vec3 } from "@game/shared";
 
+type Snapshot = { id: string; pos: Vec3; rotY: number; anim?: PlayerPublic["anim"] };
+
 interface Sample {
   t: number;
   pos: Vec3;
@@ -12,15 +14,16 @@ interface Sample {
 export const INTERP_DELAY_MS = 120;
 const buffers = new Map<string, Sample[]>();
 
-export function pushSnapshot(p: PlayerPublic, t = performance.now()) {
+export function pushSnapshot(p: Snapshot, t = performance.now()) {
   const buf = buffers.get(p.id) ?? [];
-  buf.push({ t, pos: p.pos, rotY: p.rotY, anim: p.anim });
+  buf.push({ t, pos: p.pos, rotY: p.rotY, anim: p.anim ?? "idle" });
   if (buf.length > 20) buf.splice(0, buf.length - 20);
   buffers.set(p.id, buf);
 }
 
+/** Забыть игроков, которых больше нет (NPC с id `npc:*` не трогаем) */
 export function forget(keep: Set<string>) {
-  for (const id of buffers.keys()) if (!keep.has(id)) buffers.delete(id);
+  for (const id of buffers.keys()) if (!id.startsWith("npc:") && !keep.has(id)) buffers.delete(id);
 }
 
 const lerpAngle = (a: number, b: number, k: number) => {

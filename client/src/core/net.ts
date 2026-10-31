@@ -69,7 +69,10 @@ export function connect(auth: Auth) {
   const s: GameSocket = io({ auth: { token: auth.token } });
   socket = s;
 
-  s.on("connect", () => store.set({ connected: true, netError: null }));
+  s.on("connect", () => {
+    local.resyncChunks = true;
+    store.set({ connected: true, netError: null });
+  });
   s.on("disconnect", () => store.set({ connected: false }));
   s.on("connect_error", (e) => {
     if (e.message === "unauthorized") logout();
@@ -95,6 +98,12 @@ export function connect(auth: Auth) {
     const cur = store.get().others;
     const sig = (l: { id: string; name: string; role: unknown }[]) => l.map((p) => `${p.id}:${p.name}:${p.role}`).join("|");
     if (sig(cur) !== sig(others)) store.set({ others: others.map(({ id, name, role }) => ({ id, name, role })) });
+  });
+
+  s.on("npcs:update", ({ npcs }) => {
+    for (const n of npcs) pushSnapshot({ id: `npc:${n.npcId}`, pos: n.pos, rotY: n.rotY, anim: n.following ? "walk" : "idle" });
+    const sig = (l: { npcId: string; following: string | null }[]) => l.map((n) => `${n.npcId}:${n.following}`).join("|");
+    if (sig(npcs) !== sig(store.get().npcs)) store.set({ npcs: npcs.map(({ npcId, following }) => ({ npcId, following })) });
   });
 
   s.on("chunk:data", ({ chunk }) => store.set((st) => ({ chunks: { ...st.chunks, [chunk.id]: chunk } })));

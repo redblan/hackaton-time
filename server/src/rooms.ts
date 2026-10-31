@@ -1,5 +1,6 @@
 /** Чистая логика комнат (без сокетов) — чтобы её можно было тестировать. */
-import type { Mode, PlayerId, PlayerPublic, Role, RunState, StageId, Effect } from "@game/shared";
+import type { Effect, Mode, NpcId, NpcPublic, PlayerId, PlayerPublic, Role, RunState, StageId } from "@game/shared";
+import type { Escort } from "./escort";
 
 export const ROLES_BY_MODE: Record<Mode, Role[]> = {
   solo: ["inside_top"],
@@ -30,6 +31,10 @@ export interface Room {
   emptySince?: number;
   /** Игровое время (D-50): накоплено до последней паузы + момент, с которого часы идут (null — пауза) */
   clock: { elapsedMs: number; runningSince: number | null };
+  /** Подвижные NPC (сопровождение) */
+  npcs: Map<NpcId, Escort>;
+  /** Есть несохранённые изменения — снимок уйдёт в БД */
+  dirty: boolean;
 }
 
 export function newRoom(id: string, mode: Mode): Room {
@@ -43,6 +48,8 @@ export function newRoom(id: string, mode: Mode): Room {
     flags: new Set(),
     timers: [],
     clock: { elapsedMs: 0, runningSince: null },
+    npcs: new Map(),
+    dirty: false,
   };
 }
 
@@ -93,4 +100,57 @@ export function pauseClock(room: Room, wall: number) {
 export function resumeClock(room: Room, wall: number) {
   if (room.clock.runningSince !== null) return;
   room.clock = { ...room.clock, runningSince: wall };
+}
+
+// ---------- Снимок комнаты для восстановления после перезапуска сервера ----------
+
+export interface RoomSnapshot {
+  v: 1;
+  id: string;
+  mode: Mode;
+  finished: boolean;
+  run: RunState | null;
+  flags: string[];
+  clockMs: number;
+  players: Pick<RoomPlayer, "id" | "name" | "role" | "pos" | "rotY" | "stage" | "lastStage">[];
+  npcs: Escort[];
+}
+
+export function toSnapshot(room: Room, wall: number): RoomSnapshot {
+  return {
+    v: 1,
+    id: room.id,
+    mode: room.mode,
+    finished: room.finished,
+    run: room.run,
+    flags: [...room.flags],
+    clockMs: gameNow(room, wall),
+    players: [...room.players.values()].map(({ id, name, role, pos, rotY, stage, lastStage }) => ({
+      id,
+      name,
+      role,
+      pos,
+      rotY,
+      stage,
+      lastStage,
+    })),
+    npcs: [...room.npcs.values()],
+  };
+}
+
+/** Комната из снимка: запущена, все офлайн, часы на паузе до первого перезахода. */
+export function fromSnapshot(s: RoomSnapshot): Room {
+  const room = newRoom(s.id, s.mode);
+  room.started = true;
+  room.finished = s.finished;
+  room.run = s.run;
+  room.flags = new Set(s.flags);
+  room.clock = { elapsedMs: s.clockMs, runningSince: null };
+  for (const p of s.players) room.players.set(p.id, { ...p, anim: "idle", online: false });
+  for (const e of s.npcs) room.npcs.set(e.npcId, e);
+  return room;
+}
+
+export function publicNpcs(room: Room): NpcPublic[] {
+  return [...room.npcs.values()].map((e) => ({ npcId: e.npcId, pos: e.pos, rotY: e.rotY, following: e.playerId }));
 }

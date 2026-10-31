@@ -10,6 +10,7 @@ import type { Aabb, InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
 import { getColliders } from "../world/ChunkView";
 import { chunkAt, isActive, wantedChunks } from "./chunkMath";
 import { local } from "./local";
+import { sample } from "./remote";
 import { getSocket, sendEvent } from "./net";
 import { store, useStore } from "./store";
 
@@ -213,6 +214,10 @@ export function Player() {
       t.chunks = now;
       const want = wantedChunks(pos, st.chunks);
       const key = want.join(",");
+      if (local.resyncChunks) {
+        local.resyncChunks = false;
+        t.wanted = "";
+      }
       if (key !== t.wanted) {
         t.wanted = key;
         getSocket()?.emit("chunk:want", { ids: want });
@@ -221,13 +226,20 @@ export function Player() {
       let best: { target: string; label: string; d: number } | null = null;
       let npc: { id: NpcId; d: number } | null = null;
       const inZones = new Set<ZoneId>();
+      const moving = new Set(st.npcs.map((n) => n.npcId));
+      for (const n of st.npcs) {
+        const s = sample(`npc:${n.npcId}`);
+        if (!s) continue;
+        const d = Math.hypot(s.pos[0] - pos[0], s.pos[1] - pos[1], s.pos[2] - pos[2]);
+        if (d <= NPC_TALK_RADIUS && (!npc || d < npc.d)) npc = { id: n.npcId, d };
+      }
       for (const c of Object.values(st.chunks)) {
         for (const o of c.objects) {
           if (!isActive(o, st.flags)) continue;
           if (o.kind === "interactable") {
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[2] - pos[2]);
             if (d <= o.radius && Math.abs(o.pos[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: o.target, label: o.label, d };
-          } else if (o.kind === "npc") {
+          } else if (o.kind === "npc" && !moving.has(o.npcId)) {
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[1] - pos[1], o.pos[2] - pos[2]);
             if (d <= NPC_TALK_RADIUS && (!npc || d < npc.d)) npc = { id: o.npcId, d };
           } else if (o.kind === "zone") {

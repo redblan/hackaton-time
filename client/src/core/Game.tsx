@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
+import type { ChunkData } from "@game/shared";
 import { ChunkView } from "../world/ChunkView";
 import { Hud } from "./Hud";
 import { MinigameOverlay } from "./MinigameHost";
@@ -9,9 +11,18 @@ import { useStore } from "./store";
 function World() {
   const chunks = useStore((s) => s.chunks);
   const flags = useStore((s) => s.flags);
+  const npcs = useStore((s) => s.npcs);
+  // NPC, которых двигает сервер, рисуем отдельно (RemotePlayers) — из чанков их убираем
+  const visible = useMemo(() => {
+    const moving = new Set<string>(npcs.map((n) => n.npcId));
+    if (!moving.size) return Object.values(chunks);
+    return Object.values(chunks).map(
+      (c): ChunkData => ({ ...c, objects: c.objects.filter((o) => o.kind !== "npc" || !moving.has(o.npcId)) }),
+    );
+  }, [chunks, npcs]);
   return (
     <>
-      {Object.values(chunks).map((c) => (
+      {visible.map((c) => (
         <ChunkView key={c.id} chunk={c} flags={flags} />
       ))}
     </>

@@ -4,6 +4,7 @@
  */
 import pg from "pg";
 import type { PlayerId, PlayerMemory, PlayerProfile, StageId, Vec3 } from "@game/shared";
+import type { RoomSnapshot } from "./rooms";
 
 export interface PlayerRow {
   id: PlayerId;
@@ -29,6 +30,10 @@ export interface Store {
   saveMemory(m: PlayerMemory): Promise<void>;
   saveProgress(playerId: PlayerId, p: Progress): Promise<void>;
   getProgress(playerId: PlayerId): Promise<Progress | null>;
+  /** Снимок запущенной комнаты (восстановление после перезапуска) */
+  saveRoom(snapshot: RoomSnapshot): Promise<void>;
+  /** Незаконченные комнаты, обновлённые за последние maxAgeMs */
+  loadRooms(maxAgeMs: number): Promise<RoomSnapshot[]>;
 }
 
 export const emptyProfile = (playerId: PlayerId): PlayerProfile => ({ playerId, runs: 0, skills: {} });
@@ -61,6 +66,12 @@ CREATE TABLE IF NOT EXISTS npc_memory (
   player_id TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
   data JSONB NOT NULL
 );
+CREATE TABLE IF NOT EXISTS rooms (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  finished BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 CREATE TABLE IF NOT EXISTS run_progress (
   player_id TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
   room_id TEXT NOT NULL,
@@ -71,6 +82,21 @@ CREATE TABLE IF NOT EXISTS run_progress (
 `;
 
 class PgStore implements Store {
+  async saveRoom(snap: RoomSnapshot) {
+    await this.pool.query(
+      `INSERT INTO rooms (id, data, finished, updated_at) VALUES ($1, $2, $3, now())
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, finished = EXCLUDED.finished, updated_at = now()`,
+      [snap.id, JSON.stringify(snap), snap.finished],
+    );
+  }
+  async loadRooms(maxAgeMs: number) {
+    const r = await this.pool.query(
+      "SELECT data FROM rooms WHERE NOT finished AND updated_at > now() - make_interval(secs => $1)",
+      [maxAgeMs / 1000],
+    );
+    return r.rows.map((row) => row.data as RoomSnapshot).filter((s) => s?.v === 1);
+  }
+
   readonly kind = "postgres";
   constructor(private pool: pg.Pool) {}
 
@@ -138,6 +164,15 @@ export class MemStore implements Store {
   private profiles = new Map<PlayerId, PlayerProfile>();
   private memory = new Map<PlayerId, PlayerMemory>();
   private progress = new Map<PlayerId, Progress>();
+  private rooms = new Map<string, { snap: RoomSnapshot; at: number }>();
+
+  async saveRoom(snap: RoomSnapshot) {
+    this.rooms.set(snap.id, { snap: structuredClone(snap), at: Date.now() });
+  }
+  async loadRooms(maxAgeMs: number) {
+    const now = Date.now();
+    return [...this.rooms.values()].filter((r) => !r.snap.finished && now - r.at < maxAgeMs).map((r) => structuredClone(r.snap));
+  }
 
   async findPlayer(name: string) {
     return this.players.get(name) ?? null;

@@ -171,6 +171,9 @@ export function Hud() {
   const typing = useStore((s) => s.typing);
   const connected = useStore((s) => s.connected);
   const inventory = useStore((s) => s.inventory);
+  const me = useStore((s) => s.auth?.playerId);
+  const npcs = useStore((s) => s.npcs);
+  const followers = npcs.filter((n) => n.following !== null && n.following === me);
   const showClick = !locked && !typing;
 
   return (
@@ -185,6 +188,11 @@ export function Hud() {
           <div className="stage-hint">Осмотритесь…</div>
         )}
         {inventory.length > 0 && <div className="inventory">В рюкзаке: {inventory.length}</div>}
+        {followers.map((n) => (
+          <div key={n.npcId} className="inventory">
+            {NPC_NAMES[n.npcId]} идёт за вами — не убегайте
+          </div>
+        ))}
       </div>
       <ChunkCounter />
       {!connected && <div className="hud-offline">Нет связи с сервером…</div>}
