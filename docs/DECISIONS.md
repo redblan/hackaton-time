@@ -19,6 +19,8 @@
 | Q-04 | Перезаход во время открытой мини-игры: сервер открывает её заново? | Юра | Егор | решено → D-53 |
 | Q-05 | Коды ошибок в `npcSay(mistake)` → `context.mistake.code`: какие строки шлёт сценарий? ИИ сейчас ждёт id интерактива/зоны (`cover_window`, `cover_wardrobe`, `cover_run_out`, `light_switch`, `elevator_call`, `z_collapse`, `z_canopy_danger`, `z_wire_danger`) и коды мини-игр (`go_bag_trap`, `tourniquet_no_time`…) | Матвей | Юра | решено → D-58 |
 | Q-06 | Реплики пострадавших во время мини-игр: у ИИ готовы `victim_bleeding`, `victim_cpr`, `victim_unconscious`, `neighbor_leg` с событием `victim_help` (Олег стонет и просит держать рану, у тех, кто без сознания, — что видит игрок). Предложение: в `firstAid` при открытии мини-игры звать `say(ctx, <victim id>, "victim_help")` так же, как сейчас для `victim_scared` | Матвей | Юра | решено → D-64 |
+| Q-07 | Голос (M12): `ai/src/stt.ts` готов — `createStt().transcribe(wav)` → текст, whisper.cpp локально, пути `WHISPER_BIN`/`WHISPER_MODEL` в `.env`. Формат — **WAV 16 кГц, моно, 16 бит** (webm/opus без ffmpeg не прочитать). Предложение: клиент пишет через `AudioContext` с ресемплом в 16 кГц и шлёт по сокету `voice:say { npcId, wav }` (≤ 15 с); сервер → `transcribe` → дальше как текст игрока в `npc:talk`. Ок? | Матвей | Егор | открыт |
+| Q-08 | Outcome раньше конца ответа модели. Сейчас сервер шлёт `dialogOutcome` после того, как модель договорила (~1 с); игрок успевает уйти — зачёт теряется («Не успокоил Ваню» в e2e). Outcome (`calmed`, `agreed_to_go`…) у ИИ считается **до** модели. Предложение: в `AiModule.sayStream` необязательный `onOutcome(outcome)`, ИИ зовёт его до генерации, сервер диспатчит сразу. Нужна правка контракта `shared/src/ai.ts` | Матвей | Егор | открыт |
 
 ## Решения
 
