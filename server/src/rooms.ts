@@ -14,6 +14,8 @@ export interface RoomPlayer extends PlayerPublic {
   online: boolean;
   /** Последний эффект stage — переотправляем при перезаходе */
   lastStage?: Extract<Effect, { type: "stage" }>;
+  /** Открытая мини-игра — повторяем при перезаходе, пока нет результата (D-53) */
+  openMinigame?: Extract<Effect, { type: "openMinigame" }>;
   stage?: StageId;
   lastSavedAt?: number;
 }
@@ -112,7 +114,7 @@ export interface RoomSnapshot {
   run: RunState | null;
   flags: string[];
   clockMs: number;
-  players: Pick<RoomPlayer, "id" | "name" | "role" | "pos" | "rotY" | "stage" | "lastStage">[];
+  players: Pick<RoomPlayer, "id" | "name" | "role" | "pos" | "rotY" | "stage" | "lastStage" | "openMinigame">[];
   npcs: Escort[];
 }
 
@@ -125,7 +127,7 @@ export function toSnapshot(room: Room, wall: number): RoomSnapshot {
     run: room.run,
     flags: [...room.flags],
     clockMs: gameNow(room, wall),
-    players: [...room.players.values()].map(({ id, name, role, pos, rotY, stage, lastStage }) => ({
+    players: [...room.players.values()].map(({ id, name, role, pos, rotY, stage, lastStage, openMinigame }) => ({
       id,
       name,
       role,
@@ -133,6 +135,7 @@ export function toSnapshot(room: Room, wall: number): RoomSnapshot {
       rotY,
       stage,
       lastStage,
+      openMinigame,
     })),
     npcs: [...room.npcs.values()],
   };

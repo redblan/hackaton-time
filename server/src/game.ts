@@ -143,6 +143,7 @@ export class Game {
       s.emit("players:update", { players: this.publicPlayers(room) });
       if (room.npcs.size) s.emit("npcs:update", { npcs: publicNpcs(room) });
       if (me.lastStage) s.emit("game:effect", me.lastStage);
+      if (me.openMinigame) s.emit("game:effect", me.openMinigame); // D-53
     }
   }
 
@@ -328,7 +329,12 @@ export class Game {
     else if (ev.type === "enterZone" && includes(ZONES, ev.zone)) event = { type: "enterZone", ...base, zone: ev.zone };
     else if (ev.type === "minigameResult" && ev.result && typeof ev.result === "object")
       event = { type: "minigameResult", ...base, result: ev.result as Extract<GameEvent, { type: "minigameResult" }>["result"] };
-    if (event) this.dispatch(room, event);
+    if (!event) return;
+    if (event.type === "minigameResult") {
+      const me = room.players.get(event.playerId);
+      if (me?.openMinigame?.game === event.result.game) me.openMinigame = undefined;
+    }
+    this.dispatch(room, event);
   }
 
   /** Прогнать событие через reduce() и исполнить эффекты. Ошибка в сценарии не роняет сервер. */
@@ -392,7 +398,12 @@ export class Game {
           context: { ...this.npcContext(room, eff.toPlayerId), ...eff.context },
         });
         break;
-      case "openMinigame":
+      case "openMinigame": {
+        const p = room.players.get(eff.playerId);
+        if (p) p.openMinigame = eff;
+        this.io.to(`p:${eff.playerId}`).emit("game:effect", eff);
+        break;
+      }
       case "inventory":
         this.io.to(`p:${eff.playerId}`).emit("game:effect", eff);
         break;

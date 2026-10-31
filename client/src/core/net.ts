@@ -122,6 +122,8 @@ export function connect(auth: Auth) {
         store.set({ stage: { stage: e.stage, hint: e.hint } });
         break;
       case "openMinigame":
+        // Повтор после перезахода (D-53): та же игра уже открыта — не перезапускаем
+        if (store.get().minigame?.game === e.game) break;
         document.exitPointerLock?.();
         store.set({ minigame: { game: e.game, params: e.params, key: nextKey() } });
         break;

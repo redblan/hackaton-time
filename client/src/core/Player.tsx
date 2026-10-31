@@ -6,39 +6,23 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
 import { Euler } from "three";
-import type { Aabb, InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
+import type { InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
 import { getColliders } from "../world/ChunkView";
 import { chunkAt, isActive, wantedChunks } from "./chunkMath";
 import { local } from "./local";
+import { PHYS, stepBody, type Body } from "./physics";
 import { sample } from "./remote";
 import { getSocket, sendEvent } from "./net";
 import { store, useStore } from "./store";
 
 const EYE = 1.6;
-const HEIGHT = 1.75;
-const RADIUS = 0.3;
-const STEP = 0.45;
-const WALK = 3.2;
-const RUN = 5.5;
-const GRAVITY = 22;
-const JUMP = 6;
+const { WALK, RUN } = PHYS;
 const SEND_MS = 66; // ~15 Гц
 const NPC_TALK_RADIUS = 4;
 
 const keys = new Set<string>();
 const isTypingTarget = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
-
-function overlaps(x: number, feet: number, z: number, b: Aabb) {
-  return (
-    x + RADIUS > b.min[0] &&
-    x - RADIUS < b.max[0] &&
-    z + RADIUS > b.min[2] &&
-    z - RADIUS < b.max[2] &&
-    feet + HEIGHT > b.min[1] &&
-    feet < b.max[1]
-  );
-}
 
 export function Player() {
   const chunks = useStore((s) => s.chunks);
@@ -47,8 +31,7 @@ export function Player() {
   const { camera } = useThree();
 
   const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags)), [chunks, flags]);
-  const vy = useRef(0);
-  const grounded = useRef(false);
+  const body = useRef<Body>({ pos: local.pos, vy: 0, grounded: false });
   const lastSafe = useRef<Vec3 | null>(null);
   const timers = useRef({ send: 0, chunks: 0, wanted: "", zones: new Set<ZoneId>() });
 
@@ -97,7 +80,7 @@ export function Player() {
 
     if (local.teleport) {
       local.teleport = false;
-      vy.current = 0;
+      body.current = { pos: local.pos, vy: 0, grounded: false };
       camera.rotation.set(0, local.rotY, 0, "YXZ");
     }
     if (!local.ready) return;
@@ -125,50 +108,17 @@ export function Player() {
     const dz = ((-fx * sin + fz * cos) / len) * speed * dt;
     const moving = fx !== 0 || fz !== 0;
 
-    const tryAxis = (nx: number, nz: number) => {
-      let feet = pos[1];
-      for (const b of colliders) {
-        if (!overlaps(nx, feet, nz, b)) continue;
-        if (b.max[1] - feet <= STEP && grounded.current) feet = b.max[1];
-        else return false;
-      }
-      // после подъёма на ступеньку не упираемся головой
-      if (feet !== pos[1] && colliders.some((b) => overlaps(nx, feet, nz, b))) return false;
-      pos[0] = nx;
-      pos[2] = nz;
-      pos[1] = feet;
-      return true;
-    };
-    if (dx) tryAxis(pos[0] + dx, pos[2]);
-    if (dz) tryAxis(pos[0], pos[2] + dz);
-
-    // --- гравитация (если мир под ногами ещё не загружен — висим, а не падаем) ---
+    const b = body.current;
+    b.pos = pos;
+    stepBody(b, dx, dz, colliders, dt, { gravity: worldHere, jump: keys.has("Space") && !busy });
     if (worldHere) {
-      if (grounded.current && keys.has("Space") && !busy) vy.current = JUMP;
-      vy.current -= GRAVITY * dt;
-      const ny = pos[1] + vy.current * dt;
-      let landed: number | null = null;
-      let ceiling: number | null = null;
-      for (const b of colliders) {
-        if (!overlaps(pos[0], ny, pos[2], b)) continue;
-        if (vy.current <= 0 && b.max[1] <= pos[1] + 0.01) landed = Math.max(landed ?? -Infinity, b.max[1]);
-        else if (vy.current > 0) ceiling = Math.min(ceiling ?? Infinity, b.min[1] - HEIGHT);
-      }
-      grounded.current = landed !== null;
-      if (landed !== null) {
-        pos[1] = landed;
-        vy.current = 0;
-      } else if (ceiling !== null) {
-        pos[1] = ceiling;
-        vy.current = 0;
-      } else pos[1] = ny;
-      if (grounded.current) lastSafe.current = [pos[0], pos[1], pos[2]];
+      if (b.grounded) lastSafe.current = [pos[0], pos[1], pos[2]];
       if (pos[1] < -30) {
         const back = lastSafe.current ?? [pos[0], 0, pos[2]];
         pos[0] = back[0];
         pos[1] = back[1] + 0.5;
         pos[2] = back[2];
-        vy.current = 0;
+        b.vy = 0;
       }
     }
 

@@ -142,3 +142,41 @@ describe("сервер целиком", () => {
     expect(b.log.npcs[0]![0]!.pos[2]).toBeCloseTo(valBefore[2], 0);
   }, 15_000);
 });
+
+describe("перезаход в мини-игру (D-53)", () => {
+  it("сервер повторяет openMinigame, пока нет результата", async () => {
+    const store = new MemStore();
+    const r = await login(store, "Мини", "pw");
+    if (!r.ok) throw new Error(r.error);
+    const srv = await boot(store);
+    cleanup.push(srv.stop);
+    const a = client(srv.url, r.token);
+    const opened: string[] = [];
+    a.c.on("game:effect", (e) => e.type === "openMinigame" && opened.push(e.game));
+    a.c.emit("room:join", { mode: "solo" });
+    await until(() => a.log.rooms.some((x) => x.started));
+    // Настоящий сценарий: через 3 с толчок, укрылся — открывается go_bag
+    await wait(3300);
+    a.c.emit("game:event", { type: "interact", target: "cover_table", at: 0, playerId: "" });
+    await until(() => opened.includes("go_bag"));
+    a.c.disconnect();
+
+    const b = client(srv.url, r.token);
+    const again: string[] = [];
+    b.c.on("game:effect", (e) => e.type === "openMinigame" && again.push(e.game));
+    await until(() => again.includes("go_bag"));
+    b.c.emit("game:event", {
+      type: "minigameResult", at: 0, playerId: "",
+      result: { game: "go_bag", skill: "go_bag", ok: true, mistakes: [], timeMs: 1, data: { items: [] } },
+    });
+    await wait(200);
+    b.c.disconnect();
+
+    const c = client(srv.url, r.token);
+    const third: string[] = [];
+    c.c.on("game:effect", (e) => e.type === "openMinigame" && third.push(e.game));
+    await until(() => c.log.rooms.length > 0);
+    await wait(300);
+    expect(third).toEqual([]); // результат пришёл — больше не открываем
+  }, 15_000);
+});
