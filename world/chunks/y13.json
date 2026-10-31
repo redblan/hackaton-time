@@ -114,6 +114,32 @@
       "collide": true
     },
     {
+      "id": "visual:tree",
+      "kind": "model",
+      "src": "city/tree-large.glb",
+      "pos": [
+        14,
+        0,
+        -45
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:bench",
+      "kind": "model",
+      "src": "furniture/bench.glb",
+      "pos": [
+        21,
+        0,
+        -40
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
       "id": "ambulance",
       "kind": "box",
       "pos": [
@@ -128,6 +154,19 @@
       ],
       "color": "#eee8db",
       "collide": true
+    },
+    {
+      "id": "visual:ambulance",
+      "kind": "model",
+      "src": "cars/ambulance.glb",
+      "pos": [
+        21,
+        0,
+        -43
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
     },
     {
       "id": "brigade",
