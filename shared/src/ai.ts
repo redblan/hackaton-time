@@ -31,8 +31,9 @@ export interface NpcResponse {
   /** Какие факты из базы знаний прозвучали (для памяти и для разбора) */
   factIds: string[];
   /**
-   * Итог для сценария, если он есть: `calmed`, `panicked`, `slots_complete`,
-   * `slot_missing:address`, `slot_missing:victims`... Сервер превратит в dialogOutcome.
+   * Итог для сценария, если он есть — значение `DialogOutcome` из ids.ts: `calmed`, `panicked`,
+   * `agreed_to_go`, `slots_complete`, `slot_missing:address`, `handover_missing:fire`...
+   * Сервер превратит в dialogOutcome.
    */
   outcome?: string;
   /** Откуда ответ — для отладки и для жюри */
