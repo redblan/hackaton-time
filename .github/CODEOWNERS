@@ -1,13 +1,11 @@
-# Общие зоны: PR, который их трогает, ждёт апрува лида.
-# Свои фичи (src/features/<имя>, src/app/(app)/<имя>) мержатся без апрува при зелёном CI.
-/src/shared/          @redblan
-/src/app/layout.tsx   @redblan
-/src/app/globals.css  @redblan
-/src/app/api/         @redblan
-/scripts/             @redblan
-/package.json         @redblan
-/package-lock.json    @redblan
-/next.config.ts       @redblan
-/drizzle.config.ts    @redblan
-/AGENTS.md            @redblan
-/.github/             @redblan
+# PR, который трогает эти файлы, ждёт апрува лида. Свои зоны мержатся без апрува при зелёном CI.
+/shared/src/*.ts                 @redblan
+/shared/src/scenario/types.ts    @redblan
+/shared/src/scenario/index.ts    @redblan
+/package.json                    @redblan
+/package-lock.json               @redblan
+/tsconfig.base.json              @redblan
+/AGENTS.md                       @redblan
+/.github/                        @redblan
+/server/                         @redblan
+/client/src/core/                @redblan

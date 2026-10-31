@@ -1,0 +1,11 @@
+{
+  "name": "@game/world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@game/shared": "*" }
+}

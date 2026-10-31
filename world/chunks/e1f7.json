@@ -1,0 +1,100 @@
+{
+  "id": "e1f7",
+  "bounds": {
+    "min": [
+      0,
+      18,
+      0
+    ],
+    "max": [
+      12,
+      21,
+      12
+    ]
+  },
+  "neighbors": [
+    "e1f6",
+    "e1f8"
+  ],
+  "objects": [
+    {
+      "id": "floor",
+      "kind": "box",
+      "pos": [
+        6,
+        17.95,
+        6
+      ],
+      "size": [
+        12,
+        0.1,
+        12
+      ],
+      "color": "#d9c9b0",
+      "collide": true
+    },
+    {
+      "id": "wall-n",
+      "kind": "box",
+      "pos": [
+        6,
+        19.5,
+        0
+      ],
+      "size": [
+        12,
+        3,
+        0.2
+      ],
+      "color": "#f2efe8",
+      "collide": true
+    },
+    {
+      "id": "table",
+      "kind": "interactable",
+      "target": "cover_table",
+      "pos": [
+        3,
+        18,
+        3
+      ],
+      "radius": 1.5,
+      "label": "Укрыться под столом"
+    },
+    {
+      "id": "spawn-a",
+      "kind": "spawn",
+      "role": "inside_top",
+      "pos": [
+        2,
+        18,
+        2
+      ]
+    },
+    {
+      "id": "papa",
+      "kind": "npc",
+      "npcId": "papa",
+      "pos": [
+        5,
+        18,
+        4
+      ]
+    },
+    {
+      "id": "z-apt",
+      "kind": "zone",
+      "zone": "z_apartment",
+      "min": [
+        0,
+        18,
+        0
+      ],
+      "max": [
+        8,
+        21,
+        8
+      ]
+    }
+  ]
+}

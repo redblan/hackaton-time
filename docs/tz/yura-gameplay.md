@@ -1,0 +1,76 @@
+# ТЗ: Юра — сценарий и мини-игры
+
+**Твоя зона:** `shared/src/scenario/` (кроме `types.ts`) и `client/src/minigames/`.
+**Контракт:** `shared/src/scenario/types.ts`, `shared/src/minigame.ts`, словарь `shared/src/ids.ts`.
+**Зачем:** ты пишешь саму игру — что происходит на каждом этапе, что считается правильным, что ошибкой, когда трясёт, когда игра закончилась. Сервер лишь исполняет твою логику.
+
+Сценарий по шагам — в документе «Сценарий: Землетрясение». Этапы — `STAGES` в `ids.ts`.
+
+## Часть 1. Сценарий (P0 — начинай сейчас, клиент не нужен)
+
+Всё в `shared/src/scenario/`. Сигнатуры из `index.ts` не меняем, меняем тела функций.
+
+### 1. Генератор `generateRun(input) → RunConfig` (`generator.ts`)
+
+- Детерминирован по `seed` (свой ГПСЧ, например mulberry32; `Math.random` нельзя).
+- Выбирает `startFloor` (6–9), флаги: `fire_f{n}` (этаж ниже старта или нет пожара), `collapse_f{n}` (пролёт ниже старта, выше 2-го), `lift_vanya` / нет, `neighbor_valentina`, `wire` / `gas`, `aftershock` / нет; пострадавших (2–4 из `VictimKind`), адрес из списка.
+- **Адаптация:** чем больше `fail` у навыка в профилях, тем выше шанс, что он выпадет (два раза ошибся со жгутом → `bleeding` почти наверняка).
+- Для `coop3` всегда есть `neighbor_leg` (выносят вдвоём).
+
+### 2. Редьюсер `initRun` + `reduce(state, event) → { state, effects }` (`reducer.ts`, `stages/*.ts`)
+
+- **Чистая функция**: без `Date.now()`, без случайности (всё случайное — в генераторе), без сети, без мутаций входного state.
+- Удобно: одна функция-обработчик на этап, `stages/cover.ts`, `stages/pack.ts`... и таблица переходов.
+- На каждое значимое действие — `journal` (ok / mistake / missed) с короткой русской `note`, на неё опирается разбор.
+- Ключевые эффекты: `stage` (новый этап + подсказка в HUD), `npcSay` (папа/Михалыч/Громов говорит по событию), `openMinigame`, `quake`, `setFlag`, `runEnd`.
+- Таймеры через событие `tick` (приходит раз в секунду): толчок в начале, лимит 10 с на укрытие, повторный толчок по `aftershockAfterMs`.
+- Роли: в `solo` все этапы у `inside_top`, Михалыч — NPC. В `coop2` у `outside` свои этапы (см. таблицы в документе сценария), точки синхронизации — через `facts`.
+
+Пример: `stages/cover.ts`
+```ts
+// interact cover_table/cover_wall → ok; cover_window/cover_wardrobe → mistake;
+// cover_run_out → mistake + npcSay(papa, mistake); tick > 10 c без выбора → missed.
+// В любом случае дальше → stage "pack" + npcSay(papa, quake_over_pack).
+```
+
+### 3. Оценка `summarize(state) → RunSummary` (`summary.ts`)
+
+Очки: ok +10, mistake −5, missed −10, бонус за время. Списки ok и ошибок по игрокам.
+
+### Как проверить сам (готово, если)
+
+- [ ] `npm run check` зелёный.
+- [ ] Тест «идеальное solo-прохождение»: скрипт событий от `start` до `runEnd` → ни одной ошибки, финальный этап `done`.
+- [ ] Тест «прохождение с ошибками» → в журнале ровно ожидаемые ошибки.
+- [ ] Тест генератора: одинаковый seed → одинаковый конфиг; профиль с 3 ошибками по `bleeding` → кровотечение в 90%+ из 100 seed.
+- [ ] Тест: редьюсер не мутирует входной state.
+
+## Часть 2. Мини-игры (P0-завтра, после того как Егор зальёт клиент)
+
+`client/src/minigames/<Name>.tsx`, реестр `client/src/minigames/index.ts`:
+```ts
+export const minigames: Record<MinigameId, React.FC<MinigameProps>> = { go_bag: GoBag, tourniquet: Tourniquet, ... };
+```
+
+| Игра | Механика | Ошибки (коды) |
+|---|---|---|
+| `go_bag` | 6 ячеек рюкзака, 40 с, клик по предметам | `bag_trap_item`, `bag_no_documents`, `bag_no_kit` |
+| `tourniquet` | Удерживать давление (зажать пробел), потом выбрать место жгута на схеме ноги, вписать время | `tourniquet_below_wound`, `tourniquet_no_time`, `pressure_released` |
+| `cpr` | Нажимать пробел в ритме 100–120/мин, индикатор темпа, 30 сек | `cpr_too_slow`, `cpr_too_fast`, `cpr_pause` |
+| `recovery_position` | Расставить 4 шага в правильном порядке | `recovery_wrong_order` |
+| `triage` | Перетащить пострадавших в порядке помощи | `triage_wrong_order` |
+
+Правильные порядки и цифры берёшь у Матвея (база знаний, `ai/knowledge/`), не из головы.
+
+- Это HTML/CSS/React поверх сцены, three.js знать не нужно. Стиль — крупно, ярко, мультяшно.
+- Страница-песочница `client/src/minigames/Sandbox.tsx` (Егор подключит роут `/sandbox`): кнопки «запустить игру X» и вывод `MinigameResult` в JSON.
+- Мини-игра ничего не шлёт по сети сама — только вызывает `onDone(result)`.
+
+## Нельзя
+
+- Менять `types.ts`, `ids.ts` и другие файлы `shared/src/*.ts` — это контракт. Нужен новый id или поле — к Егору.
+- Тащить в `shared/` зависимости от React, Node или сети.
+
+## Промпт для агента (Claude Code / Codex)
+
+> Ты работаешь в монорепе игры-хакатона. Твоя зона — ТОЛЬКО `shared/src/scenario/` (кроме `types.ts`). Прочитай `AGENTS.md`, `docs/tz/README.md`, `docs/tz/yura-gameplay.md`, `shared/src/scenario/types.ts`, `shared/src/scenario/index.ts`, `shared/src/ids.ts`. Реализуй Часть 1 ТЗ: детерминированный генератор `generateRun` с адаптацией под профили, чистый редьюсер `initRun`/`reduce` с обработчиком на каждый этап одиночного режима (wake → cover → pack → exit_apartment → elevator → smoke → collapse → neighbor → exit_building → yard_assess → call_112 → triage → first_aid → aftershock → handover → debrief → done) по сценарию из ТЗ, и `summarize`. Сигнатуры в `index.ts` и все типы в `types.ts` не меняй. Никаких Date.now, Math.random, сети и мутаций. Напиши vitest-тесты из раздела «Как проверить сам» в `shared/test/`. В конце запусти `npm run check` из корня.
