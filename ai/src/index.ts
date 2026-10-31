@@ -21,6 +21,7 @@ export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
 export { createDispatcher, extractSlots, requiredSlots } from "./dispatcher";
 export { createGromov, extractHandover, requiredHandover } from "./gromov";
 export { createLlmQueue, QueueSkip, type QueueStats } from "./queue";
+export { createStt, SttError, type Stt } from "./stt";
 export { loadData, unverifiedFacts } from "./data";
 export type { KnowledgeFact, NpcCard } from "./types";
 
