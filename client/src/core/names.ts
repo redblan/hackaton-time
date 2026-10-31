@@ -1,4 +1,24 @@
-import type { Mode, NpcId, Role, StageId } from "@game/shared";
+import type { Mode, NpcId, Role, SkillId, StageId } from "@game/shared";
+
+export const SKILL_NAMES: Record<SkillId, string> = {
+  cover: "Укрытие при толчке",
+  go_bag: "Тревожный рюкзак",
+  gas: "Запах газа",
+  elevator: "Лифт и застрявший человек",
+  smoke: "Проход через дым",
+  route: "Безопасный маршрут",
+  escort: "Сопровождение соседки",
+  exit_building: "Выход из подъезда",
+  yard_hazard: "Опасности во дворе",
+  call_112: "Звонок 112",
+  triage: "Кому помогать первым",
+  bleeding: "Остановка кровотечения",
+  cpr: "Сердечно-лёгочная реанимация",
+  recovery_position: "Боковое положение",
+  psych_support: "Психологическая поддержка",
+  aftershock: "Повторный толчок",
+  handover: "Передача бригаде",
+};
 
 export const NPC_NAMES: Record<NpcId, string> = {
   papa: "Папа",

@@ -92,6 +92,8 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 .help-key { display: flex; gap: 10px; align-items: center; }
 .help-key kbd { background: #f1f5f9; border: 1px solid var(--line); min-width: 64px; }
 
+.profile { display: grid; gap: 4px; background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+
 /* Песочница */
 .sandbox { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: #f8fafc; }
 .sandbox-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; }

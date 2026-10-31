@@ -1,6 +1,7 @@
-import { MODES, type Mode, type Role } from "@game/shared";
+import { useEffect, useState } from "react";
+import { MODES, type Mode, type PlayerProfile, type Role, type SkillId } from "@game/shared";
 import { getSocket, logout } from "./net";
-import { MODE_NAMES, ROLE_NAMES } from "./names";
+import { MODE_NAMES, ROLE_NAMES, SKILL_NAMES } from "./names";
 import { useStore } from "./store";
 import { Button, Card } from "./ui";
 
@@ -9,6 +10,32 @@ const ROLES_BY_MODE: Record<Mode, Role[]> = {
   coop2: ["inside_top", "outside"],
   coop3: ["inside_top", "inside_mid", "outside"],
 };
+
+/** Карточка навыков за все прохождения: генератор чаще даёт то, в чём были ошибки */
+function ProfileCard({ token }: { token: string }) {
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
+  useEffect(() => {
+    fetch("/api/me", { headers: { authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? (r.json() as Promise<{ profile: PlayerProfile }>) : null))
+      .then((d) => setProfile(d?.profile ?? null))
+      .catch(() => {});
+  }, [token]);
+  if (!profile || (profile.runs === 0 && Object.keys(profile.skills).length === 0)) return <p className="muted">Первое прохождение — удачи!</p>;
+  const skills = Object.entries(profile.skills) as [SkillId, { ok: number; fail: number }][];
+  const weak = skills.filter(([, v]) => v.fail > 0).sort((a, b) => b[1].fail - a[1].fail);
+  const strong = skills.filter(([, v]) => v.fail === 0 && v.ok > 0);
+  return (
+    <div className="profile">
+      <b>Прохождений: {profile.runs}</b>
+      {weak.length > 0 && (
+        <div>
+          Подтянуть: {weak.map(([k, v]) => `${SKILL_NAMES[k]} (ошибок ${v.fail})`).join(", ")}. Следующее прохождение проверит именно это.
+        </div>
+      )}
+      {strong.length > 0 && <div className="muted">Уже уверенно: {strong.map(([k]) => SKILL_NAMES[k]).join(", ")}</div>}
+    </div>
+  );
+}
 
 export function Lobby() {
   const auth = useStore((s) => s.auth)!;
@@ -37,6 +64,7 @@ export function Lobby() {
           </span>
         </div>
         {netError && <div className="error">{netError}</div>}
+        <ProfileCard token={auth.token} />
 
         <h2>Режим</h2>
         <div className="row">

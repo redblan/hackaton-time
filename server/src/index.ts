@@ -79,7 +79,7 @@ app.get("/api/chunks/:id", (req, res) => {
 });
 
 // Оверлей для жюри (F3): что NPC помнят об игроке и его профиль навыков. Только про себя, по токену.
-app.get("/api/debug/me", async (req, res) => {
+app.get(["/api/me", "/api/debug/me"], async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
   const player = token ? await store.getSession(token).catch(() => null) : null;
   if (!player) {

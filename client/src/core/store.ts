@@ -54,6 +54,10 @@ export interface State {
   runEnd: { summary: RunSummary; debrief: string } | null;
   locked: boolean;
   typing: boolean;
+  /**
+   * Идёт толчок: до какого момента (performance.now()) и сила 0..1.
+   * Для мира (Никита): `useStore((s) => s.quake)` — пыль, качание люстр, дрожание объектов.
+   */
   quake: { until: number; strength: number } | null;
   /** Окно помощи (F1 / H) и отладка для жюри (F3 / `) */
   help: boolean;

@@ -2,6 +2,7 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServer, ServerToClient } from "@game/shared";
 import { local, teleport } from "./local";
+import { playQuake } from "./sound";
 import { forget, pushSnapshot } from "./remote";
 import { nextKey, store, type Auth } from "./store";
 
@@ -136,6 +137,7 @@ export function connect(auth: Auth) {
         break;
       case "quake":
         store.set({ quake: { until: performance.now() + e.durationMs, strength: e.strength } });
+        playQuake(e.strength, e.durationMs);
         break;
       case "inventory":
         store.set({ inventory: e.items });
