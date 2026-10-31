@@ -37,6 +37,12 @@ export interface TtsOptions {
   cards?: Map<NpcId, NpcCard>;
   /** Сколько ждать Piper на одну фразу, по умолчанию 10 с */
   timeoutMs?: number;
+  /** Waiting jobs (one additional job may be running). */
+  maxQueue?: number;
+  /** Drop a waiting line after this age; default 5 s. */
+  maxQueueWaitMs?: number;
+  /** LRU WAV cache budget; default 16 MiB. Zero disables caching. */
+  maxCacheBytes?: number;
   /** Подмена запуска Piper — для тестов: (bin, args, text) → WAV */
   run?: (bin: string, args: string[], text: string, timeoutMs: number) => Promise<Buffer>;
 }
@@ -64,9 +70,11 @@ async function defaultRun(bin: string, args: string[], text: string, timeoutMs: 
     await new Promise<void>((resolve, reject) => {
       const p = spawn(bin, [...args, "-f", out], { windowsHide: true });
       let err = "";
+      let timedOut=false;
       const timer = setTimeout(() => {
+        timedOut=true;
         p.kill();
-        reject(new Error("piper: таймаут"));
+        // Wait for close before allowing the next job to use the CPU / temp file.
       }, timeoutMs);
       p.stderr.on("data", (d) => (err = (err + String(d)).slice(-500)));
       p.on("error", (e) => {
@@ -75,7 +83,8 @@ async function defaultRun(bin: string, args: string[], text: string, timeoutMs: 
       });
       p.on("close", (code) => {
         clearTimeout(timer);
-        if (code === 0 && existsSync(out)) resolve();
+        if(timedOut) reject(new Error('piper: таймаут'));
+        else if (code === 0 && existsSync(out)) resolve();
         else reject(new Error(`piper: код ${code} ${err}`));
       });
       p.stdin.end(text, "utf8");
@@ -91,15 +100,37 @@ export function createTts(opts: TtsOptions = {}) {
   const voicesDir = opts.voicesDir ?? process.env.PIPER_VOICES ?? "";
   const run = opts.run ?? defaultRun;
   const timeoutMs = opts.timeoutMs ?? 10_000;
-  /** Одинаковые фразы (шаблоны) — из кеша, мгновенно */
+  const maxQueue=Math.max(0,Math.floor(opts.maxQueue??4));
+  const maxQueueWaitMs=Math.max(0,opts.maxQueueWaitMs??5000);
+  const maxCacheBytes=Math.max(0,opts.maxCacheBytes??16*1024*1024);
+  /** Identical requests share a pending synthesis; cached WAVs use byte-bounded LRU. */
   const cache = new Map<string, Buffer>();
-  /** Piper по одному: не отнимаем процессор у модели ИИ */
-  let chain: Promise<unknown> = Promise.resolve();
+  let cacheBytes=0, running=false, synthesized=0, dropped=0;
+  const pending=new Map<string,Promise<Buffer|null>>();
+  type Job={key:string;expiresAt:number;start:()=>void;drop:()=>void;timer?:ReturnType<typeof setTimeout>};
+  const waiting:Job[]=[];
+  function pump() {
+    if(running) return;
+    while(waiting.length) {
+      const job=waiting.shift()!;
+      if(Date.now()>=job.expiresAt) {job.drop();continue;}
+      job.start();return;
+    }
+  }
+  function remember(key:string,wav:Buffer) {
+    if(!maxCacheBytes || wav.length>maxCacheBytes) return;
+    while(cache.size && (cacheBytes+wav.length>maxCacheBytes || cache.size>=200)) {
+      const oldest=cache.keys().next().value!;
+      cacheBytes-=cache.get(oldest)!.length;cache.delete(oldest);
+    }
+    cache.set(key,wav);cacheBytes+=wav.length;
+  }
 
   const voiceOf = (npcId: NpcId): NpcVoice => opts.cards?.get(npcId)?.voice ?? DEFAULT_VOICES[npcId] ?? FALLBACK;
   const modelPath = (v: NpcVoice) => join(voicesDir, `ru_RU-${v.name}-medium.onnx`);
 
   return {
+    stats:()=>({running:Number(running),waiting:waiting.length,cacheBytes,cacheEntries:cache.size,synthesized,dropped}),
     /** Настроен ли Piper: есть программа и хотя бы один голос (в тестах с подменой — всегда) */
     available(): boolean {
       return !!opts.run || (!!bin && !!voicesDir && existsSync(bin) && existsSync(modelPath(FALLBACK)));
@@ -108,24 +139,38 @@ export function createTts(opts: TtsOptions = {}) {
     /** Реплика NPC → WAV. null — нечего озвучивать, Piper не настроен или упал (игра идёт без звука). */
     async speak(npcId: NpcId, text: string): Promise<Buffer | null> {
       const say = speakable(text);
-      if (!say || !this.available()) return null;
+      if (!say || say.length>2000 || !this.available()) return null;
       const voice = voiceOf(npcId);
       const key = `${voice.name}|${voice.speed ?? 1}|${say}`;
       const hit = cache.get(key);
-      if (hit) return hit;
+      if (hit) {cache.delete(key);cache.set(key,hit);return hit;}
+      const existing=pending.get(key);
+      if(existing) return existing;
+      if(running && waiting.length>=maxQueue) {dropped++;return null;}
       // length_scale: > 1 — медленнее, < 1 — быстрее
       const args = ["-m", modelPath(voice), "--length_scale", String(+(1 / (voice.speed ?? 1)).toFixed(2))];
-      const job = chain.then(() => run(bin, args, say, timeoutMs));
-      chain = job.catch(() => undefined);
-      try {
-        const wav = await job;
-        if (cache.size > 200) cache.delete(cache.keys().next().value!);
-        cache.set(key, wav);
-        return wav;
-      } catch (e) {
-        console.error("[tts]", (e as Error).message);
-        return null;
+      let complete!:(wav:Buffer|null)=>void;
+      const result=new Promise<Buffer|null>(resolve=>{complete=resolve;});
+      pending.set(key,result);
+      const job:Job={key,expiresAt:Date.now()+maxQueueWaitMs,
+        drop:()=>{clearTimeout(job.timer);pending.delete(key);dropped++;complete(null);},
+        start:()=>{
+          clearTimeout(job.timer);running=true;
+          const finish=(wav:Buffer|null)=>{pending.delete(key);running=false;pump();complete(wav);};
+          void Promise.resolve().then(()=>run(bin,args,say,timeoutMs)).then(wav=>{
+            synthesized++;remember(key,wav);finish(wav);
+          },e=>{console.error('[tts]',(e as Error).message);finish(null);});
+        },
+      };
+      if(!running) job.start();
+      else {
+        waiting.push(job);
+        job.timer=setTimeout(()=>{
+          const index=waiting.indexOf(job);
+          if(index>=0) {waiting.splice(index,1);job.drop();}
+        },maxQueueWaitMs);
       }
+      return result;
     },
   };
 }
