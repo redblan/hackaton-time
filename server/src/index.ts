@@ -45,7 +45,7 @@ function loadCert(): { key: Buffer; cert: Buffer } | null {
 
 const store = await openStore(config.databaseUrl);
 const chunks = new ChunkStore(config.chunksDir);
-const ai = createAi({ memory: dbMemoryStore(store), ollamaUrl: config.ollamaUrl, model: config.ollamaModel });
+const ai = createAi({ memory: dbMemoryStore(store), ollamaUrl: config.ollamaUrl, model: config.ollamaModel ?? "qwen2.5:3b-instruct" });
 
 const app = express();
 app.use(express.json({ limit: "64kb" }));
@@ -150,7 +150,7 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) {
 
 /** Прогрев локальной модели: первая загрузка в память долгая, без прогрева первая реплика уйдёт в шаблон */
 async function warmupModel() {
-  const model = config.ollamaModel ?? "qwen2.5:7b-instruct";
+  const model = config.ollamaModel ?? "qwen2.5:3b-instruct"; // M19: база для демо — 3b
   const t0 = Date.now();
   try {
     const r = await fetch(`${config.ollamaUrl}/api/generate`, {
