@@ -3,6 +3,7 @@ import {
   addFact,
   getTimer,
   hasFact,
+  hasFlag,
   log,
   logOkIfClean,
   openMinigame,
@@ -19,6 +20,7 @@ import type { StageDef } from "./types";
 
 const AFTERSHOCK_LIMIT_MS = 10_000;
 const DEBRIEF_MS = 60_000;
+const CALL_LIMIT_MS = 120_000;
 
 /** Временные группы сортировки из D-20. TODO(Q-01): заменить на подтверждённый порядок. */
 const TRIAGE_GROUPS: VictimKind[][] = [["bleeding"], ["cpr", "unconscious"], ["scared"], ["light_injury"]];
@@ -72,21 +74,56 @@ export const yardAssess: StageDef = {
   },
 };
 
+/** Слоты, обязательные в этом прохождении (D-23). */
+function requiredSlots(ctx: Ctx): string[] {
+  const { state } = ctx;
+  return [
+    "address",
+    "what",
+    "victims",
+    "condition",
+    ...(hasFlag(state, "lift") ? ["trapped"] : []),
+    ...(hasFlag(state, "fire") ? ["fire"] : []),
+    ...(hasFlag(state, "wire") || hasFlag(state, "gas") ? ["hazard"] : []),
+  ];
+}
+
+/**
+ * Звонок оборван (D-62). Диспетчер спрашивает по одному слоту, поэтому считаем несказанными
+ * тот, что он спросил последним, и те, до которых не дошёл.
+ */
+function endCall(ctx: Ctx) {
+  const { state } = ctx;
+  for (const slot of requiredSlots(ctx)) {
+    if (!hasFact(state, `slot_reported:${slot}`) || hasFact(state, `slot_last:${slot}`)) {
+      log(ctx, "call_112", "missed", SLOT_NOTES[slot] ?? `Не сообщил: ${slot}`);
+    }
+  }
+  ctx.advance();
+}
+
 export const call112: StageDef = {
   hint: "Позвони 112: адрес, что случилось, сколько пострадавших",
-  enter: (ctx) =>
+  enter(ctx) {
+    setTimer(ctx.state, "call", ctx.at);
     say(ctx, "dispatcher", "dispatcher_open", {
       flags: ctx.state.config.flags,
       address: ctx.state.config.address,
-    }),
+    });
+  },
   on(ctx, event) {
+    if (event.type === "tick" && event.at - getTimer(ctx.state, "call")! >= CALL_LIMIT_MS) endCall(ctx);
     if (event.type !== "dialogOutcome" || event.npcId !== "dispatcher") return;
-    // TODO(Q-03): других способов закончить звонок нет, поэтому `missed` из D-17 пока недостижим.
-    if (event.outcome === "slots_complete") {
+    if (event.outcome === "call_ended") {
+      endCall(ctx);
+    } else if (event.outcome === "slots_complete") {
       log(ctx, "call_112", "ok", "Передал диспетчеру всё нужное");
       ctx.advance();
     } else if (event.outcome.startsWith("slot_missing:")) {
       const slot = event.outcome.slice("slot_missing:".length);
+      addFact(ctx.state, `slot_reported:${slot}`);
+      ctx.state.facts = ctx.state.facts.filter((f) => !f.startsWith("slot_last:"));
+      addFact(ctx.state, `slot_last:${slot}`);
       log(ctx, "call_112", "mistake", SLOT_NOTES[slot] ?? `Не сообщил: ${slot}`, `slot:${slot}`);
     }
   },

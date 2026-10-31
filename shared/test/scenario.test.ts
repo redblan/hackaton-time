@@ -121,6 +121,44 @@ describe("прохождение", () => {
     expect(calls.map((e) => e.outcome)).toEqual(["mistake", "ok"]);
   });
 
+  describe("конец звонка 112 (D-62)", () => {
+    const call = PERFECT.findIndex((s) => s.outcome === "slots_complete");
+    const toCall = PERFECT.slice(0, call);
+    const calls = (state: RunState) =>
+      state.journal.filter((e) => e.skill === "call_112").map((e) => [e.outcome, e.note]);
+
+    it("кнопка без единого слота: missed по всем обязательным, дальше triage", () => {
+      const { state } = play(FULL, [...toCall, talk("dispatcher", "call_ended")]);
+      expect(state.stage[P]).toBe("triage");
+      expect(calls(state).map(([outcome]) => outcome)).toEqual(Array(7).fill("missed"));
+    });
+
+    it("без лифта, пожара и опасности эти слоты не обязательны", () => {
+      const config: RunConfig = { ...FULL, flags: ["neighbor_valentina"] };
+      const steps = PERFECT.slice(0, call).filter((s) => !/z_smoke|balcony_door|elevator_shaft|vanya/.test(JSON.stringify(s)));
+      const { state } = play(config, [...steps, talk("dispatcher", "call_ended")]);
+      expect(calls(state)).toHaveLength(4);
+    });
+
+    it("сказанное не считается: missed с последнего вопроса диспетчера", () => {
+      const { state } = play(FULL, [
+        ...toCall,
+        talk("dispatcher", "slot_missing:address"),
+        talk("dispatcher", "slot_missing:fire"),
+        talk("dispatcher", "call_ended"),
+      ]);
+      const missed = calls(state).filter(([outcome]) => outcome === "missed");
+      expect(missed.map(([, note]) => note)).toContain("Не сообщил о пожаре");
+      expect(missed.map(([, note]) => note)).not.toContain("Не назвал адрес диспетчеру");
+    });
+
+    it("120 секунд на этапе: звонок заканчивается сам", () => {
+      const ticks = (n: number) => Array.from({ length: n }, () => tick);
+      expect(play(FULL, [...toCall, ...ticks(119)]).state.stage[P]).toBe("call_112");
+      expect(play(FULL, [...toCall, ...ticks(120)]).state.stage[P]).toBe("triage");
+    });
+  });
+
   it("ошибки сопровождения: left_behind и козырёк по одному разу, без ok", () => {
     const agreed = PERFECT.findIndex((s) => s.outcome === "agreed_to_go");
     const left = talk("valentina", "left_behind");
