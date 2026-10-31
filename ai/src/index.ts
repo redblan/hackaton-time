@@ -7,6 +7,8 @@
  */
 import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemory } from "@game/shared";
 import { factsBySkill, loadData, type AiData } from "./data";
+import { createDispatcher } from "./dispatcher";
+import { createGromov } from "./gromov";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
 import { buildMessages, cleanReply, EMOTIONAL, type Plan, type PlannedFact } from "./prompt";
@@ -14,6 +16,8 @@ import { detectTone, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
 export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
+export { createDispatcher, extractSlots, requiredSlots } from "./dispatcher";
+export { createGromov, extractHandover, requiredHandover } from "./gromov";
 export { loadData, unverifiedFacts } from "./data";
 export type { KnowledgeFact, NpcCard } from "./types";
 
@@ -44,6 +48,8 @@ export function createAi(opts: CreateAiOptions): AiModule {
   const timeoutMs = opts.timeoutMs ?? 6000;
   /** Кого игрок уже встретил в текущем прохождении: `${playerId}:${npcId}` */
   const metThisRun = new Set<string>();
+  const dispatcher = createDispatcher();
+  const gromov = createGromov(data);
 
   function pickExplanation(memory: PlayerMemory, fact: KnowledgeFact): number {
     const used = memory.usedExplanations[fact.id] ?? [];
@@ -172,6 +178,26 @@ export function createAi(opts: CreateAiOptions): AiModule {
   }
 
   async function respond(req: NpcRequest, onToken?: (t: string) => void): Promise<NpcResponse> {
+    // Диспетчер 112 и доклад/разбор Громова — конечные автоматы без модели: отвечают сразу и одинаково
+    const fsm =
+      req.npcId === "dispatcher"
+        ? (_m: PlayerMemory) => dispatcher.respond(req)
+        : req.npcId === "gromov" && req.event === "debrief"
+          ? (m: PlayerMemory) => gromov.debrief(req, m)
+          : req.npcId === "gromov" && (req.event === "brigade_arrived" || (req.event === "free_talk" && gromov.inHandover(req.playerId)))
+            ? (_m: PlayerMemory) => gromov.handover(req)
+            : undefined;
+    if (fsm) {
+      const memory = await opts.memory.get(req.playerId);
+      const res = fsm(memory);
+      onToken?.(res.text);
+      const now = Date.now();
+      if (req.playerMessage) memory.recent.push({ npcId: req.npcId, from: "player", text: req.playerMessage, at: now });
+      memory.recent.push({ npcId: req.npcId, from: "npc", text: res.text, at: now });
+      memory.recent = memory.recent.slice(-RECENT_LIMIT);
+      await opts.memory.save(memory);
+      return res;
+    }
     const memory = await opts.memory.get(req.playerId);
     const p = plan(req, memory);
     const outcome = outcomeOf(req, p, memory);
@@ -205,6 +231,8 @@ export function createAi(opts: CreateAiOptions): AiModule {
     say: (req) => respond(req),
     sayStream: (req, onToken) => respond(req, onToken),
     resetRun(playerId: PlayerId) {
+      dispatcher.reset(playerId);
+      gromov.reset(playerId);
       for (const key of [...metThisRun]) if (key.startsWith(`${playerId}:`)) metThisRun.delete(key);
     },
   };

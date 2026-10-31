@@ -199,3 +199,20 @@ describe("завершить звонок (D-62)", () => {
     expect(outs).toEqual([expect.objectContaining({ npcId: "dispatcher", outcome: "call_ended", playerId: r.playerId })]);
   }, 10_000);
 });
+
+describe("рация в solo (M8)", () => {
+  it("сообщение в рацию — отвечает Михалыч с channel: radio и именем игрока", async () => {
+    const store = new MemStore();
+    const r = await login(store, "Рация", "pw");
+    if (!r.ok) throw new Error(r.error);
+    const srv = await boot(store);
+    cleanup.push(srv.stop);
+    const a = client(srv.url, r.token);
+    const said: string[] = [];
+    a.c.on("npc:done", (p) => said.push(p.npcId));
+    a.c.emit("room:join", { mode: "solo" });
+    await until(() => a.log.rooms.some((x) => x.started));
+    a.c.emit("chat:send", { text: "Михалыч, куда идти?" });
+    await until(() => said.includes("mihalych"));
+  }, 10_000);
+});

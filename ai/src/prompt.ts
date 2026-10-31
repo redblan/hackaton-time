@@ -27,7 +27,7 @@ export interface Plan {
   tone: "calm" | "rude" | "panic" | "neutral";
 }
 
-const SKILL_NAMES: Record<SkillId, string> = {
+export const SKILL_NAMES: Record<SkillId, string> = {
   cover: "укрытие во время толчка",
   go_bag: "тревожный набор",
   gas: "запах газа",

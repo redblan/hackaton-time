@@ -4,11 +4,11 @@
  * Модели visual:X заменяют только вид коробок; физика остаётся в getColliders.
  */
 import { Clone, Instance, Instances, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Box3, CanvasTexture, DoubleSide, Vector3, type Points } from "three";
+import { Suspense, useEffect, useMemo } from "react";
+import { Box3, CanvasTexture, DoubleSide, Vector3, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
-import { Character } from "./Character";
+import { Character, npcColor } from "./Character";
+import { FxParticles, InteractMarker } from "./Effects";
 import { paintSurface } from "./style";
 
 const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
@@ -48,20 +48,11 @@ function Model({ object }: { object: Extract<WorldObject,{kind:'model'}> }) {
   return <group position={object.pos} rotation-y={object.rotY??0} scale={object.scale??1}><group scale={fit.scale}><Clone object={scene} position={fit.offset} castShadow receiveShadow /></group></group>;
 }
 
-function Particles({object}:{object:Extract<WorldObject,{kind:'fx'}>}) {
-  const ref=useRef<Points>(null);
-  const positions=useMemo(()=>new Float32Array(48*3),[]);
-  useFrame(({clock})=>{
-    const t=clock.elapsedTime, spread=object.size??1;
-    for(let i=0;i<48;i++) {
-      const phase=(t*(object.fx==='sparks'?1.8:.3)+i/48)%1;
-      positions[i*3]=Math.sin(i*17.3+t*.3)*spread*(.2+phase*.4);
-      positions[i*3+1]=phase*spread*2;
-      positions[i*3+2]=Math.cos(i*9.7+t*.2)*spread*(.2+phase*.4);
-    }
-    if(ref.current) ref.current.geometry.attributes.position.needsUpdate=true;
-  });
-  return <points ref={ref} position={object.pos} frustumCulled={false}><bufferGeometry><bufferAttribute attach="attributes-position" args={[positions,3]} /></bufferGeometry><pointsMaterial color={object.fx==='fire'?'#ff963d':object.fx==='sparks'?'#ffe98a':object.fx==='dust'?'#d4b998':'#69727e'} size={object.fx==='sparks'?.05:.22} transparent opacity={.6} depthWrite={false}/></points>;
+function paintOnce(material: MeshStandardMaterial | null) {
+  if (!material || material.userData.painted) return;
+  material.userData.painted = true;
+  paintSurface(material);
+  material.needsUpdate = true;
 }
 
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
@@ -71,7 +62,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   return (
     <group name={props.chunk.id}>
       <Instances key={`${props.chunk.id}:${boxes.length}`} limit={Math.max(1,boxes.length)} range={boxes.length} castShadow receiveShadow frustumCulled={false}>
-        <boxGeometry /><meshStandardMaterial roughness={.85} ref={(m)=>{if(m&&!m.userData.painted){m.userData.painted=true;paintSurface(m);m.needsUpdate=true;}}}/>
+        <boxGeometry /><meshStandardMaterial ref={paintOnce} roughness={.85}/>
         {boxes.map(o=><Instance key={o.id} position={o.pos} scale={o.size} rotation-y={o.rotY??0} color={o.color}/>)}
       </Instances>
       {objects.map((o) => {
@@ -81,22 +72,17 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
           case "model":
             return <Suspense key={o.id} fallback={null}><Model object={o}/></Suspense>;
           case "interactable":
-            return (
-              <mesh key={o.id} position={[o.pos[0], o.pos[1] + 0.6, o.pos[2]]}>
-                <sphereGeometry args={[0.12, 12, 12]} />
-                <meshStandardMaterial color="#facc15" emissive="#facc15" emissiveIntensity={0.8} />
-              </mesh>
-            );
+            return <InteractMarker key={o.id} object={o} />;
           case "npc":
             return (
               <group key={o.id} position={o.pos} rotation-y={o.rotY ?? 0}>
-                <Character npcId={o.npcId} pose={o.pose} />
+                <Character color={npcColor(o.npcId)} pose={o.pose} />
               </group>
             );
           case "sign":
             return <Sign key={o.id} object={o}/>;
           case "fx":
-            return <Particles key={o.id} object={o}/>;
+            return <FxParticles key={o.id} object={o}/>;
           default:
             return null; // zone, spawn — невидимые
         }

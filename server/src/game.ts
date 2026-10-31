@@ -435,6 +435,7 @@ export class Game {
       address: run?.config.address,
       startFloor: run?.config.startFloor,
       mode: room.mode,
+      playerName: room.players.get(playerId)?.name,
       partners: [...room.players.values()].filter((p) => p.id !== playerId).map((p) => p.name),
     };
   }
@@ -480,7 +481,19 @@ export class Game {
     const room = this.myRoom(s.data.playerId);
     if (!room || typeof text !== "string") return;
     const t = text.trim().slice(0, 300);
-    if (t) this.io.to(`r:${room.id}`).emit("chat:msg", { from: s.data.name, text: t, at: Date.now() });
+    if (!t) return;
+    this.io.to(`r:${room.id}`).emit("chat:msg", { from: s.data.name, text: t, at: Date.now() });
+    // Рация в solo (или когда напарников нет в сети): отвечает Михалыч (M8)
+    const partnersOnline = [...room.players.values()].some((p) => p.id !== s.data.playerId && p.online);
+    if (room.started && !room.finished && !partnersOnline) {
+      void this.npcSay(room, s.data.playerId, {
+        npcId: "mihalych",
+        playerId: s.data.playerId,
+        event: "free_talk",
+        playerMessage: t,
+        context: { ...this.npcContext(room, s.data.playerId), channel: "radio" },
+      });
+    }
   }
 
   private async endRun(room: Room, summary: Extract<Effect, { type: "runEnd" }>["summary"]) {

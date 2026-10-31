@@ -11,6 +11,9 @@
     "mistakes": {
       "z_wire_danger": "К оборванному проводу подходить нельзя: можно попасть под напряжение."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Вологодской обл.) — Оборванные электрические провода: правила поведения при их обнаружении",
+      "url": "https://35.mchs.gov.ru/deyatelnost/poleznaya-informaciya/rekomendacii-naseleniyu/oborvannye-elektricheskie-provoda-pravila-povedeniya-pri-ih-obnaruzhenii"
+    }
   }
 ]

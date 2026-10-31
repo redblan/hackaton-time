@@ -192,6 +192,29 @@ function Ground() {
   );
 }
 
+/** Фонари по краям двора: всего 4 точечных света, без теней. */
+const LAMPS: [number, number][] = [[-1.5, -12], [37.5, -12], [-1.5, -36], [37.5, -36]];
+
+function YardLamps() {
+  return (
+    <>
+      {LAMPS.map(([x, z]) => (
+        <group key={`${x}:${z}`} position={[x, 0, z]}>
+          <mesh position={[0, 2.2, 0]} castShadow>
+            <cylinderGeometry args={[0.07, 0.11, 4.4, 8]} />
+            <meshStandardMaterial color="#3e3a3a" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 4.5, 0]}>
+            <sphereGeometry args={[0.24, 12, 10]} />
+            <meshStandardMaterial color="#ffe2a8" emissive="#ffc46b" emissiveIntensity={3} />
+          </mesh>
+          <pointLight position={[0, 4.3, 0]} color="#ffc98a" intensity={22} distance={15} decay={1.8} />
+        </group>
+      ))}
+    </>
+  );
+}
+
 export function Landscape() {
   return (
     <group name="landscape">
@@ -199,6 +222,7 @@ export function Landscape() {
       <Rocks />
       <Pines />
       <Grass />
+      <YardLamps />
     </group>
   );
 }

@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import type { ChunkData } from "@game/shared";
 import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView } from "../world/ChunkView";
+import { QuakeDust } from "../world/QuakeDust";
 import { Landscape } from "../world/Landscape";
 import { Hud } from "./Hud";
 import { MinigameOverlay } from "./MinigameHost";
@@ -37,6 +38,7 @@ export function Game() {
       <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 600 }} dpr={[1, 1.5]}>
         <Atmosphere />
         <Landscape />
+        <QuakeDust />
         <World />
         <RemotePlayers />
         <Player />

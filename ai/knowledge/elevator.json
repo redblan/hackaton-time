@@ -11,7 +11,10 @@
     "mistakes": {
       "elevator_call": "Лифт после землетрясения может застрять или упасть. Только лестница."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Московской обл.) — Правила поведения при землетрясении",
+      "url": "https://50.mchs.gov.ru/deyatelnost/poleznaya-informaciya/propaganda/pamyatki-naseleniyu/pravila-povedeniya-pri-zemletryasenii"
+    }
   },
   {
     "id": "elevator.trapped",
@@ -25,6 +28,9 @@
     "mistakes": {
       "elevator_forced": "Вскрывать двери лифта нельзя: кабина может сдвинуться."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Томской обл.) — что делать, если застрял в лифте",
+      "url": "https://70.mchs.gov.ru/deyatelnost/press-centr/novosti/4967437"
+    }
   }
 ]

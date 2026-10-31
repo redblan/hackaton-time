@@ -5,10 +5,10 @@
 import { Color, type Material, type WebGLProgramParametersWithUniforms } from "three";
 
 export const PALETTE = {
-  skyTop: "#6fa8dc",
-  skyHorizon: "#ffdfae",
-  sun: "#fff0d0",
-  fog: "#f2cfa0",
+  skyTop: "#4f76b5",
+  skyHorizon: "#ffb98a",
+  sun: "#ffd9a8",
+  fog: "#eeb68c",
   hemiSky: "#cfe2ff",
   hemiGround: "#e6ad78",
   rock: "#f2a766",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NpcRequest } from "@game/shared";
+import { MISTAKE_NOTES, type NpcRequest } from "@game/shared";
 import { createAi, createInMemoryStore, loadData } from "../src/index";
 import type { AiData } from "../src/data";
 
@@ -166,5 +166,14 @@ describe("данные в ai/knowledge и ai/npcs", () => {
   it("карточки ссылаются только на существующие факты", () => {
     for (const card of real.cards.values())
       for (const e of Object.values(card.events)) for (const id of e?.facts ?? []) expect(real.facts.has(id), id).toBe(true);
+  });
+});
+
+describe("коды ошибок сценария (D-58)", () => {
+  const real = loadData();
+  const keys = new Set([...real.facts.values()].flatMap((f) => Object.keys(f.mistakes ?? {})));
+  it("у каждого кода мини-игр и реплик NPC есть объяснение в базе знаний", () => {
+    const npcCodes = ["cover_run_out", "cover_window", "cover_wardrobe", "gas_light_switch", "elevator_call", "z_collapse", "z_canopy_danger", "z_wire_danger"];
+    for (const code of [...Object.keys(MISTAKE_NOTES), ...npcCodes]) expect(keys.has(code), code).toBe(true);
   });
 });

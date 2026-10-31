@@ -8,7 +8,13 @@
       "Пример: прижми рану ладонью через ткань и держи, не отпуская.",
       "Что будет, если ждать: при сильном кровотечении счёт идёт на минуты."
     ],
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "Приказ Минздрава России от 03.05.2024 № 220н «Об утверждении Порядка оказания первой помощи», приложение 2, п. 2",
+      "url": "https://www.kontur-extern.ru/info/normativ/document/1/472132-prikaz-minzdrava-rf-ot-03-05-2024-n-220n"
+    },
+    "mistakes": {
+      "pressure_released": "Отпустил рану — кровотечение возобновилось. Давить нужно не отпуская, пока не наложена повязка или жгут."
+    }
   },
   {
     "id": "bleeding.tourniquet",
@@ -21,8 +27,11 @@
     ],
     "mistakes": {
       "tourniquet_no_time": "Без записки со временем врачи не знают, сколько жгут уже стоит.",
-      "tourniquet_wrong_place": "Жгут ниже раны не остановит кровь."
+      "tourniquet_below_wound": "Жгут ниже раны не остановит кровь."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России — Универсальный алгоритм оказания первой помощи",
+      "url": "https://mchs.gov.ru/deyatelnost/bezopasnost-grazhdan/universalnyy-algoritm-okazaniya-pervoy-pomoshchi_5"
+    }
   }
 ]

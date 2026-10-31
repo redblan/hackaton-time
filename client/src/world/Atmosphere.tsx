@@ -1,5 +1,5 @@
 /**
- * Свет и небо: низкое тёплое солнце, рисованные облака, туман в цвет горизонта.
+ * Свет и небо: вечернее низкое солнце, рисованные облака, туман в цвет горизонта.
  * Тень одна, от солнца, и следует за камерой: так она стоит одинаково на любом ноуте.
  */
 import { useEffect, useMemo, useRef } from "react";
@@ -7,7 +7,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { ACESFilmicToneMapping, BackSide, Color, Vector3, type DirectionalLight, type Mesh, type Object3D } from "three";
 import { PALETTE } from "./style";
 
-const SUN_DIRECTION = new Vector3(-0.62, 0.42, -0.66).normalize();
+const SUN_DIRECTION = new Vector3(-0.7, 0.26, -0.66).normalize();
 const SHADOW_RANGE = 34;
 
 const SKY_VERTEX = /* glsl */ `
@@ -100,8 +100,8 @@ function Sun() {
       <object3D ref={target} />
       <directionalLight
         ref={light}
-        color="#ffdcae"
-        intensity={3}
+        color="#ffb877"
+        intensity={2.6}
         castShadow
         shadow-mapSize={[1536, 1536]}
         shadow-bias={-0.0004}
@@ -128,7 +128,7 @@ export function Atmosphere() {
     <>
       <color attach="background" args={[PALETTE.fog]} />
       <fog attach="fog" args={[PALETTE.fog, 60, 240]} />
-      <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.9]} />
+      <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.6]} />
       <Sky />
       <Sun />
     </>

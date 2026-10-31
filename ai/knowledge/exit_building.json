@@ -11,6 +11,9 @@
     "mistakes": {
       "z_canopy_danger": "Под треснувшим козырьком стоять нельзя: он может рухнуть."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Московской обл.) — Правила поведения при землетрясении",
+      "url": "https://50.mchs.gov.ru/deyatelnost/poleznaya-informaciya/propaganda/pamyatki-naseleniyu/pravila-povedeniya-pri-zemletryasenii"
+    }
   }
 ]
