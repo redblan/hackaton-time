@@ -97,7 +97,7 @@ export type GameEvent =
   | { type: "enterZone"; at: number; playerId: PlayerId; zone: ZoneId }
   | { type: "interact"; at: number; playerId: PlayerId; target: InteractableId }
   | { type: "minigameResult"; at: number; playerId: PlayerId; result: MinigameResult }
-  /** Итог разговора от ИИ-модуля: `calmed`, `panicked`, `slots_complete`, `slot_missing:address`... */
+  /** Итог разговора от ИИ-модуля, см. `DialogOutcome` в ids.ts: `calmed`, `slots_complete`, `slot_missing:address`... */
   | { type: "dialogOutcome"; at: number; playerId: PlayerId; npcId: NpcId; outcome: string }
   /** Сервер шлёт раз в секунду — для таймеров (толчок, повторный толчок, лимиты этапов) */
   | { type: "tick"; at: number };
@@ -109,6 +109,8 @@ export interface RunSummary {
   durationMs: number;
   perPlayer: {
     playerId: PlayerId;
+    /** Очки этого игрока (общий score — по команде) */
+    score: number;
     ok: SkillId[];
     mistakes: { skill: SkillId; note: string }[];
   }[];
