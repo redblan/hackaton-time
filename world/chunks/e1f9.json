@@ -13,8 +13,7 @@
     ]
   },
   "neighbors": [
-    "e1f8",
-    "e2f9"
+    "e1f8"
   ],
   "objects": [
     {
@@ -854,10 +853,38 @@
       "label": "Тёплая одежда"
     },
     {
-      "id": "prop-laptop",
+      "id": "prop-bandage",
       "kind": "box",
       "pos": [
         7,
+        25,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_bandage",
+      "kind": "interactable",
+      "target": "item_bandage",
+      "pos": [
+        7,
+        25,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Бинт"
+    },
+    {
+      "id": "prop-laptop",
+      "kind": "box",
+      "pos": [
+        8,
         25,
         9
       ],
@@ -874,7 +901,7 @@
       "kind": "interactable",
       "target": "item_laptop",
       "pos": [
-        7,
+        8,
         25,
         9
       ],
@@ -885,7 +912,7 @@
       "id": "prop-console",
       "kind": "box",
       "pos": [
-        8,
+        9,
         25,
         9
       ],
@@ -902,7 +929,7 @@
       "kind": "interactable",
       "target": "item_console",
       "pos": [
-        8,
+        9,
         25,
         9
       ],
@@ -913,9 +940,9 @@
       "id": "prop-mugs",
       "kind": "box",
       "pos": [
-        9,
+        7,
         25,
-        9
+        10
       ],
       "size": [
         0.25,
@@ -930,9 +957,9 @@
       "kind": "interactable",
       "target": "item_mugs",
       "pos": [
-        9,
+        7,
         25,
-        9
+        10
       ],
       "radius": 1.5,
       "label": "Кружки"
@@ -998,16 +1025,20 @@
       "label": "Поговорить с человеком в лифте"
     },
     {
-      "id": "balcony_door",
-      "kind": "interactable",
-      "target": "balcony_door",
+      "id": "hall-end",
+      "kind": "box",
       "pos": [
-        11.5,
-        24,
-        4.5
+        11.9,
+        25.5,
+        4
       ],
-      "radius": 1.5,
-      "label": "Переход в соседний подъезд"
+      "size": [
+        0.2,
+        3,
+        2
+      ],
+      "color": "#f3ddbd",
+      "collide": true
     },
     {
       "id": "z_apartment",
@@ -1070,21 +1101,6 @@
       ]
     },
     {
-      "id": "z_balcony",
-      "kind": "zone",
-      "zone": "z_balcony",
-      "min": [
-        11,
-        24,
-        4
-      ],
-      "max": [
-        12,
-        27,
-        5
-      ]
-    },
-    {
       "id": "z_smoke",
       "kind": "zone",
       "zone": "z_smoke",
@@ -1099,39 +1115,6 @@
         5
       ],
       "when": "fire_f9"
-    },
-    {
-      "id": "z_collapse",
-      "kind": "zone",
-      "zone": "z_collapse",
-      "min": [
-        8,
-        22.5,
-        0
-      ],
-      "max": [
-        11,
-        25,
-        3
-      ],
-      "when": "collapse_f9"
-    },
-    {
-      "id": "rubble",
-      "kind": "box",
-      "pos": [
-        9.5,
-        24.4,
-        1.5
-      ],
-      "size": [
-        2.5,
-        0.8,
-        2
-      ],
-      "color": "#8b817c",
-      "collide": true,
-      "when": "collapse_f9"
     },
     {
       "id": "smoke",

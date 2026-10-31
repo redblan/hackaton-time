@@ -171,6 +171,34 @@
         -6
       ],
       "when": "wire"
+    },
+    {
+      "id": "gas-pipe",
+      "kind": "box",
+      "pos": [
+        33,
+        0.7,
+        -6
+      ],
+      "size": [
+        0.2,
+        1.4,
+        3
+      ],
+      "color": "#d5b34c",
+      "collide": true,
+      "when": "gas"
+    },
+    {
+      "id": "gas-warning",
+      "kind": "sign",
+      "pos": [
+        32,
+        1.8,
+        -8
+      ],
+      "text": "Запах газа! Не приближайтесь. Сообщите в 112.",
+      "when": "gas"
     }
   ]
 }

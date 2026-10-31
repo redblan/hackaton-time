@@ -14,8 +14,7 @@
   },
   "neighbors": [
     "e2f7",
-    "e2f9",
-    "e1f8"
+    "e2f9"
   ],
   "objects": [
     {
@@ -855,10 +854,38 @@
       "label": "Тёплая одежда"
     },
     {
-      "id": "prop-laptop",
+      "id": "prop-bandage",
       "kind": "box",
       "pos": [
         19,
+        22,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_bandage",
+      "kind": "interactable",
+      "target": "item_bandage",
+      "pos": [
+        19,
+        22,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Бинт"
+    },
+    {
+      "id": "prop-laptop",
+      "kind": "box",
+      "pos": [
+        20,
         22,
         9
       ],
@@ -875,7 +902,7 @@
       "kind": "interactable",
       "target": "item_laptop",
       "pos": [
-        19,
+        20,
         22,
         9
       ],
@@ -886,7 +913,7 @@
       "id": "prop-console",
       "kind": "box",
       "pos": [
-        20,
+        21,
         22,
         9
       ],
@@ -903,7 +930,7 @@
       "kind": "interactable",
       "target": "item_console",
       "pos": [
-        20,
+        21,
         22,
         9
       ],
@@ -914,9 +941,9 @@
       "id": "prop-mugs",
       "kind": "box",
       "pos": [
-        21,
+        19,
         22,
-        9
+        10
       ],
       "size": [
         0.25,
@@ -931,9 +958,9 @@
       "kind": "interactable",
       "target": "item_mugs",
       "pos": [
-        21,
+        19,
         22,
-        9
+        10
       ],
       "radius": 1.5,
       "label": "Кружки"
@@ -999,16 +1026,20 @@
       "label": "Поговорить с человеком в лифте"
     },
     {
-      "id": "balcony_door",
-      "kind": "interactable",
-      "target": "balcony_door",
+      "id": "hall-end",
+      "kind": "box",
       "pos": [
-        12.5,
-        21,
-        4.5
+        12.1,
+        22.5,
+        4
       ],
-      "radius": 1.5,
-      "label": "Переход в соседний подъезд"
+      "size": [
+        0.2,
+        3,
+        2
+      ],
+      "color": "#f3ddbd",
+      "collide": true
     },
     {
       "id": "z_apartment",
@@ -1071,21 +1102,6 @@
       ]
     },
     {
-      "id": "z_balcony",
-      "kind": "zone",
-      "zone": "z_balcony",
-      "min": [
-        12,
-        21,
-        4
-      ],
-      "max": [
-        13,
-        24,
-        5
-      ]
-    },
-    {
       "id": "z_smoke",
       "kind": "zone",
       "zone": "z_smoke",
@@ -1100,39 +1116,6 @@
         5
       ],
       "when": "fire_f8"
-    },
-    {
-      "id": "z_collapse",
-      "kind": "zone",
-      "zone": "z_collapse",
-      "min": [
-        20,
-        19.5,
-        0
-      ],
-      "max": [
-        23,
-        22,
-        3
-      ],
-      "when": "collapse_f8"
-    },
-    {
-      "id": "rubble",
-      "kind": "box",
-      "pos": [
-        21.5,
-        21.4,
-        1.5
-      ],
-      "size": [
-        2.5,
-        0.8,
-        2
-      ],
-      "color": "#8b817c",
-      "collide": true,
-      "when": "collapse_f8"
     },
     {
       "id": "smoke",

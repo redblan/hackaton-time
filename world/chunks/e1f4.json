@@ -855,10 +855,38 @@
       "label": "Тёплая одежда"
     },
     {
-      "id": "prop-laptop",
+      "id": "prop-bandage",
       "kind": "box",
       "pos": [
         7,
+        10,
+        9
+      ],
+      "size": [
+        0.25,
+        0.2,
+        0.25
+      ],
+      "color": "#efc56c",
+      "collide": true
+    },
+    {
+      "id": "item_bandage",
+      "kind": "interactable",
+      "target": "item_bandage",
+      "pos": [
+        7,
+        10,
+        9
+      ],
+      "radius": 1.5,
+      "label": "Бинт"
+    },
+    {
+      "id": "prop-laptop",
+      "kind": "box",
+      "pos": [
+        8,
         10,
         9
       ],
@@ -875,7 +903,7 @@
       "kind": "interactable",
       "target": "item_laptop",
       "pos": [
-        7,
+        8,
         10,
         9
       ],
@@ -886,7 +914,7 @@
       "id": "prop-console",
       "kind": "box",
       "pos": [
-        8,
+        9,
         10,
         9
       ],
@@ -903,7 +931,7 @@
       "kind": "interactable",
       "target": "item_console",
       "pos": [
-        8,
+        9,
         10,
         9
       ],
@@ -914,9 +942,9 @@
       "id": "prop-mugs",
       "kind": "box",
       "pos": [
-        9,
+        7,
         10,
-        9
+        10
       ],
       "size": [
         0.25,
@@ -931,9 +959,9 @@
       "kind": "interactable",
       "target": "item_mugs",
       "pos": [
-        9,
+        7,
         10,
-        9
+        10
       ],
       "radius": 1.5,
       "label": "Кружки"
@@ -1106,14 +1134,14 @@
       "kind": "zone",
       "zone": "z_collapse",
       "min": [
-        8,
-        7.5,
-        0
+        8.25,
+        9,
+        0.5
       ],
       "max": [
-        11,
-        10,
-        3
+        10.75,
+        9.8,
+        2.5
       ],
       "when": "collapse_f4"
     },

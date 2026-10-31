@@ -17,6 +17,7 @@ export function validateWorld(chunks: ChunkData[]): void {
       if(objectIds.has(o.id)) fail(`Duplicate object: ${c.id}/${o.id}`);
       objectIds.add(o.id);
       if(o.kind==='interactable'&&!INTERACTABLES.includes(o.target)) fail('Unknown target');
+      if(o.kind==='interactable'&&(typeof o.label!=='string'||!o.label.trim())) fail('Missing interaction label');
       if(o.kind==='zone'&&!ZONES.includes(o.zone)) fail('Unknown zone');
       if(o.kind==='npc'&&!NPC_IDS.includes(o.npcId)) fail('Unknown NPC');
       if(o.kind==='spawn'&&!ROLES.includes(o.role)) fail('Unknown role');
