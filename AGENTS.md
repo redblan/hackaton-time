@@ -7,6 +7,7 @@
 
 1. Прочитай `docs/tz/README.md` и ТЗ своего человека в `docs/tz/`.
 2. Прочитай контракты в `shared/src/` (ids.ts, world.ts, ai.ts, scenario/types.ts, minigame.ts, net.ts).
+3. Прочитай `docs/DECISIONS.md` — принятые решения. Если решение расходится с ТЗ, верно решение.
 
 ## Зоны (работай только в своей)
 

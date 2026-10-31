@@ -85,3 +85,5 @@ npm run chat -- papa # консольный чат с NPC (модуль Матв
 - [Юра — сценарий и мини-игры](./yura-gameplay.md)
 - [Никита — мир](./nikita-world.md)
 - [Егор — сервер, клиент, склейка](./egor-core.md)
+
+Решения и открытые вопросы: [docs/DECISIONS.md](../DECISIONS.md)
