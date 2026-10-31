@@ -33,7 +33,7 @@ export function Login() {
   return (
     <div className="screen">
       <Card>
-        <h1>Толчок</h1>
+        <h1>Происшествия</h1>
         <p className="muted">Эвакуация при землетрясении и первая помощь</p>
         <div className="tabs">
           <button className={`tab ${mode === "login" ? "tab-on" : ""}`} onClick={() => switchTo("login")}>
