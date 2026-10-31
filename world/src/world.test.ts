@@ -4,6 +4,19 @@ import { generateWorld } from './generate';
 import { validateWorld } from './validate';
 
 describe('world',()=>{
+  it('places slab tops at floor height and closes stair side gaps',()=>{
+    for(const c of generateWorld().filter(c=>c.id.startsWith('e'))) {
+      for(const id of ['slab','landing']) {
+        const o=c.objects.find(o=>o.id===id);
+        expect(o?.kind).toBe('box');
+        if(o?.kind==='box') expect(o.pos[1]+o.size[1]/2).toBeCloseTo(c.bounds.min[1]);
+      }
+      for(const o of c.objects.filter(o=>o.id.startsWith('stair-a-')||o.id.startsWith('stair-b-'))) {
+        if(o.kind==='box') {expect(o.pos[2]-o.size[2]/2).toBe(0);expect(o.pos[2]+o.size[2]/2).toBe(3);}
+      }
+      for(const o of c.objects.filter(o=>o.kind==='spawn')) if(o.kind==='spawn') expect(o.rotY).toBe(Math.PI);
+    }
+  });
   it('generates a deterministic connected world with all gameplay targets',()=>{
     const chunks=generateWorld();
     expect(()=>validateWorld(chunks)).not.toThrow();

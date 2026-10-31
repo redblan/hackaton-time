@@ -115,6 +115,32 @@
       "collide": true
     },
     {
+      "id": "visual:tree",
+      "kind": "model",
+      "src": "city/tree-large.glb",
+      "pos": [
+        14,
+        0,
+        -33
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
+      "id": "visual:bench",
+      "kind": "model",
+      "src": "furniture/bench.glb",
+      "pos": [
+        21,
+        0,
+        -28
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
+    },
+    {
       "id": "z_safe_area",
       "kind": "zone",
       "zone": "z_safe_area",
@@ -160,6 +186,19 @@
       ],
       "color": "#efb36d",
       "collide": true
+    },
+    {
+      "id": "visual:play-stairs",
+      "kind": "model",
+      "src": "furniture/stairs.glb",
+      "pos": [
+        21,
+        0,
+        -32
+      ],
+      "scale": 1,
+      "rotY": 0,
+      "collide": false
     },
     {
       "id": "spawn-outside",
