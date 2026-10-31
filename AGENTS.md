@@ -16,7 +16,8 @@
 |---|---|
 | `ai/` | Матвей |
 | `shared/src/scenario/` (кроме types.ts), `client/src/minigames/`, `client/src/debrief/` | Юра |
-| `world/`, `client/src/world/` | Никита |
+| `world/` (данные мира, ассеты) | Никита |
+| `client/src/world/` (отрисовка, графика) | Юра (D-63) |
 | `server/`, `client/src/core/`, `shared/src/*.ts`, `shared/src/scenario/types.ts`, конфиги, CI, `package.json` в корне | Егор (лид) |
 
 Если для задачи нужно изменить файл вне своей зоны или контракт в `shared/src/` — **остановись и скажи человеку**, он договорится с лидом. Не обходи контракт «временно».
