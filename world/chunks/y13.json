@@ -1,0 +1,155 @@
+{
+  "id": "y13",
+  "bounds": {
+    "min": [
+      12,
+      0,
+      -48
+    ],
+    "max": [
+      24,
+      6,
+      -36
+    ]
+  },
+  "neighbors": [
+    "y12",
+    "y03",
+    "y23"
+  ],
+  "objects": [
+    {
+      "id": "ground",
+      "kind": "box",
+      "pos": [
+        18,
+        -0.1,
+        -42
+      ],
+      "size": [
+        12,
+        0.2,
+        12
+      ],
+      "color": "#8dab80",
+      "collide": true
+    },
+    {
+      "id": "path",
+      "kind": "box",
+      "pos": [
+        18,
+        0.01,
+        -42
+      ],
+      "size": [
+        4,
+        0.02,
+        12
+      ],
+      "color": "#d7c8ac",
+      "collide": true
+    },
+    {
+      "id": "z_yard",
+      "kind": "zone",
+      "zone": "z_yard",
+      "min": [
+        12,
+        0,
+        -48
+      ],
+      "max": [
+        24,
+        4,
+        -36
+      ]
+    },
+    {
+      "id": "tree-trunk",
+      "kind": "box",
+      "pos": [
+        14,
+        1.3,
+        -45
+      ],
+      "size": [
+        0.4,
+        2.6,
+        0.4
+      ],
+      "color": "#957353",
+      "collide": true
+    },
+    {
+      "id": "tree-crown",
+      "kind": "box",
+      "pos": [
+        14,
+        3.2,
+        -45
+      ],
+      "size": [
+        2.5,
+        2,
+        2.5
+      ],
+      "color": "#609577",
+      "collide": true
+    },
+    {
+      "id": "bench",
+      "kind": "box",
+      "pos": [
+        21,
+        0.5,
+        -40
+      ],
+      "size": [
+        2,
+        0.2,
+        0.6
+      ],
+      "color": "#dcaa69",
+      "collide": true
+    },
+    {
+      "id": "ambulance",
+      "kind": "box",
+      "pos": [
+        21,
+        1.2,
+        -43
+      ],
+      "size": [
+        2.5,
+        2.4,
+        5
+      ],
+      "color": "#eee8db",
+      "collide": true
+    },
+    {
+      "id": "brigade",
+      "kind": "interactable",
+      "target": "brigade",
+      "pos": [
+        18,
+        0,
+        -43
+      ],
+      "radius": 1.5,
+      "label": "Передать пострадавших бригаде"
+    },
+    {
+      "id": "gromov",
+      "kind": "npc",
+      "npcId": "gromov",
+      "pos": [
+        18,
+        0,
+        -43
+      ]
+    }
+  ]
+}
