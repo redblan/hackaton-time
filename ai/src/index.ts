@@ -1,13 +1,211 @@
 /**
  * ИИ-модуль. ВЛАДЕЛЕЦ: Матвей. ТЗ: docs/tz/matvey-ai.md
- * Сейчас ЗАГЛУШКА с правильной сигнатурой, чтобы сервер уже мог её вызывать.
+ *
+ * На каждый запрос: выбираем факты из базы (с учётом памяти игрока) → собираем промпт →
+ * локальная Ollama стримом → если модель молчит дольше таймаута, шаблон из карточки,
+ * который этот игрок ещё не слышал → обновляем память.
  */
-import type { AiModule, AiOptions, NpcRequest, NpcResponse } from "@game/shared";
+import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemory } from "@game/shared";
+import { factsBySkill, loadData, type AiData } from "./data";
+import { RECENT_LIMIT } from "./memory";
+import { ollamaChat } from "./ollama";
+import { buildMessages, cleanReply, EMOTIONAL, type Plan, type PlannedFact } from "./prompt";
+import { detectTone, searchFacts, stripLabel } from "./text";
+import type { KnowledgeFact, NpcCard } from "./types";
 
-export function createAi(_opts: AiOptions): AiModule {
+export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
+export { loadData, unverifiedFacts } from "./data";
+export type { KnowledgeFact, NpcCard } from "./types";
+
+export interface CreateAiOptions extends AiOptions {
+  /** Свои данные вместо ai/knowledge и ai/npcs — для тестов */
+  data?: AiData;
+  /** Подмена fetch — для тестов */
+  fetchImpl?: typeof fetch;
+}
+
+
+/** Ключ шаблона в memory.toldFacts: так помним, какие шаблоны игрок уже слышал. */
+const tplKey = (npcId: string, event: string, i: number) => `tpl:${npcId}.${event}.${i}`;
+
+const FALLBACK_CARD = (id: NpcCard["id"]): NpcCard => ({
+  id,
+  name: id,
+  role: "житель дома",
+  personality: "взволнован, но держится",
+  speech: "Короткие фразы.",
+  events: {},
+});
+
+export function createAi(opts: CreateAiOptions): AiModule {
+  const data = opts.data ?? loadData();
+  const url = opts.ollamaUrl ?? "http://127.0.0.1:11434";
+  const model = opts.model ?? "qwen2.5:7b-instruct";
+  const timeoutMs = opts.timeoutMs ?? 6000;
+  /** Кого игрок уже встретил в текущем прохождении: `${playerId}:${npcId}` */
+  const metThisRun = new Set<string>();
+
+  function pickExplanation(memory: PlayerMemory, fact: KnowledgeFact): number {
+    const used = memory.usedExplanations[fact.id] ?? [];
+    const n = Math.max(fact.explanations.length, 1);
+    for (let i = 0; i < n; i++) if (!used.includes(i)) return i;
+    // Все варианты уже были — по кругу, начиная с самого давнего
+    return used[used.length % n] ?? 0;
+  }
+
+  function plan(req: NpcRequest, memory: PlayerMemory): Plan {
+    const card = data.cards.get(req.npcId) ?? FALLBACK_CARD(req.npcId);
+    const eventCard = card.events[req.event];
+    const ids = new Set(eventCard?.facts ?? []);
+    let mistakeNote: string | undefined;
+
+    const mistake = req.context.mistake;
+    // TODO(Q-05): коды ошибок от сценария; пока ждём id интерактива/зоны, см. mistakes в ai/knowledge
+    if (req.event === "mistake" && mistake) {
+      const related = factsBySkill(data, [mistake.skill]);
+      const withNote = related.find((f) => f.mistakes?.[mistake.code]) ?? related[0];
+      if (withNote) {
+        ids.add(withNote.id);
+        mistakeNote = withNote.mistakes?.[mistake.code];
+      }
+    }
+    if (req.playerMessage) {
+      const pool = card.skills ? factsBySkill(data, card.skills) : [...data.facts.values()];
+      for (const f of searchFacts(req.playerMessage, pool)) ids.add(f.id);
+    }
+
+    const facts: PlannedFact[] = [...ids]
+      .map((id) => data.facts.get(id))
+      .filter((f): f is KnowledgeFact => f !== undefined)
+      .map((fact) => ({ fact, told: memory.toldFacts[fact.id] ?? 0, explanation: pickExplanation(memory, fact) }));
+
+    const weakSkills = [...new Set(facts.map((p) => p.fact.skill))].filter(
+      (s) => (memory.mistakes[s] ?? 0) > 0 && !(req.event === "mistake" && s === mistake?.skill),
+    );
+    const firstThisRun = !metThisRun.has(`${req.playerId}:${req.npcId}`);
+    const recognized = firstThisRun && (memory.npc[req.npcId]?.met ?? 0) > 0;
+    return { card, eventCard, facts, weakSkills, recognized, mistakeNote, tone: detectTone(req.playerMessage) };
+  }
+
+  function outcomeOf(req: NpcRequest, p: Plan, memory: PlayerMemory): string | undefined {
+    if (!EMOTIONAL.has(req.npcId) || !req.playerMessage) return undefined;
+    if (p.tone === "rude" || p.tone === "panic") return "panicked";
+    if (p.tone !== "calm") return undefined;
+    if (req.npcId === "valentina") {
+      // Соглашается уйти, если ей доверяют (помогли в прошлый раз или успокаивали уже не раз) или предложили взять кота
+      const trust = memory.npc.valentina?.trust ?? 0;
+      if (trust >= 2 || /кот|переноск/i.test(req.playerMessage)) return "agreed_to_go";
+    }
+    return "calmed";
+  }
+
+  /** Шаблон, который игрок ещё не слышал. Если слышал все — самый редкий, коротко. */
+  function templateReply(req: NpcRequest, p: Plan, memory: PlayerMemory, outcome?: string): { text: string; key?: string } {
+    const parts: string[] = [];
+    if (p.recognized && p.card.recognize?.length) parts.push(pickLeastUsed(memory, req.npcId, "recognize", p.card.recognize).text);
+
+    const reaction = outcome === "panicked" ? p.card.reactions?.panicked : outcome ? p.card.reactions?.calmed : undefined;
+    if (reaction?.length) parts.push(pickLeastUsed(memory, req.npcId, `reaction_${outcome}`, reaction).text);
+
+    let key: string | undefined;
+    const templates = p.eventCard?.templates ?? [];
+    if (templates.length > 0 && req.event !== "free_talk") {
+      const t = pickLeastUsed(memory, req.npcId, req.event, templates);
+      parts.push(t.text);
+      key = t.key;
+    }
+    if (p.mistakeNote) parts.push(p.mistakeNote);
+    // Свободный разговор и факты, которых нет в шаблоне, — из базы знаний с неиспользованным объяснением
+    if (req.event === "free_talk" || templates.length === 0) {
+      // Ваня, Валентина, пострадавшие сами не учат: их факты — подсказка игроку, как с ними говорить
+      const f = EMOTIONAL.has(req.npcId) ? undefined : p.facts[0];
+      if (reaction?.length && !f) {
+        // реакция на тон уже прозвучала
+      } else if (f) parts.push(`${f.told > 0 ? "Я уже говорил, коротко: " : ""}${stripLabel(f.fact.explanations[f.explanation] ?? f.fact.fact)}`);
+      else if (templates.length > 0) {
+        const t = pickLeastUsed(memory, req.npcId, req.event, templates);
+        parts.push(t.text);
+        key = t.key;
+      } else parts.push("Не знаю точно. Спросим у спасателей, когда приедут.");
+    }
+    return { text: parts.join(" "), key };
+  }
+
+  function pickLeastUsed(memory: PlayerMemory, npcId: string, slot: string, list: string[]): { text: string; key: string } {
+    let best = 0;
+    for (let i = 1; i < list.length; i++) {
+      if ((memory.toldFacts[tplKey(npcId, slot, i)] ?? 0) < (memory.toldFacts[tplKey(npcId, slot, best)] ?? 0)) best = i;
+    }
+    const key = tplKey(npcId, slot, best);
+    memory.toldFacts[key] = (memory.toldFacts[key] ?? 0) + 1;
+    return { text: list[best] ?? "", key };
+  }
+
+  /** Факты, которые NPC действительно произнёс (у эмоциональных NPC факты — только подсказка для модели) */
+  const spoken = (req: NpcRequest, p: Plan): PlannedFact[] => (EMOTIONAL.has(req.npcId) ? [] : p.facts);
+
+  function remember(req: NpcRequest, p: Plan, memory: PlayerMemory, text: string, outcome?: string): void {
+    for (const f of spoken(req, p)) {
+      memory.toldFacts[f.fact.id] = (memory.toldFacts[f.fact.id] ?? 0) + 1;
+      const used = memory.usedExplanations[f.fact.id] ?? [];
+      if (!used.includes(f.explanation)) used.push(f.explanation);
+      memory.usedExplanations[f.fact.id] = used;
+    }
+    if (req.event === "mistake" && req.context.mistake) {
+      const s = req.context.mistake.skill;
+      memory.mistakes[s] = (memory.mistakes[s] ?? 0) + 1;
+    }
+    const runKey = `${req.playerId}:${req.npcId}`;
+    const rel = memory.npc[req.npcId] ?? { met: 0, trust: 0 };
+    if (!metThisRun.has(runKey)) {
+      metThisRun.add(runKey);
+      rel.met += 1;
+    }
+    if (outcome === "calmed" || outcome === "agreed_to_go") rel.trust += 1;
+    if (outcome === "panicked") rel.trust -= 1;
+    memory.npc[req.npcId] = rel;
+
+    const now = Date.now();
+    if (req.playerMessage) memory.recent.push({ npcId: req.npcId, from: "player", text: req.playerMessage, at: now });
+    memory.recent.push({ npcId: req.npcId, from: "npc", text, at: now });
+    memory.recent = memory.recent.slice(-RECENT_LIMIT);
+  }
+
+  async function respond(req: NpcRequest, onToken?: (t: string) => void): Promise<NpcResponse> {
+    const memory = await opts.memory.get(req.playerId);
+    const p = plan(req, memory);
+    const outcome = outcomeOf(req, p, memory);
+
+    let text: string;
+    let source: NpcResponse["source"];
+    try {
+      const raw = await ollamaChat({
+        url,
+        model,
+        timeoutMs,
+        messages: buildMessages(req, p, memory),
+        onToken,
+        fetchImpl: opts.fetchImpl,
+      });
+      text = cleanReply(raw);
+      if (!text) throw new Error("ollama: пустой ответ");
+      source = "llm";
+    } catch {
+      text = templateReply(req, p, memory, outcome).text;
+      source = "template";
+      onToken?.(text);
+    }
+
+    remember(req, p, memory, text, outcome);
+    await opts.memory.save(memory);
+    return { text, factIds: spoken(req, p).map((f) => f.fact.id), outcome, source };
+  }
+
   return {
-    async say(req: NpcRequest): Promise<NpcResponse> {
-      return { text: `[${req.npcId}] (${req.event}) …`, factIds: [], source: "template" };
+    say: (req) => respond(req),
+    sayStream: (req, onToken) => respond(req, onToken),
+    resetRun(playerId: PlayerId) {
+      for (const key of [...metThisRun]) if (key.startsWith(`${playerId}:`)) metThisRun.delete(key);
     },
   };
 }
