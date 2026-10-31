@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { cookies } from "next/headers";
 import { Toaster } from "sonner";
 import { APP } from "@/shared/config";
 import "./globals.css";
@@ -14,15 +15,11 @@ export const metadata: Metadata = {
   description: APP.tagline,
 };
 
-// Ставит тёмную тему до отрисовки, чтобы не было мигания
-const themeScript = `try{if(localStorage.theme==='dark'||(!localStorage.theme&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`;
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+// Тема хранится в cookie и ставится на сервере: без мигания и без inline-скриптов
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const dark = (await cookies()).get("theme")?.value === "dark";
   return (
-    <html lang="ru" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="ru" className={dark ? "dark" : undefined} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         {children}
         <Toaster richColors position="top-right" />

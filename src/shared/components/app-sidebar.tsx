@@ -20,9 +20,7 @@ export function AppSidebar({ user }: Props) {
 
   function toggleTheme() {
     const dark = document.documentElement.classList.toggle("dark");
-    try {
-      localStorage.theme = dark ? "dark" : "light";
-    } catch {}
+    document.cookie = `theme=${dark ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
   }
 
   return (
