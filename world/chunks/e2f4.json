@@ -688,7 +688,8 @@
         1.6
       ],
       "color": "#b78159",
-      "collide": true
+      "collide": true,
+      "unless": "wardrobe_fallen"
     },
     {
       "id": "kitchen",
@@ -759,7 +760,8 @@
       ],
       "scale": 1,
       "rotY": 0,
-      "collide": false
+      "collide": false,
+      "unless": "wardrobe_fallen"
     },
     {
       "id": "visual:kitchen",
@@ -812,6 +814,208 @@
       "scale": 1,
       "rotY": 0,
       "collide": false
+    },
+    {
+      "id": "wardrobe-fallen",
+      "kind": "box",
+      "pos": [
+        13.3,
+        9.4,
+        6.5
+      ],
+      "size": [
+        2.2,
+        0.8,
+        1.6
+      ],
+      "color": "#b78159",
+      "collide": true,
+      "when": "wardrobe_fallen"
+    },
+    {
+      "id": "window-glass",
+      "kind": "box",
+      "pos": [
+        20,
+        10.7,
+        11.77
+      ],
+      "size": [
+        2,
+        1.5,
+        0.04
+      ],
+      "color": "#a8dce4",
+      "collide": false,
+      "unless": "window_broken"
+    },
+    {
+      "id": "window-shard-0",
+      "kind": "box",
+      "pos": [
+        19.2,
+        9.025,
+        10.7
+      ],
+      "size": [
+        0.25,
+        0.04,
+        0.15
+      ],
+      "rotY": 0,
+      "color": "#b9e5eb",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "window-shard-1",
+      "kind": "box",
+      "pos": [
+        19.55,
+        9.025,
+        11.049999999999999
+      ],
+      "size": [
+        0.25,
+        0.04,
+        0.15
+      ],
+      "rotY": 0.7,
+      "color": "#b9e5eb",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "window-shard-2",
+      "kind": "box",
+      "pos": [
+        19.9,
+        9.025,
+        10.7
+      ],
+      "size": [
+        0.25,
+        0.04,
+        0.15
+      ],
+      "rotY": 1.4,
+      "color": "#b9e5eb",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "window-shard-3",
+      "kind": "box",
+      "pos": [
+        20.25,
+        9.025,
+        11.049999999999999
+      ],
+      "size": [
+        0.25,
+        0.04,
+        0.15
+      ],
+      "rotY": 2.0999999999999996,
+      "color": "#b9e5eb",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "window-shard-4",
+      "kind": "box",
+      "pos": [
+        20.6,
+        9.025,
+        10.7
+      ],
+      "size": [
+        0.25,
+        0.04,
+        0.15
+      ],
+      "rotY": 2.8,
+      "color": "#b9e5eb",
+      "collide": false,
+      "when": "window_broken"
+    },
+    {
+      "id": "window-dust",
+      "kind": "fx",
+      "fx": "dust",
+      "pos": [
+        20,
+        10,
+        11
+      ],
+      "size": 0.6,
+      "when": "window_broken"
+    },
+    {
+      "id": "balcony-debris-0",
+      "kind": "box",
+      "pos": [
+        12.4,
+        9.06,
+        4.05
+      ],
+      "size": [
+        0.22,
+        0.12,
+        0.18
+      ],
+      "color": "#9b8d7d",
+      "rotY": 0,
+      "collide": false,
+      "when": "balcony_debris"
+    },
+    {
+      "id": "balcony-debris-1",
+      "kind": "box",
+      "pos": [
+        12.4,
+        9.06,
+        4.17
+      ],
+      "size": [
+        0.22,
+        0.12,
+        0.18
+      ],
+      "color": "#9b8d7d",
+      "rotY": 0.6,
+      "collide": false,
+      "when": "balcony_debris"
+    },
+    {
+      "id": "balcony-debris-2",
+      "kind": "box",
+      "pos": [
+        12.4,
+        9.06,
+        4.29
+      ],
+      "size": [
+        0.22,
+        0.12,
+        0.18
+      ],
+      "color": "#9b8d7d",
+      "rotY": 1.2,
+      "collide": false,
+      "when": "balcony_debris"
+    },
+    {
+      "id": "balcony-dust",
+      "kind": "fx",
+      "fx": "dust",
+      "pos": [
+        12.4,
+        9.4,
+        4.4
+      ],
+      "size": 0.5,
+      "when": "balcony_debris"
     },
     {
       "id": "cover_table",
@@ -1326,6 +1530,18 @@
         4
       ],
       "size": 2,
+      "when": "fire_f4"
+    },
+    {
+      "id": "fire",
+      "kind": "fx",
+      "fx": "fire",
+      "pos": [
+        15.5,
+        9.1,
+        4.6
+      ],
+      "size": 0.6,
       "when": "fire_f4"
     },
     {

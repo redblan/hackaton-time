@@ -72,6 +72,19 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   model('visual:stove','furniture/kitchenStove.glb',[10.2,0,10.5]);
   model('visual:lift','furniture/doorwayFront.glb',[10,0,4]);
   model('visual:door','furniture/doorwayOpen.glb',[5,0,5]);
+  // N3: the standing model and its collider disappear together.
+  for(const object of objects) {
+    if(object.id==='wardrobe'||object.id==='visual:wardrobe') object.unless='wardrobe_fallen';
+  }
+  objects.push({id:'wardrobe-fallen',kind:'box',pos:p(1.3,.4,6.5),size:[2.2,.8,1.6],color:'#b78159',collide:true,when:'wardrobe_fallen'});
+  objects.push({id:'window-glass',kind:'box',pos:p(8,1.7,11.77),size:[2,1.5,.04],color:'#a8dce4',collide:false,unless:'window_broken'});
+  for(let i=0;i<5;i++) objects.push({id:`window-shard-${i}`,kind:'box',pos:p(7.2+i*.35,.025,10.7+(i%2)*.35),size:[.25,.04,.15],rotY:i*.7,color:'#b9e5eb',collide:false,when:'window_broken'});
+  objects.push({id:'window-dust',kind:'fx',fx:'dust',pos:p(8,1,11),size:.6,when:'window_broken'});
+  if(floor===4) {
+    // Small fragments on the edge: never block the only detour around collapse_f4.
+    for(let i=0;i<3;i++) objects.push({id:`balcony-debris-${i}`,kind:'box',pos:p(entrance===1?11.6:.4,.06,4.05+i*.12),size:[.22,.12,.18],color:'#9b8d7d',rotY:i*.6,collide:false,when:'balcony_debris'});
+    objects.push({id:'balcony-dust',kind:'fx',fx:'dust',pos:p(entrance===1?11.6:.4,.4,4.4),size:.5,when:'balcony_debris'});
+  }
   interact('cover_table',[3,0,8],'Укрыться под столом');
   interact('cover_wall',[5,0,10],'Укрыться у внутренней стены');
   interact('cover_window',[8,0,11],'Подойти к окну');
@@ -104,9 +117,10 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
     zone('z_collapse',[5,-1.6,.15],[8,.6,1.4],'collapse_f4');
   }
   objects.push({id:'smoke',kind:'fx',fx:'smoke',pos:p(5,1,4),size:2,when:`fire_f${floor}`});
+  objects.push({id:'fire',kind:'fx',fx:'fire',pos:p(3.5,.1,4.6),size:.6,when:`fire_f${floor}`});
   if(entrance===1) {
     objects.push({id:'vanya',kind:'npc',npcId:'vanya',pos:p(10,0,4),when:'lift_vanya'});
-    if(floor>=6) objects.push({id:'spawn-top',kind:'spawn',role:'inside_top',pos:p(3,0,6),rotY:Math.PI},{id:'papa',kind:'npc',npcId:'papa',pos:p(4,0,9)});
+    if(floor>=6) objects.push({id:'spawn-top',kind:'spawn',role:'inside_top',pos:p(3,0,6),rotY:Math.PI},{id:'papa',kind:'npc',npcId:'papa',pos:p(4,0,9),unless:'papa_left'});
     if(floor===3) {
       interact('neighbor_door',[7,0,5.5],'Постучать соседке');
       objects.push({id:'valentina',kind:'npc',npcId:'valentina',pos:p(7,0,6),when:'neighbor_valentina'},{id:'spawn-mid',kind:'spawn',role:'inside_mid',pos:p(5,0,4),rotY:Math.PI});
@@ -151,6 +165,8 @@ export function yardChunk(col:number,row:number,address='ул. Садовая, 1
     objects.push({id:'sparks',kind:'fx',fx:'sparks',pos:p(7,.2,6),when:'wire'});
     box('gas-pipe',[9,.7,6],[.2,1.4,3],'#d5b34c','gas');
     objects.push({id:'gas-warning',kind:'sign',pos:p(8,1.8,4),text:'Запах газа! Не приближайтесь. Сообщите в 112.',when:'gas'});
+    // The shared fx union has no gas kind: smoke + when:gas identifies this visual to the renderer.
+    objects.push({id:'gas-cloud',kind:'fx',fx:'smoke',pos:p(9,.2,6),size:1.5,when:'gas'});
   }
   if(col===1 && row===2) {
     zone('z_safe_area',[0,0,0],[12,4,12]);
