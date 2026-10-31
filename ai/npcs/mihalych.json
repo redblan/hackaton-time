@@ -9,6 +9,7 @@
     "call_112",
     "elevator",
     "exit_building",
+    "handover",
     "route",
     "smoke",
     "triage",
