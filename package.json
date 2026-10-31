@@ -2,8 +2,18 @@
   "name": "hackaton-time",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "ai", "world"],
+  "workspaces": [
+    "shared",
+    "ai",
+    "world",
+    "server",
+    "client"
+  ],
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build -w client",
+    "start": "npm run build && npm run start -w server",
+    "db": "docker compose up -d db",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check": "npm run typecheck && npm run test",
@@ -16,5 +26,7 @@
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
   },
-  "engines": { "node": ">=20.9" }
+  "engines": {
+    "node": ">=20.9"
+  }
 }

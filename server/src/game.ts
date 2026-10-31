@@ -1,0 +1,449 @@
+/**
+ * Склейка: сокеты ↔ комнаты ↔ сценарий Юры ↔ ИИ Матвея ↔ мир Никиты.
+ * Сервер — единственный источник правды.
+ */
+import { randomInt, randomUUID } from "node:crypto";
+import type { Server, Socket } from "socket.io";
+import {
+  INTERACTABLES,
+  MODES,
+  NPC_IDS,
+  ROLES,
+  ZONES,
+  generateRun,
+  initRun,
+  reduce,
+  type AiModule,
+  type ChunkId,
+  type ClientToServer,
+  type Effect,
+  type GameEvent,
+  type NpcRequest,
+  type PlayerId,
+  type PlayerPublic,
+  type ServerToClient,
+  type Vec3,
+} from "@game/shared";
+import { planChunks, type ChunkStore } from "./chunks";
+import type { Store } from "./db";
+import { canStart, findOpenRoom, gameNow, newRoom, pauseClock, pickRole, resumeClock, toPublic, type Room } from "./rooms";
+
+export interface SocketData {
+  playerId: PlayerId;
+  name: string;
+  chunks: Set<ChunkId>;
+}
+type IO = Server<ClientToServer, ServerToClient, Record<string, never>, SocketData>;
+type Sock = Socket<ClientToServer, ServerToClient, Record<string, never>, SocketData>;
+
+const POS_BROADCAST_MS = 100; // ~10 Гц
+const TICK_MS = 1000;
+const SAVE_EVERY_MS = 5000;
+const ROOM_TTL_MS = 10 * 60_000;
+const ANIMS = new Set<PlayerPublic["anim"]>(["idle", "walk", "run", "crouch", "carry"]);
+
+const isVec3 = (v: unknown): v is Vec3 =>
+  Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1e4);
+const includes = <T extends string>(list: readonly T[], v: unknown): v is T =>
+  typeof v === "string" && (list as readonly string[]).includes(v);
+
+export class Game {
+  private rooms = new Map<string, Room>();
+  private roomOf = new Map<PlayerId, string>();
+
+  constructor(
+    private io: IO,
+    private store: Store,
+    private ai: AiModule,
+    private chunks: ChunkStore,
+  ) {
+    setInterval(() => this.broadcastPositions(), POS_BROADCAST_MS);
+    setInterval(() => this.cleanup(), 60_000);
+    io.on("connection", (s) => this.onConnection(s));
+  }
+
+  // ---------- подключение ----------
+
+  private onConnection(s: Sock) {
+    const { playerId } = s.data;
+    s.join(`p:${playerId}`);
+    console.log(`[net] + ${s.data.name} (${s.id})`);
+
+    // Перезаход: игрок уже в комнате — возвращаем его туда
+    const room = this.myRoom(playerId);
+    if (room) this.rejoin(s, room);
+
+    s.on("room:join", (p) => this.safe(() => this.onJoin(s, p?.mode)));
+    s.on("room:ready", (p) => this.safe(() => this.onReady(s, p?.role)));
+    s.on("player:move", (p) => this.safe(() => this.onMove(s, p)));
+    s.on("chunk:want", (p) => this.safe(() => this.onChunkWant(s, p?.ids)));
+    s.on("game:event", (e) => this.safe(() => this.onGameEvent(s, e)));
+    s.on("npc:talk", (p) => this.safe(() => this.onNpcTalk(s, p)));
+    s.on("chat:send", (p) => this.safe(() => this.onChat(s, p?.text)));
+    s.on("disconnect", () => this.safe(() => this.onDisconnect(s)));
+  }
+
+  private rejoin(s: Sock, room: Room) {
+    const me = room.players.get(s.data.playerId);
+    if (!me) return;
+    me.online = true;
+    room.emptySince = undefined;
+    if (room.started && !room.finished) resumeClock(room, Date.now());
+    s.join(`r:${room.id}`);
+    this.emitRoomState(room);
+    if (room.started) {
+      s.emit("run:flags", { flags: [...room.flags] });
+      s.emit("players:update", { players: this.publicPlayers(room) });
+      if (me.lastStage) s.emit("game:effect", me.lastStage);
+    }
+  }
+
+  private onDisconnect(s: Sock) {
+    console.log(`[net] - ${s.data.name} (${s.id})`);
+    const { playerId } = s.data;
+    // Другая вкладка того же игрока ещё жива — ничего не делаем
+    if ((this.io.sockets.adapter.rooms.get(`p:${playerId}`)?.size ?? 0) > 0) return;
+    const room = this.myRoom(playerId);
+    if (!room) return;
+    const me = room.players.get(playerId);
+    if (!room.started) {
+      this.leave(playerId);
+      return;
+    }
+    if (me) {
+      me.online = false;
+      void this.saveProgress(room, playerId, true);
+    }
+    if ([...room.players.values()].every((p) => !p.online)) {
+      room.emptySince = Date.now();
+      pauseClock(room, Date.now());
+    }
+  }
+
+  // ---------- лобби ----------
+
+  private onJoin(s: Sock, mode: unknown) {
+    if (!includes(MODES, mode)) return;
+    const { playerId, name } = s.data;
+    const current = this.myRoom(playerId);
+    if (current && !current.started && current.mode === mode) {
+      this.emitRoomState(current);
+      return;
+    }
+    if (current) this.leave(playerId);
+
+    let room = findOpenRoom(this.rooms.values(), mode);
+    if (!room) {
+      room = newRoom(randomUUID().slice(0, 6), mode);
+      this.rooms.set(room.id, room);
+    }
+    room.players.set(playerId, { id: playerId, name, role: null, pos: [0, 0, 0], rotY: 0, anim: "idle", online: true });
+    this.roomOf.set(playerId, room.id);
+    for (const sock of this.socketsOf(playerId)) sock.join(`r:${room.id}`);
+    // В solo роль одна — выбираем сразу
+    if (mode === "solo") pickRole(room, playerId, "inside_top");
+    this.emitRoomState(room);
+    this.maybeStart(room);
+  }
+
+  private onReady(s: Sock, role: unknown) {
+    if (!includes(ROLES, role)) return;
+    const room = this.myRoom(s.data.playerId);
+    if (!room) return;
+    const r = pickRole(room, s.data.playerId, role);
+    if (!r.ok) s.emit("chat:msg", { from: "Система", text: r.error, at: Date.now() });
+    this.emitRoomState(room);
+    this.maybeStart(room);
+  }
+
+  private leave(playerId: PlayerId) {
+    const room = this.myRoom(playerId);
+    this.roomOf.delete(playerId);
+    if (!room) return;
+    room.players.delete(playerId);
+    for (const sock of this.socketsOf(playerId)) {
+      sock.leave(`r:${room.id}`);
+      sock.data.chunks.clear();
+    }
+    if (room.players.size === 0) this.destroy(room);
+    else this.emitRoomState(room);
+  }
+
+  private destroy(room: Room) {
+    room.timers.forEach(clearInterval);
+    this.rooms.delete(room.id);
+    for (const id of room.players.keys()) if (this.roomOf.get(id) === room.id) this.roomOf.delete(id);
+  }
+
+  private cleanup() {
+    const now = Date.now();
+    for (const room of this.rooms.values()) {
+      if (room.emptySince && now - room.emptySince > ROOM_TTL_MS) {
+        console.log(`[room] ${room.id} закрыта: все вышли`);
+        this.destroy(room);
+      }
+    }
+  }
+
+  private async maybeStart(room: Room) {
+    if (!canStart(room)) return;
+    room.started = true;
+    const players = [...room.players.values()].map((p) => ({ id: p.id, role: p.role! }));
+    const profiles = await Promise.all(players.map((p) => this.store.getProfile(p.id).catch(() => undefined)));
+    const config = generateRun({
+      mode: room.mode,
+      seed: randomInt(1, 2 ** 31),
+      profiles: profiles.filter((p) => p !== undefined),
+    });
+    room.run = initRun(config, players);
+    room.flags = new Set(config.flags);
+    for (const p of room.players.values()) {
+      const sp = this.chunks.findSpawn(p.role!, config.startFloor);
+      p.pos = [sp.pos[0], sp.pos[1], sp.pos[2]];
+      p.rotY = sp.rotY;
+      this.ai.resetRun?.(p.id);
+    }
+    console.log(`[room] ${room.id} старт: ${room.mode}, этаж ${config.startFloor}, флаги ${config.flags.join(",")}`);
+    this.emitRoomState(room);
+    this.io.to(`r:${room.id}`).emit("run:flags", { flags: [...room.flags] });
+    this.io.to(`r:${room.id}`).emit("players:update", { players: this.publicPlayers(room) });
+    resumeClock(room, Date.now());
+    this.dispatch(room, { type: "start", at: this.now(room) });
+    room.timers.push(
+      setInterval(() => {
+        if (room.clock.runningSince !== null) this.safe(() => this.dispatch(room, { type: "tick", at: this.now(room) }));
+      }, TICK_MS),
+    );
+  }
+
+  // ---------- движение и мир ----------
+
+  private onMove(s: Sock, p: { pos: unknown; rotY: unknown; anim: unknown } | undefined) {
+    const room = this.myRoom(s.data.playerId);
+    const me = room?.players.get(s.data.playerId);
+    if (!room || !me || !p || !isVec3(p.pos) || typeof p.rotY !== "number" || !Number.isFinite(p.rotY)) return;
+    me.pos = p.pos;
+    me.rotY = p.rotY;
+    me.anim = ANIMS.has(p.anim as PlayerPublic["anim"]) ? (p.anim as PlayerPublic["anim"]) : "idle";
+    if (room.started && Date.now() - (me.lastSavedAt ?? 0) > SAVE_EVERY_MS) void this.saveProgress(room, me.id);
+  }
+
+  private broadcastPositions() {
+    for (const room of this.rooms.values()) {
+      if (!room.started || room.finished) continue;
+      this.io.to(`r:${room.id}`).volatile.emit("players:update", { players: this.publicPlayers(room) });
+    }
+  }
+
+  private onChunkWant(s: Sock, ids: unknown) {
+    const plan = planChunks(s.data.chunks, ids, (id) => this.chunks.get(id) !== undefined);
+    s.data.chunks = plan.next;
+    if (plan.drop.length) s.emit("chunk:drop", { ids: plan.drop });
+    for (const id of plan.send) s.emit("chunk:data", { chunk: this.chunks.get(id)! });
+  }
+
+  // ---------- сценарий ----------
+
+  private onGameEvent(s: Sock, e: unknown) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room?.run || room.finished || !e || typeof e !== "object") return;
+    const ev = e as Record<string, unknown>;
+    const base = { at: this.now(room), playerId: s.data.playerId };
+    let event: GameEvent | null = null;
+    if (ev.type === "interact" && includes(INTERACTABLES, ev.target)) event = { type: "interact", ...base, target: ev.target };
+    else if (ev.type === "enterZone" && includes(ZONES, ev.zone)) event = { type: "enterZone", ...base, zone: ev.zone };
+    else if (ev.type === "minigameResult" && ev.result && typeof ev.result === "object")
+      event = { type: "minigameResult", ...base, result: ev.result as Extract<GameEvent, { type: "minigameResult" }>["result"] };
+    if (event) this.dispatch(room, event);
+  }
+
+  /** Прогнать событие через reduce() и исполнить эффекты. Ошибка в сценарии не роняет сервер. */
+  private dispatch(room: Room, event: GameEvent) {
+    if (!room.run || room.finished) return;
+    let result;
+    try {
+      result = reduce(room.run, event);
+    } catch (e) {
+      console.error(`[scenario] reduce упал на ${event.type}:`, e);
+      return;
+    }
+    room.run = result.state;
+    for (const eff of result.effects) this.safe(() => this.execute(room, eff));
+  }
+
+  private execute(room: Room, eff: Effect) {
+    const toRoom = this.io.to(`r:${room.id}`);
+    switch (eff.type) {
+      case "stage": {
+        const p = room.players.get(eff.playerId);
+        if (p) {
+          p.lastStage = eff;
+          p.stage = eff.stage;
+          void this.saveProgress(room, p.id, true);
+        }
+        this.io.to(`p:${eff.playerId}`).emit("game:effect", eff);
+        break;
+      }
+      case "npcSay":
+        void this.npcSay(room, eff.toPlayerId, {
+          npcId: eff.npcId,
+          playerId: eff.toPlayerId,
+          event: eff.event,
+          context: { ...this.npcContext(room, eff.toPlayerId), ...eff.context },
+        });
+        break;
+      case "openMinigame":
+      case "inventory":
+        this.io.to(`p:${eff.playerId}`).emit("game:effect", eff);
+        break;
+      case "journal":
+        this.io.to(`p:${eff.entry.playerId}`).emit("game:effect", eff);
+        void this.recordSkill(eff.entry.playerId, eff.entry.skill, eff.entry.outcome === "ok");
+        break;
+      case "setFlag":
+        room.flags.add(eff.flag);
+        toRoom.emit("run:flags", { flags: [...room.flags] });
+        break;
+      case "quake":
+        toRoom.emit("game:effect", eff);
+        break;
+      case "runEnd":
+        void this.endRun(room, eff.summary);
+        break;
+    }
+  }
+
+  private npcContext(room: Room, playerId: PlayerId): NpcRequest["context"] {
+    const run = room.run;
+    return {
+      stage: run?.stage[playerId],
+      flags: [...room.flags],
+      facts: run?.facts ?? [],
+      address: run?.config.address,
+      startFloor: run?.config.startFloor,
+      mode: room.mode,
+      partners: [...room.players.values()].filter((p) => p.id !== playerId).map((p) => p.name),
+    };
+  }
+
+  private async npcSay(room: Room, playerId: PlayerId, req: NpcRequest) {
+    const to = this.io.to(`p:${playerId}`);
+    try {
+      const res = this.ai.sayStream
+        ? await this.ai.sayStream(req, (token) => to.emit("npc:token", { npcId: req.npcId, token }))
+        : await this.ai.say(req);
+      to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source });
+      if (res.outcome) {
+        this.dispatch(room, { type: "dialogOutcome", at: this.now(room), playerId, npcId: req.npcId, outcome: res.outcome });
+      }
+    } catch (e) {
+      console.error(`[ai] ${req.npcId}/${req.event} упал:`, e);
+      to.emit("npc:done", { npcId: req.npcId, text: "…", source: "template" });
+    }
+  }
+
+  private onNpcTalk(s: Sock, p: { npcId: unknown; text: unknown } | undefined) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room?.started || !p || !includes(NPC_IDS, p.npcId) || typeof p.text !== "string") return;
+    const text = p.text.trim().slice(0, 500);
+    if (!text) return;
+    void this.npcSay(room, s.data.playerId, {
+      npcId: p.npcId,
+      playerId: s.data.playerId,
+      event: "free_talk",
+      playerMessage: text,
+      context: this.npcContext(room, s.data.playerId),
+    });
+  }
+
+  private onChat(s: Sock, text: unknown) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room || typeof text !== "string") return;
+    const t = text.trim().slice(0, 300);
+    if (t) this.io.to(`r:${room.id}`).emit("chat:msg", { from: s.data.name, text: t, at: Date.now() });
+  }
+
+  private async endRun(room: Room, summary: Extract<Effect, { type: "runEnd" }>["summary"]) {
+    room.finished = true;
+    room.timers.forEach(clearInterval);
+    room.timers = [];
+    for (const p of room.players.values()) {
+      const profile = await this.store.getProfile(p.id).catch(() => null);
+      if (profile) await this.store.saveProfile({ ...profile, runs: profile.runs + 1 }).catch(() => {});
+      let debrief = "";
+      try {
+        const journal = room.run?.journal.filter((j) => j.playerId === p.id) ?? [];
+        const res = await this.ai.say({
+          npcId: "gromov",
+          playerId: p.id,
+          event: "debrief",
+          context: { ...this.npcContext(room, p.id), journal, summary },
+        });
+        debrief = res.text;
+      } catch (e) {
+        console.error("[ai] разбор упал:", e);
+      }
+      this.io.to(`p:${p.id}`).emit("run:end", { summary, debrief });
+    }
+  }
+
+  // ---------- БД ----------
+
+  private async recordSkill(playerId: PlayerId, skill: string, ok: boolean) {
+    try {
+      const profile = await this.store.getProfile(playerId);
+      const key = skill as keyof typeof profile.skills;
+      const cur = profile.skills[key] ?? { ok: 0, fail: 0 };
+      profile.skills[key] = ok ? { ...cur, ok: cur.ok + 1 } : { ...cur, fail: cur.fail + 1 };
+      await this.store.saveProfile(profile);
+    } catch (e) {
+      console.error("[db] профиль не сохранён:", (e as Error).message);
+    }
+  }
+
+  private async saveProgress(room: Room, playerId: PlayerId, force = false) {
+    const p = room.players.get(playerId);
+    if (!p) return;
+    if (!force && Date.now() - (p.lastSavedAt ?? 0) < SAVE_EVERY_MS) return;
+    p.lastSavedAt = Date.now();
+    try {
+      await this.store.saveProgress(playerId, { roomId: room.id, stage: p.stage ?? null, pos: p.pos });
+    } catch (e) {
+      console.error("[db] прогресс не сохранён:", (e as Error).message);
+    }
+  }
+
+  // ---------- утилиты ----------
+
+  /** Игровое время комнаты (D-50) — его получает сценарий в `at` */
+  private now(room: Room) {
+    return gameNow(room, Date.now());
+  }
+  private myRoom(playerId: PlayerId) {
+    const id = this.roomOf.get(playerId);
+    return id ? this.rooms.get(id) : undefined;
+  }
+  private socketsOf(playerId: PlayerId): Sock[] {
+    const ids = this.io.sockets.adapter.rooms.get(`p:${playerId}`) ?? new Set<string>();
+    return [...ids].map((id) => this.io.sockets.sockets.get(id)).filter((s): s is Sock => s !== undefined);
+  }
+  private publicPlayers(room: Room) {
+    return [...room.players.values()].filter((p) => p.online).map(toPublic);
+  }
+  private emitRoomState(room: Room) {
+    this.io.to(`r:${room.id}`).emit("room:state", {
+      roomId: room.id,
+      mode: room.mode,
+      players: [...room.players.values()].map(toPublic),
+      started: room.started,
+    });
+  }
+  private safe(fn: () => unknown) {
+    try {
+      const r = fn();
+      if (r instanceof Promise) r.catch((e) => console.error("[game]", e));
+    } catch (e) {
+      console.error("[game]", e);
+    }
+  }
+}

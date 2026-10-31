@@ -7,7 +7,12 @@
 
 ```bash
 npm install
+npm run db        # Postgres в docker (без него сервер работает в памяти)
+npm run dev       # сервер :3000 + клиент :5173 → http://<ip>:5173 с любого ноута в сети
+npm run start     # демо: сборка клиента + https://<ip>:3000 (самоподписанный сертификат)
 npm run check
 ```
+
+Песочница мини-игр и чанков: `/sandbox`. Переменные (необязательно): `PORT`, `HTTPS=0|1`, `DATABASE_URL`, `OLLAMA_URL`, `OLLAMA_MODEL`.
 
 Нужно: Node.js 20.9+. Для ИИ на сервере — [Ollama](https://ollama.com) с локальной моделью (скачать заранее).

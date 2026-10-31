@@ -4,3 +4,5 @@ dist
 .DS_Store
 *.log
 ai/memory/*.json
+server/.certs
+client/dist
