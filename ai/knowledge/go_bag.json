@@ -11,6 +11,9 @@
     "mistakes": {
       "go_bag_trap": "Ноутбук и приставка занимают место, а воду и аптечку потом взять негде."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России — Тревожный чемоданчик",
+      "url": "https://mchs.gov.ru/deyatelnost/bezopasnost-grazhdan/trevozhnyy-chemodanchik_2"
+    }
   }
 ]

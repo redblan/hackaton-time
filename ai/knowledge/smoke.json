@@ -8,6 +8,9 @@
       "Пример: внизу воздух чище, дым поднимается вверх.",
       "Что будет, если идти в полный рост: надышишься дымом и потеряешь сознание."
     ],
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Тульской обл.) — Как вести себя при пожаре в многоквартирном доме",
+      "url": "https://71.mchs.gov.ru/deyatelnost/poleznaya-informaciya/rekomendacii-naseleniyu/pozharnaya-bezopasnost/kak-vesti-sebya-pri-pozhare-v-mnogokvartirnom-dome"
+    }
   }
 ]

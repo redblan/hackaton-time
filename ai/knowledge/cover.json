@@ -13,7 +13,10 @@
       "cover_wardrobe": "Шкаф может упасть прямо на тебя, к высокой мебели не прижимайся.",
       "cover_run_out": "Бежать на лестницу во время толчка нельзя: пролёты рушатся первыми."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Московской обл.) — Правила поведения при землетрясении",
+      "url": "https://50.mchs.gov.ru/deyatelnost/poleznaya-informaciya/propaganda/pamyatki-naseleniyu/pravila-povedeniya-pri-zemletryasenii"
+    }
   },
   {
     "id": "cover.low_floors",
@@ -24,6 +27,9 @@
       "Пример: с седьмого этажа ты за пару секунд не спустишься, а на лестнице в это время опаснее всего.",
       "Что будет, если: начнёшь спускаться с верхнего этажа во время толчка — застанет на лестнице."
     ],
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России (ГУ по Московской обл.) — Правила поведения при землетрясении",
+      "url": "https://50.mchs.gov.ru/deyatelnost/poleznaya-informaciya/propaganda/pamyatki-naseleniyu/pravila-povedeniya-pri-zemletryasenii"
+    }
   }
 ]

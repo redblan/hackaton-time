@@ -11,7 +11,10 @@
     "mistakes": {
       "light_switch": "Выключатель искрит. При запахе газа свет не трогают."
     },
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России — Утечка бытового газа",
+      "url": "https://mchs.gov.ru/deyatelnost/bezopasnost-grazhdan/utechka-bytovogo-gaza_9"
+    }
   },
   {
     "id": "gas.phone",
@@ -22,6 +25,9 @@
       "Пример: позвонить можно с площадки или со двора, там безопасно.",
       "Что будет, если: телефон тоже может дать искру."
     ],
-    "source": { "title": "TODO: проверить по официальному источнику", "url": "" }
+    "source": {
+      "title": "МЧС России — Утечка бытового газа",
+      "url": "https://mchs.gov.ru/deyatelnost/bezopasnost-grazhdan/utechka-bytovogo-gaza_9"
+    }
   }
 ]
