@@ -63,7 +63,7 @@
    | `hazard` | опасности: оборванный провод, газ, треснувший козырёк |
 
    Слоты вытаскиваются из текста игрока регулярками и ключевыми словами, LLM только формулирует вопрос. Ответ: `outcome: "slot_missing:<слот>"` (первый недостающий по порядку таблицы) или `"slots_complete"`, плюс `slots` — что уже собрано.
-7. Карточки `valentina`, `dispatcher`, пострадавшие. Передача бригаде (`gromov`): то же, что у диспетчера, но по `HANDOVER_ITEMS` (`victims`, `tourniquet_time`, `trapped`, `fire`, `hazard`) → `handover_missing:<пункт>` или `handover_complete`.
+7. Карточки `valentina`, `dispatcher`, пострадавшие. Передача бригаде (`gromov`): то же, что у диспетчера, но по `HANDOVER_ITEMS` (`victims`, `condition`, `actions`, `tourniquet_time`, `trapped`, `fire`, `hazard`; условность — D-23/D-24 в `docs/DECISIONS.md`) → `handover_missing:<пункт>` или `handover_complete`.
 
    **Все значения `outcome`** — тип `DialogOutcome` из `ids.ts`, других не придумываем (нужен новый — к Егору):
 
@@ -72,6 +72,7 @@
    | `calmed` | vanya, valentina, victim_*, neighbor_leg | игрок говорит спокойно, поддерживает |
    | `panicked` | те же | грубость, паника, крик в тексте игрока |
    | `agreed_to_go` | valentina | согласилась идти с игроком к выходу |
+| `left_behind` | **сервер**, не ИИ | игрок ушёл от Валентины дальше 8 м (D-26) — ИИ его не возвращает |
    | `slot_missing:<слот>` | dispatcher | не хватает слота из `DISPATCHER_SLOTS` |
    | `slots_complete` | dispatcher | все слоты собраны |
    | `handover_missing:<пункт>` | gromov | не хватает пункта из `HANDOVER_ITEMS` |

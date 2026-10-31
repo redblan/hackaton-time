@@ -132,6 +132,7 @@ export function initRun(config: RunConfig, players: { id: PlayerId; role: Role }
     ),
     journal: [],
     startedAt: 0,
+    timers: {},
     finished: false,
   };
 }

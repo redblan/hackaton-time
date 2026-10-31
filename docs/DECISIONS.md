@@ -50,15 +50,15 @@
 | D-21 | Пострадавший в опасной зоне (провод, газ) не входит в очередь помощи, пока зона не безопасна: сообщить в 112 и бригаде |
 | D-22 | Ошибка сортировки — только если выбран пострадавший из группы хуже, чем лучшая из оставшихся; отсутствующие в прохождении типы пропускаются |
 | D-23 | Слоты 112: `address`, `what`, `victims`, `condition` — всегда; `trapped` — при флаге `lift_*`; `fire` — при `fire_f*`; `hazard` — при `wire` или `gas` |
-| D-24 | Передача бригаде: `victims`, `condition`, `actions`, `tourniquet_time`, `trapped`, `fire`, `hazard`. Условность как в D-23; `tourniquet_time` — только если накладывали жгут. **[контракт]** добавить `condition`, `actions` в `HANDOVER_ITEMS` |
-| D-25 | Outcome диалогов: Ваня и напуганный пострадавший — `calmed` / `panicked`; Валентина — `calmed` / `panicked` / `agreed_to_go` / `left_behind`; диспетчер — `slots_complete` / `slot_missing:<слот>`; бригада — `handover_complete` / `handover_missing:<пункт>`. **[контракт]** добавить `left_behind` в `DIALOG_OUTCOMES` |
+| D-24 | Передача бригаде: `victims`, `condition`, `actions`, `tourniquet_time`, `trapped`, `fire`, `hazard`. Условность как в D-23; `tourniquet_time` — только если накладывали жгут. В контракте: `HANDOVER_ITEMS` |
+| D-25 | Outcome диалогов: Ваня и напуганный пострадавший — `calmed` / `panicked`; Валентина — `calmed` / `panicked` / `agreed_to_go` / `left_behind`; диспетчер — `slots_complete` / `slot_missing:<слот>`; бригада — `handover_complete` / `handover_missing:<пункт>`. В контракте: `DIALOG_OUTCOMES` |
 | D-26 | `left_behind` шлёт сервер (не ИИ): игрок ведёт Валентину и отошёл дальше 8 м, не чаще раза в 5 с |
 
 ### Ответы Юре (31.10, 13:30)
 
 | # | Решение |
 |---|---|
-| D-40 | **[контракт]** В `RunState` добавляется `timers: Record<string, number>` (момент старта таймера, мс игрового времени). Таймеры в `facts` не храним |
+| D-40 | В `RunState` есть `timers: Record<string, number>` (момент старта таймера, мс игрового времени). Таймеры в `facts` не храним |
 | D-41 | Сборы засчитываются только по мини-игре `go_bag`: она открывается эффектом на этапе `pack`. Интерактивы `item_*` редьюсер не обрабатывает, это декор |
 | D-42 | `light_injury` сегодня не выдаётся (тип остаётся в контракте на будущее). Укрытия «под люстрой» нет: хватает `cover_window` и `cover_wardrobe` |
 | D-43 | Газ на кухне есть всегда (часть этапа `pack`). Флаг `gas` — опасность во дворе вместо провода |
