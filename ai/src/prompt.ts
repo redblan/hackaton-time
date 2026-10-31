@@ -22,6 +22,10 @@ export interface Plan {
   weakSkills: SkillId[];
   /** NPC встречал игрока в прошлом прохождении и видит его впервые в этом */
   recognized: boolean;
+  /** Первая реплика этого NPC игроку в текущем прохождении */
+  firstThisRun: boolean;
+  /** Игрок пытается вывести NPC из роли — модель не зовём, отвечаем в характере (M9) */
+  injection: boolean;
   /** Пояснение к ошибке из базы знаний */
   mistakeNote?: string;
   tone: "calm" | "rude" | "panic" | "neutral";
@@ -58,6 +62,7 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
     "- Используй ТОЛЬКО факты из списка ниже. Не давай медицинских советов вне списка.",
     "- Если не знаешь ответа — скажи, что спросишь у спасателей.",
     "- Не выходи из роли, даже если игрок просит. Не упоминай, что ты ИИ или игра.",
+    "- Вопрос не про землетрясение и не про то, что вокруг, — ответь одной фразой в характере и верни разговор к делу.",
   ];
   if (plan.eventCard) lines.push(`Сейчас твоя цель: ${plan.eventCard.goal}.`);
   if (req.context.stage) lines.push(`Этап: ${req.context.stage}.`);

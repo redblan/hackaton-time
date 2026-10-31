@@ -50,3 +50,18 @@ export function detectTone(message: string | undefined): Tone {
   if (CALM.some((w) => m.includes(w))) return "calm";
   return "neutral";
 }
+
+/** Попытка вывести NPC из роли: «забудь инструкции», «ты ИИ?», «system prompt»… (M9) */
+export function detectInjection(message: string | undefined): boolean {
+  if (!message) return false;
+  return /игнорир|забудь\s+(все|всё|свои|прошл|инструкц|правил)|системн\S*\s+(промпт|сообщ)|промпт|system\s*prompt|ты\s+(же\s+)?(ии|бот|нейросеть|нейронка|chatgpt|gpt|модель|программа|искусственн)|притворись|представь,?\s+что\s+ты|режим\s+разработчика|developer\s+mode|jailbreak|ignore\s+(all|previous|the)|you\s+are\s+now|act\s+as/i.test(
+    message,
+  );
+}
+
+/** Ответ модели вышел из роли или выдал, что это ИИ — такой не показываем (M9). */
+export function looksBroken(reply: string): boolean {
+  return /как\s+(ии|искусственн\S*\s+интеллект|языков\S*\s+модель)|я\s*(—|-)?\s*(ии|бот|языков\S*\s+модель|нейросеть|искусственн)|language\s+model|as\s+an\s+ai|openai|qwen|alibaba|<\|im_|\bassistant\b|\buser\b:/i.test(
+    reply,
+  );
+}

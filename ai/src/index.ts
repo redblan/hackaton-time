@@ -11,8 +11,8 @@ import { createDispatcher } from "./dispatcher";
 import { createGromov } from "./gromov";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
-import { buildMessages, cleanReply, EMOTIONAL, type Plan, type PlannedFact } from "./prompt";
-import { detectTone, searchFacts, stripLabel } from "./text";
+import { buildMessages, cleanReply, EMOTIONAL, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
+import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
 export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
@@ -75,7 +75,8 @@ export function createAi(opts: CreateAiOptions): AiModule {
         mistakeNote = withNote.mistakes?.[mistake.code];
       }
     }
-    if (req.playerMessage) {
+    const injection = detectInjection(req.playerMessage);
+    if (req.playerMessage && !injection) {
       const pool = card.skills ? factsBySkill(data, card.skills) : [...data.facts.values()];
       for (const f of searchFacts(req.playerMessage, pool)) ids.add(f.id);
     }
@@ -90,7 +91,17 @@ export function createAi(opts: CreateAiOptions): AiModule {
     );
     const firstThisRun = !metThisRun.has(`${req.playerId}:${req.npcId}`);
     const recognized = firstThisRun && (memory.npc[req.npcId]?.met ?? 0) > 0;
-    return { card, eventCard, facts, weakSkills, recognized, mistakeNote, tone: detectTone(req.playerMessage) };
+    return {
+      card,
+      eventCard,
+      facts,
+      weakSkills,
+      recognized,
+      firstThisRun,
+      injection,
+      mistakeNote,
+      tone: injection ? "neutral" : detectTone(req.playerMessage),
+    };
   }
 
   function outcomeOf(req: NpcRequest, p: Plan, memory: PlayerMemory): string | undefined {
@@ -109,6 +120,12 @@ export function createAi(opts: CreateAiOptions): AiModule {
   function templateReply(req: NpcRequest, p: Plan, memory: PlayerMemory, outcome?: string): { text: string; key?: string } {
     const parts: string[] = [];
     if (p.recognized && p.card.recognize?.length) parts.push(pickLeastUsed(memory, req.npcId, "recognize", p.card.recognize).text);
+
+    // Напоминание о прошлой ошибке в этой теме — один раз за прохождение у этого NPC
+    const weak = p.weakSkills[0];
+    if (weak && p.firstThisRun && !EMOTIONAL.has(req.npcId) && req.event !== "mistake") {
+      parts.push(`В прошлый раз тут было непросто — ${SKILL_NAMES[weak]}. Будь внимательнее.`);
+    }
 
     const reaction = outcome === "panicked" ? p.card.reactions?.panicked : outcome ? p.card.reactions?.calmed : undefined;
     if (reaction?.length) parts.push(pickLeastUsed(memory, req.npcId, `reaction_${outcome}`, reaction).text);
@@ -205,6 +222,7 @@ export function createAi(opts: CreateAiOptions): AiModule {
     let text: string;
     let source: NpcResponse["source"];
     try {
+      if (p.injection) throw new Error("попытка вывести NPC из роли — отвечаем шаблоном");
       const raw = await ollamaChat({
         url,
         model,
@@ -215,6 +233,7 @@ export function createAi(opts: CreateAiOptions): AiModule {
       });
       text = cleanReply(raw);
       if (!text) throw new Error("ollama: пустой ответ");
+      if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
       source = "llm";
     } catch {
       text = templateReply(req, p, memory, outcome).text;
