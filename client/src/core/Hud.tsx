@@ -10,6 +10,7 @@ import { NPC_NAMES, ROLE_NAMES, STAGE_NAMES } from "./names";
 import { sample } from "./remote";
 import { nextKey, store, useStore } from "./store";
 import { Button } from "./ui";
+import { RouteReview } from '../debrief/RouteReview';
 
 type Target = "radio" | NpcId;
 
@@ -149,7 +150,7 @@ function RunEnd() {
   const mine = end.summary.perPlayer.find((p) => p.playerId === me);
   return (
     <div className="overlay">
-      <div className="card card-wide">
+      <div className="card card-wide route-results">
         <h1>Прохождение завершено</h1>
         <p>
           Очки: <b>{end.summary.score}</b> · время {Math.round(end.summary.durationMs / 1000)} с
@@ -177,6 +178,7 @@ function RunEnd() {
             В лобби
           </Button>
         </div>
+        {end.summary.route && <RouteReview review={end.summary.route} />}
       </div>
     </div>
   );

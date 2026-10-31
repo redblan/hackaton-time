@@ -4,6 +4,7 @@ import { getSocket, logout } from "./net";
 import { MODE_NAMES, ROLE_NAMES, SKILL_NAMES } from "./names";
 import { useStore } from "./store";
 import { Button, Card } from "./ui";
+import { LastRoute } from '../debrief/LastRoute';
 
 const ROLES_BY_MODE: Record<Mode, Role[]> = {
   solo: ["inside_top"],
@@ -65,6 +66,7 @@ export function Lobby() {
         </div>
         {netError && <div className="error">{netError}</div>}
         <ProfileCard token={auth.token} />
+        <LastRoute token={auth.token} />
 
         <h2>Режим</h2>
         <div className="row">

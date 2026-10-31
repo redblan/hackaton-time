@@ -1,0 +1,9 @@
+.route-review { color: #203c37; background: #fffef6; padding: 16px; border-radius: 12px; margin: 16px 0; }
+.route-review svg { display: block; width: 100%; height: 340px; background: #e5eee9; margin: 12px 0; }
+.route-review label { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.route-review input[type=range] { width: 240px; }
+.route-review select { color: #203c37; background: white; }
+.route-review button { cursor: pointer; text-align: left; margin: 4px; padding: 6px; }
+.route-legend { font-size: 13px; line-height: 1.5; }
+.route-error { border-left: 4px solid #cf342c; padding: 10px; background: #fff0e7; }
+.route-results { max-height: 92vh; overflow-y: auto; pointer-events: auto; }

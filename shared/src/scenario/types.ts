@@ -107,6 +107,7 @@ export type GameEvent =
 // ---------- Эффекты (выход редьюсера) ----------
 
 export interface RunSummary {
+  route?: import('../route').RouteReview;
   score: number;
   durationMs: number;
   perPlayer: {

@@ -92,6 +92,14 @@ app.get("/api/chunks/:id", (req, res) => {
 });
 
 // Оверлей для жюри (F3): что NPC помнят об игроке и его профиль навыков. Только про себя, по токену.
+app.get('/api/me/route', async (req, res) => {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '') ?? '';
+  const player = token ? await resolveToken(store, token).catch(() => null) : null;
+  if (!player) { res.status(401).json({ error: 'Войдите в игру' }); return; }
+  try { res.json({ review: await store.getRoute(player.id) }); }
+  catch { res.status(500).json({ error: 'Не удалось загрузить маршрут' }); }
+});
+
 app.get(["/api/me", "/api/debug/me"], async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
   const player = token ? await resolveToken(store, token).catch(() => null) : null;

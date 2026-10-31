@@ -87,7 +87,7 @@ async function boot(store: InstanceType<typeof MemStore>, aiImpl: AiModule = ai)
     io.close();
     await new Promise((r) => http.close(r));
   };
-  return { url, stop };
+  return { url, stop, game };
 }
 
 function client(url: string, token: string) {
@@ -102,6 +102,31 @@ function client(url: string, token: string) {
 }
 
 describe("сервер целиком", () => {
+  it('sends and persists a route report with server-side error positions', async () => {
+    const store = new MemStore();
+    const auth = await register(store, 'Маршрут', 'pass1');
+    if (!auth.ok) throw new Error(auth.error);
+    const srv = await boot(store); cleanup.push(srv.stop);
+    const a = client(srv.url, auth.token);
+    a.c.emit('room:join', { mode: 'solo' });
+    await until(() => a.log.rooms.some(r => r.started));
+    const internals = srv.game as unknown as {
+      myRoom(id: string): import('../src/rooms').Room;
+      execute(room: import('../src/rooms').Room, effect: import('@game/shared').Effect): void;
+    };
+    const room = internals.myRoom(auth.playerId);
+    a.c.emit('player:move', { pos: [4,6,4], rotY: 0, anim: 'walk' });
+    await until(() => room.players.get(auth.playerId)?.pos[0] === 4);
+    internals.execute(room, { type:'journal', entry:{at:100,playerId:auth.playerId,stage:'cover',skill:'cover',outcome:'mistake',note:'Встал у окна'} });
+    let report: import('@game/shared').RunSummary | undefined;
+    a.c.on('run:end', value => { report=value.summary; });
+    internals.execute(room, { type:'runEnd',summary:{score:0,durationMs:1000,perPlayer:[]} });
+    await until(() => Boolean(report));
+    expect(report?.route?.players[0].errors[0].pos).toEqual([4,6,4]);
+    expect(report?.route?.players[0].points[0].pos).toEqual([2,6,2]);
+    expect(await store.getRoute(auth.playerId)).toEqual(report?.route);
+    expect(await store.getRoute('another-player')).toBeNull();
+  });
   it("сопровождение, left_behind и восстановление после перезапуска", async () => {
     const store = new MemStore();
     const r = await register(store, "Тестер", "pass1");

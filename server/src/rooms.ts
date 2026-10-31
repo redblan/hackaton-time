@@ -37,6 +37,9 @@ export interface Room {
   npcs: Map<NpcId, Escort>;
   /** Есть несохранённые изменения — снимок уйдёт в БД */
   dirty: boolean;
+  route: import('@game/shared').RoutePlayer[];
+  flagTimes: Record<string, number>;
+  result?: import('@game/shared').RunSummary;
 }
 
 export function newRoom(id: string, mode: Mode): Room {
@@ -52,6 +55,8 @@ export function newRoom(id: string, mode: Mode): Room {
     clock: { elapsedMs: 0, runningSince: null },
     npcs: new Map(),
     dirty: false,
+    route: [],
+    flagTimes: {},
   };
 }
 
@@ -107,6 +112,9 @@ export function resumeClock(room: Room, wall: number) {
 // ---------- Снимок комнаты для восстановления после перезапуска сервера ----------
 
 export interface RoomSnapshot {
+  result?: import('@game/shared').RunSummary;
+  route?: import('@game/shared').RoutePlayer[];
+  flagTimes?: Record<string, number>;
   v: 1;
   id: string;
   mode: Mode;
@@ -121,6 +129,9 @@ export interface RoomSnapshot {
 export function toSnapshot(room: Room, wall: number): RoomSnapshot {
   return {
     v: 1,
+    route: room.route,
+    result: room.result,
+    flagTimes: room.flagTimes,
     id: room.id,
     mode: room.mode,
     finished: room.finished,
@@ -147,6 +158,9 @@ export function fromSnapshot(s: RoomSnapshot): Room {
   room.started = true;
   room.finished = s.finished;
   room.run = s.run;
+  room.route = s.route ?? [];
+  room.result = s.result;
+  room.flagTimes = s.flagTimes ?? {};
   room.flags = new Set(s.flags);
   room.clock = { elapsedMs: s.clockMs, runningSince: null };
   for (const p of s.players) room.players.set(p.id, { ...p, anim: "idle", online: false });

@@ -3,6 +3,7 @@
  * Сервер — единственный источник правды.
  */
 import { randomInt, randomUUID } from "node:crypto";
+import { recordRoute, routeAreas, routeAdvice } from './route';
 import type { Server, Socket } from "socket.io";
 import {
   INTERACTABLES,
@@ -265,6 +266,9 @@ export class Game {
       p.pos = [sp.pos[0], sp.pos[1], sp.pos[2]];
       p.rotY = sp.rotY;
       this.ai.resetRun?.(p.id);
+      const route = { id: p.id, name: p.name, points: [], errors: [], truncated: false };
+      recordRoute(route, 0, p.pos, true);
+      room.route.push(route);
     }
     console.log(`[room] ${room.id} старт: ${room.mode}, этаж ${config.startFloor}, флаги ${config.flags.join(",")}`);
     this.emitRoomState(room);
@@ -291,6 +295,10 @@ export class Game {
     const me = room?.players.get(s.data.playerId);
     if (!room || !me || !p || !isVec3(p.pos) || typeof p.rotY !== "number" || !Number.isFinite(p.rotY)) return;
     me.pos = p.pos;
+    if (room.started && !room.finished) {
+      const route = room.route.find(r => r.id === me.id);
+      if (route) recordRoute(route, this.now(room), me.pos);
+    }
     me.rotY = p.rotY;
     me.anim = ANIMS.has(p.anim as PlayerPublic["anim"]) ? (p.anim as PlayerPublic["anim"]) : "idle";
     for (const e of room.npcs.values()) if (e.playerId === me.id) recordTrail(e, me.pos);
@@ -416,11 +424,19 @@ export class Game {
       case "inventory":
         this.io.to(`p:${eff.playerId}`).emit("game:effect", eff);
         break;
-      case "journal":
+      case "journal": {
+        const route = room.route.find(r => r.id === eff.entry.playerId);
+        const player = room.players.get(eff.entry.playerId);
+        if (route && player && eff.entry.outcome !== 'ok' && route.errors.length < 500) {
+          recordRoute(route, eff.entry.at, player.pos, true);
+          route.errors.push({ at: eff.entry.at, pos: [...player.pos], note: eff.entry.note, advice: routeAdvice(eff.entry.skill) });
+        }
         this.io.to(`p:${eff.entry.playerId}`).emit("game:effect", eff);
         void this.recordSkill(eff.entry.playerId, eff.entry.skill, eff.entry.outcome === "ok");
         break;
+      }
       case "setFlag":
+        room.flagTimes[eff.flag] ??= this.now(room);
         room.flags.add(eff.flag);
         toRoom.emit("run:flags", { flags: [...room.flags] });
         break;
@@ -532,12 +548,23 @@ export class Game {
   }
 
   private async endRun(room: Room, summary: Extract<Effect, { type: "runEnd" }>["summary"]) {
+    if (room.finished) return;
+    for (const player of room.players.values()) {
+      const route = room.route.find(r => r.id === player.id);
+      if (route) recordRoute(route, this.now(room), player.pos, true);
+    }
+    summary = { ...summary, route: {
+      players: structuredClone(room.route), durationMs: summary.durationMs,
+      areas: routeAreas(this.chunks.ids().flatMap(id => { const c = this.chunks.get(id); return c ? [c] : []; }), room.flags, room.flagTimes),
+    } };
+    room.result = summary;
     room.finished = true;
     room.timers.forEach(clearInterval);
     room.timers = [];
     room.dirty = true;
     void this.saveRooms();
     for (const p of room.players.values()) {
+      if (summary.route) await this.store.saveRoute(p.id, summary.route).catch(e => console.error('[route] сохранение не удалось:', e));
       const profile = await this.store.getProfile(p.id).catch(() => null);
       if (profile) await this.store.saveProfile({ ...profile, runs: profile.runs + 1 }).catch(() => {});
       let debrief = "";

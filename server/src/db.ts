@@ -22,6 +22,8 @@ export interface Progress {
 }
 
 export interface Store {
+  saveRoute(playerId: PlayerId, review: import('@game/shared').RouteReview): Promise<void>;
+  getRoute(playerId: PlayerId): Promise<import('@game/shared').RouteReview | null>;
   readonly kind: "postgres" | "memory";
   findPlayer(name: string): Promise<PlayerRow | null>;
   createPlayer(row: PlayerRow): Promise<void>;
@@ -83,9 +85,20 @@ CREATE TABLE IF NOT EXISTS run_progress (
   pos JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS route_reviews (
+  player_id TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+  data JSONB NOT NULL
+);
 `;
 
 class PgStore implements Store {
+  async saveRoute(id: PlayerId, review: import('@game/shared').RouteReview) {
+    await this.pool.query('INSERT INTO route_reviews (player_id,data) VALUES ($1,$2) ON CONFLICT (player_id) DO UPDATE SET data=EXCLUDED.data', [id, JSON.stringify(review)]);
+  }
+  async getRoute(id: PlayerId): Promise<import('@game/shared').RouteReview | null> {
+    const result = await this.pool.query('SELECT data FROM route_reviews WHERE player_id=$1', [id]);
+    return result.rows[0]?.data ?? null;
+  }
   async saveRoom(snap: RoomSnapshot) {
     await this.pool.query(
       `INSERT INTO rooms (id, data, finished, updated_at) VALUES ($1, $2, $3, now())
@@ -166,6 +179,9 @@ class PgStore implements Store {
 }
 
 export class MemStore implements Store {
+  private reviews = new Map<PlayerId, import('@game/shared').RouteReview>();
+  async saveRoute(id: PlayerId, review: import('@game/shared').RouteReview) { this.reviews.set(id, structuredClone(review)); }
+  async getRoute(id: PlayerId) { return structuredClone(this.reviews.get(id) ?? null); }
   readonly kind = "memory";
   private players = new Map<string, PlayerRow>();
   private sessions = new Map<string, { playerId: PlayerId; at: number }>();
