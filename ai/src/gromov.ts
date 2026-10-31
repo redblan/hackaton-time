@@ -7,6 +7,8 @@
  */
 import {
   HANDOVER_ITEMS,
+  MISTAKE_NOTES,
+  SKILLS,
   type HandoverItem,
   type JournalEntry,
   type NpcRequest,
@@ -66,6 +68,55 @@ const DANGER: SkillId[] = [
   "smoke", "route", "exit_building", "aftershock", "call_112", "handover", "escort", "psych_support", "go_bag",
 ];
 
+/**
+ * Итог прошлого прохождения (M16). Контракт PlayerMemory не меняем: храним индексы навыков (SKILLS)
+ * и кодов ошибок мини-игр (MISTAKE_NOTES) в usedExplanations под служебными ключами — F3 их не показывает.
+ */
+const LAST_SKILLS = "run:last_skills";
+const LAST_CODES = "run:last_codes";
+const CODES = Object.keys(MISTAKE_NOTES);
+
+interface LastRun {
+  skills: SkillId[];
+  /** skill → заметка журнала о том, что именно было не так (если это ошибка мини-игры) */
+  notes: Partial<Record<SkillId, string>>;
+}
+
+function readLastRun(memory: PlayerMemory): LastRun | undefined {
+  const idx = memory.usedExplanations[LAST_SKILLS];
+  if (!idx) return undefined;
+  const skills = idx.map((i) => SKILLS[i]).filter((s): s is SkillId => !!s);
+  const notes: LastRun["notes"] = {};
+  for (const i of memory.usedExplanations[LAST_CODES] ?? []) {
+    const code = CODES[i];
+    if (!code) continue;
+    const skill = CODE_SKILL[code];
+    if (skill && !notes[skill]) notes[skill] = MISTAKE_NOTES[code];
+  }
+  return { skills, notes };
+}
+
+function writeLastRun(memory: PlayerMemory, bad: JournalEntry[]): void {
+  const skills = [...new Set(bad.map((j) => j.skill))];
+  memory.usedExplanations[LAST_SKILLS] = skills.map((s) => SKILLS.indexOf(s)).filter((i) => i >= 0);
+  const byNote = new Map(Object.entries(MISTAKE_NOTES).map(([code, note]) => [note, code]));
+  memory.usedExplanations[LAST_CODES] = [
+    ...new Set(bad.map((j) => byNote.get(j.note)).filter((c): c is string => !!c).map((c) => CODES.indexOf(c))),
+  ];
+}
+
+/** Код ошибки мини-игры → навык (по префиксу кода) */
+const CODE_SKILL: Record<string, SkillId> = Object.fromEntries(
+  CODES.map((c) => [
+    c,
+    c.startsWith("bag_") ? "go_bag" : c.startsWith("tourniquet_") || c.startsWith("pressure_") ? "bleeding"
+      : c.startsWith("cpr_") ? "cpr" : c.startsWith("recovery_") ? "recovery_position" : c.startsWith("triage_") ? "triage" : "handover",
+  ]),
+) as Record<string, SkillId>;
+
+const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+const whatWasWrong = (last: LastRun, skill: SkillId) => (last.notes[skill] ? lower(last.notes[skill]!) : SKILL_NAMES[skill]);
+
 interface HandoverState {
   said: Set<HandoverItem>;
   asked: Partial<Record<HandoverItem, number>>;
@@ -77,7 +128,7 @@ interface HandoverState {
 export interface Gromov {
   /** Ведёт ли Громов сейчас приём доклада у этого игрока */
   inHandover(playerId: PlayerId): boolean;
-  handover(req: NpcRequest): NpcResponse;
+  handover(req: NpcRequest, memory: PlayerMemory): NpcResponse;
   /** Разбор; меняет память игрока (ошибки по навыкам, использованные объяснения) */
   debrief(req: NpcRequest, memory: PlayerMemory): NpcResponse;
   reset(playerId: PlayerId): void;
@@ -87,6 +138,12 @@ export function createGromov(data: AiData): Gromov {
   const reports = new Map<PlayerId, HandoverState>();
   /** Разбор уже записан в память в этом прохождении (сервер зовёт его дважды: на этапе и в конце) */
   const debriefed = new Set<PlayerId>();
+  /** Итог прошлого прохождения, прочитанный до того, как разбор перезапишет его текущим */
+  const lastRuns = new Map<PlayerId, LastRun | undefined>();
+  const lastRunOf = (playerId: PlayerId, memory: PlayerMemory) => {
+    if (!lastRuns.has(playerId)) lastRuns.set(playerId, readLastRun(memory));
+    return lastRuns.get(playerId);
+  };
 
   function stateFor(req: NpcRequest): HandoverState {
     const flags = Array.isArray(req.context.flags) ? (req.context.flags as string[]) : [];
@@ -118,9 +175,19 @@ export function createGromov(data: AiData): Gromov {
       return !!st && !st.done;
     },
 
-    handover(req) {
+    handover(req, memory) {
       const st = stateFor(req);
-      if (req.event === "brigade_arrived" || !req.playerMessage) return { text: OPEN, factIds: [], source: "template" };
+      if (req.event === "brigade_arrived" || !req.playerMessage) {
+        // Встречались в прошлом прохождении — узнаёт и вспоминает, что тогда было не так (M16)
+        const last = lastRunOf(req.playerId, memory);
+        const worst = last?.skills.slice().sort((a, b) => DANGER.indexOf(a) - DANGER.indexOf(b))[0];
+        const greet = !last
+          ? ""
+          : worst
+            ? `А, это ты. Помню: в прошлый раз — ${whatWasWrong(last, worst)}. Посмотрим, как сегодня. `
+            : "А, это ты. В прошлый раз отработал чисто — держи планку. ";
+        return { text: req.event === "brigade_arrived" ? `${greet}${OPEN}` : OPEN, factIds: [], source: "template" };
+      }
       for (const i of extractHandover(req.playerMessage)) st.said.add(i);
       const missing = requiredHandover(st.flags, st.tourniquet).filter((i) => !st.said.has(i));
       if (missing.length === 0) {
@@ -143,15 +210,19 @@ export function createGromov(data: AiData): Gromov {
 
       const parts: string[] = [];
       const factIds: string[] = [];
+      // Сравниваем с прошлым прохождением, а не со всей историей: «Опять» — только если и тогда было (M16)
+      const last = lastRunOf(req.playerId, memory);
       if (ok.length > 0) {
         parts.push(`Хорошо: ${ok.slice(0, 3).map((s) => SKILL_NAMES[s]).join(", ")}.`);
       } else {
         parts.push("До конца добрались — это уже немало.");
       }
+      const fixed = last?.skills.filter((s) => !badSkills.includes(s)).sort((a, b) => DANGER.indexOf(a) - DANGER.indexOf(b))[0];
+      if (last && fixed) parts.push(`В прошлый раз — ${whatWasWrong(last, fixed)}, сегодня — чисто. Вот это прогресс.`);
       const worst = badSkills[0];
       if (worst) {
         const note = bad.find((j) => j.skill === worst)?.note;
-        const before = (memory.mistakes[worst] ?? 0) > 0;
+        const before = !!last?.skills.includes(worst);
         const e = explain(worst, memory);
         if (e.factId) factIds.push(e.factId);
         parts.push(
@@ -166,6 +237,7 @@ export function createGromov(data: AiData): Gromov {
       if (!debriefed.has(req.playerId)) {
         debriefed.add(req.playerId);
         for (const s of badSkills) memory.mistakes[s] = (memory.mistakes[s] ?? 0) + 1;
+        writeLastRun(memory, bad);
       }
       return { text: parts.join(" "), factIds, source: "template" };
     },
@@ -173,6 +245,7 @@ export function createGromov(data: AiData): Gromov {
     reset(playerId) {
       reports.delete(playerId);
       debriefed.delete(playerId);
+      lastRuns.delete(playerId);
     },
   };
 }

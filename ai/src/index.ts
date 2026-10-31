@@ -228,7 +228,7 @@ export function createAi(opts: CreateAiOptions): Ai {
         : req.npcId === "gromov" && req.event === "debrief"
           ? (m: PlayerMemory) => gromov.debrief(req, m)
           : req.npcId === "gromov" && (req.event === "brigade_arrived" || (req.event === "free_talk" && gromov.inHandover(req.playerId)))
-            ? (_m: PlayerMemory) => gromov.handover(req)
+            ? (m: PlayerMemory) => gromov.handover(req, m)
             : undefined;
     if (fsm) {
       const memory = await opts.memory.get(req.playerId);

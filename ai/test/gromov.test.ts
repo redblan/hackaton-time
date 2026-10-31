@@ -81,3 +81,57 @@ describe("Громов: разбор по журналу", () => {
     expect(second.text).not.toBe(first.text);
   });
 });
+
+describe("Громов помнит прошлые прохождения (M16)", () => {
+  const run1: JournalEntry[] = [
+    entry("cover", "ok", "Укрылся под столом"),
+    entry("bleeding", "mistake", "Отпустил давление на рану"),
+  ];
+  const run2: JournalEntry[] = [
+    entry("cover", "ok", "Укрылся под столом"),
+    entry("bleeding", "ok", "Остановил кровотечение"),
+    entry("gas", "mistake", "Потянулся к выключателю при запахе газа"),
+  ];
+  const debriefOf = (journal: JournalEntry[]): NpcRequest => ({ npcId: "gromov", playerId: "p1", event: "debrief", context: { flags: [], facts: [], journal } });
+
+  it("первое прохождение — без «в прошлый раз» и без «опять», даже если разбор зовут дважды", async () => {
+    const ai = createAi({ memory: createInMemoryStore() });
+    const a = await ai.say(debriefOf(run1));
+    const b = await ai.say(debriefOf(run1));
+    for (const r of [a, b]) {
+      expect(r.text).not.toContain("В прошлый раз");
+      expect(r.text).not.toContain("Опять");
+    }
+  });
+
+  it("второе прохождение: узнаёт при встрече и отмечает прогресс на разборе", async () => {
+    const memory = createInMemoryStore();
+    const ai = createAi({ memory });
+    await ai.say(debriefOf(run1));
+    ai.resetRun?.("p1");
+
+    const meet = await ai.say(arrive(false));
+    expect(meet.text).toContain("отпустил давление на рану");
+    expect(meet.text).toContain("Капитан Громов");
+
+    const r = await ai.say(debriefOf(run2));
+    expect(r.text).toContain("В прошлый раз — отпустил давление на рану, сегодня — чисто");
+    expect(r.text).not.toContain("Опять");
+    // разбор в конце прохождения (второй вызов) говорит то же про прогресс
+    expect((await ai.say(debriefOf(run2))).text).toContain("сегодня — чисто");
+  });
+
+  it("та же ошибка второй раз подряд — «Опять»", async () => {
+    const ai = createAi({ memory: createInMemoryStore() });
+    await ai.say(debriefOf(run1));
+    ai.resetRun?.("p1");
+    expect((await ai.say(debriefOf(run1))).text).toContain("Опять");
+  });
+
+  it("служебные ключи не попадают в «рассказано» (F3)", async () => {
+    const memory = createInMemoryStore();
+    const ai = createAi({ memory });
+    await ai.say(debriefOf(run1));
+    expect(Object.keys((await memory.get("p1")).toldFacts).some((k) => k.startsWith("run:"))).toBe(false);
+  });
+});
