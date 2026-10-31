@@ -162,6 +162,108 @@
       ],
       "radius": 2,
       "label": "Помочь пострадавшему"
+    },
+    {
+      "id": "lamp-post-0",
+      "kind": "box",
+      "pos": [
+        22.5,
+        1.7,
+        -22
+      ],
+      "size": [
+        0.14,
+        3.4,
+        0.14
+      ],
+      "color": "#4b606a",
+      "collide": true,
+      "rotY": 0
+    },
+    {
+      "id": "lamp-head-0",
+      "kind": "box",
+      "pos": [
+        22.5,
+        3.45,
+        -22
+      ],
+      "size": [
+        0.5,
+        0.25,
+        0.5
+      ],
+      "color": "#ffe3a0",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "lamp-cap-0",
+      "kind": "box",
+      "pos": [
+        22.5,
+        3.62,
+        -22
+      ],
+      "size": [
+        0.65,
+        0.1,
+        0.65
+      ],
+      "color": "#4b606a",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "lamp-post-1",
+      "kind": "box",
+      "pos": [
+        15,
+        1.7,
+        -14.5
+      ],
+      "size": [
+        0.14,
+        3.4,
+        0.14
+      ],
+      "color": "#4b606a",
+      "collide": true,
+      "rotY": 0
+    },
+    {
+      "id": "lamp-head-1",
+      "kind": "box",
+      "pos": [
+        15,
+        3.45,
+        -14.5
+      ],
+      "size": [
+        0.5,
+        0.25,
+        0.5
+      ],
+      "color": "#ffe3a0",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "lamp-cap-1",
+      "kind": "box",
+      "pos": [
+        15,
+        3.62,
+        -14.5
+      ],
+      "size": [
+        0.65,
+        0.1,
+        0.65
+      ],
+      "color": "#4b606a",
+      "collide": false,
+      "rotY": 0
     }
   ]
 }

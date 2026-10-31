@@ -1459,6 +1459,159 @@
         5
       ],
       "text": "Подъезд 2 · Этаж 6"
+    },
+    {
+      "id": "facade-window-2",
+      "kind": "box",
+      "pos": [
+        14,
+        16.8,
+        -0.12
+      ],
+      "size": [
+        1.5,
+        1.25,
+        0.04
+      ],
+      "color": "#8ebac8",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-sill-2",
+      "kind": "box",
+      "pos": [
+        14,
+        16.12,
+        -0.16
+      ],
+      "size": [
+        1.7,
+        0.1,
+        0.3
+      ],
+      "color": "#f6e1bd",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-mullion-2",
+      "kind": "box",
+      "pos": [
+        14,
+        16.8,
+        -0.15
+      ],
+      "size": [
+        0.06,
+        1.3,
+        0.05
+      ],
+      "color": "#f9ebd5",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-transom-2",
+      "kind": "box",
+      "pos": [
+        14,
+        16.8,
+        -0.15
+      ],
+      "size": [
+        1.55,
+        0.06,
+        0.05
+      ],
+      "color": "#f9ebd5",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-window-10",
+      "kind": "box",
+      "pos": [
+        22,
+        16.8,
+        -0.12
+      ],
+      "size": [
+        1.5,
+        1.25,
+        0.04
+      ],
+      "color": "#8ebac8",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-sill-10",
+      "kind": "box",
+      "pos": [
+        22,
+        16.12,
+        -0.16
+      ],
+      "size": [
+        1.7,
+        0.1,
+        0.3
+      ],
+      "color": "#f6e1bd",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-mullion-10",
+      "kind": "box",
+      "pos": [
+        22,
+        16.8,
+        -0.15
+      ],
+      "size": [
+        0.06,
+        1.3,
+        0.05
+      ],
+      "color": "#f9ebd5",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-transom-10",
+      "kind": "box",
+      "pos": [
+        22,
+        16.8,
+        -0.15
+      ],
+      "size": [
+        1.55,
+        0.06,
+        0.05
+      ],
+      "color": "#f9ebd5",
+      "collide": false,
+      "rotY": 0
+    },
+    {
+      "id": "facade-floor-band",
+      "kind": "box",
+      "pos": [
+        18,
+        15.15,
+        -0.13
+      ],
+      "size": [
+        12,
+        0.16,
+        0.08
+      ],
+      "color": "#d1a582",
+      "collide": false,
+      "rotY": 0
     }
   ]
 }
