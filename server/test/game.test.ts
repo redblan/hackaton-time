@@ -68,7 +68,7 @@ afterEach(async () => {
   for (const f of cleanup.splice(0).reverse()) await f();
 });
 
-async function boot(store: InstanceType<typeof MemStore>) {
+async function boot(store: InstanceType<typeof MemStore>, aiImpl: AiModule = ai) {
   const http: HttpServer = createServer();
   const io = new Server(http);
   io.use(async (s, next) => {
@@ -77,7 +77,7 @@ async function boot(store: InstanceType<typeof MemStore>) {
     s.data = { playerId: p.id, name: p.name, chunks: new Set() };
     next();
   });
-  const game = new Game(io as never, store, ai, new ChunkStore(dir, false));
+  const game = new Game(io as never, store, aiImpl, new ChunkStore(dir, false));
   await game.restore();
   await new Promise<void>((r) => http.listen(0, "127.0.0.1", r));
   const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
@@ -214,5 +214,38 @@ describe("рация в solo (M8)", () => {
     await until(() => a.log.rooms.some((x) => x.started));
     a.c.emit("chat:send", { text: "Михалыч, куда идти?" });
     await until(() => said.includes("mihalych"));
+  }, 10_000);
+});
+
+describe("итог диалога раньше конца ответа (D-68)", () => {
+  it("onOutcome уходит в сценарий сразу и не повторяется в конце", async () => {
+    const slow: AiModule = {
+      async say() {
+        return { text: "…", factIds: [], source: "template" };
+      },
+      async sayStream(req, onToken, onOutcome) {
+        if (req.npcId === "vanya" && req.event === "free_talk") onOutcome?.("calmed");
+        await wait(800); // модель «думает»
+        onToken("Ладно, дышу.");
+        return { text: "Ладно, дышу.", factIds: [], source: "llm", outcome: req.npcId === "vanya" ? "calmed" : undefined };
+      },
+    };
+    const store = new MemStore();
+    const r = await register(store, "Ранний", "pass1");
+    if (!r.ok) throw new Error(r.error);
+    const srv = await boot(store, slow);
+    cleanup.push(srv.stop);
+    const a = client(srv.url, r.token);
+    a.c.emit("room:join", { mode: "solo" });
+    await until(() => a.log.rooms.some((x) => x.started));
+    const before = seen.length;
+    a.c.emit("npc:talk", { npcId: "vanya", text: "Ваня, я рядом" });
+    await wait(300); // ответ ещё не готов
+    const early = seen.slice(before).filter((e) => e.type === "dialogOutcome");
+    expect(early).toEqual([expect.objectContaining({ npcId: "vanya", outcome: "calmed" })]);
+    expect(a.log.done).toHaveLength(0);
+    await until(() => a.log.done.length > 0);
+    await wait(100);
+    expect(seen.slice(before).filter((e) => e.type === "dialogOutcome")).toHaveLength(1);
   }, 10_000);
 });

@@ -26,6 +26,7 @@ import {
 } from "@game/shared";
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
+import type { Stt } from "@game/ai";
 import { checkLeftBehind, recordTrail, startEscort, stepEscort } from "./escort";
 import {
   canStart,
@@ -57,6 +58,8 @@ const ROOM_TTL_MS = 30 * 60_000;
 const SAVE_ROOMS_MS = 3000;
 /** Сколько ждём игроков после перезапуска сервера */
 const RESTORE_MAX_AGE_MS = 3 * 60 * 60_000;
+/** 15 с × 16 кГц × 2 байта + заголовок — с запасом */
+const MAX_VOICE_BYTES = 520_000;
 const ANIMS = new Set<PlayerPublic["anim"]>(["idle", "walk", "run", "crouch", "carry"]);
 
 const isVec3 = (v: unknown): v is Vec3 =>
@@ -74,6 +77,7 @@ export class Game {
     private store: Store,
     private ai: AiModule,
     private chunks: ChunkStore,
+    private stt?: Pick<Stt, "available" | "transcribe">,
   ) {
     this.intervals.push(
       setInterval(() => this.safe(() => this.frame(POS_BROADCAST_MS)), POS_BROADCAST_MS),
@@ -129,6 +133,7 @@ export class Game {
     s.on("npc:talk", (p) => this.safe(() => this.onNpcTalk(s, p)));
     s.on("chat:send", (p) => this.safe(() => this.onChat(s, p?.text)));
     s.on("npc:hangup", (p) => this.safe(() => this.onHangup(s, p?.npcId)));
+    s.on("voice:say", (p) => this.safe(() => this.onVoice(s, p)));
     s.on("disconnect", () => this.safe(() => this.onDisconnect(s)));
   }
 
@@ -445,13 +450,18 @@ export class Game {
   private async npcSay(room: Room, playerId: PlayerId, req: NpcRequest) {
     const to = this.io.to(`p:${playerId}`);
     try {
+      // D-68: итог диалога — в сценарий сразу, как ИИ его посчитал, не дожидаясь конца текста
+      let sent: string | undefined;
+      const sendOutcome = (outcome: string) => {
+        if (sent) return;
+        sent = outcome;
+        this.dispatch(room, { type: "dialogOutcome", at: this.now(room), playerId, npcId: req.npcId, outcome });
+      };
       const res = this.ai.sayStream
-        ? await this.ai.sayStream(req, (token) => to.emit("npc:token", { npcId: req.npcId, token }))
+        ? await this.ai.sayStream(req, (token) => to.emit("npc:token", { npcId: req.npcId, token }), sendOutcome)
         : await this.ai.say(req);
       to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source });
-      if (res.outcome) {
-        this.dispatch(room, { type: "dialogOutcome", at: this.now(room), playerId, npcId: req.npcId, outcome: res.outcome });
-      }
+      if (res.outcome) sendOutcome(res.outcome);
     } catch (e) {
       console.error(`[ai] ${req.npcId}/${req.event} упал:`, e);
       to.emit("npc:done", { npcId: req.npcId, text: "…", source: "template" });
@@ -470,6 +480,29 @@ export class Game {
       playerMessage: text,
       context: this.npcContext(room, s.data.playerId),
     });
+  }
+
+  /** D-69: голос → текст (whisper.cpp у Матвея) → дальше как обычная реплика игрока */
+  private async onVoice(s: Sock, p: { to: unknown; wav: unknown } | undefined) {
+    const to = p?.to;
+    if (to !== "radio" && !includes(NPC_IDS, to)) return;
+    const reply = (r: { text: string } | { error: string }) => s.emit("voice:text", { to, ...r });
+    const wav = p?.wav;
+    const buf = Buffer.isBuffer(wav) ? wav : wav instanceof ArrayBuffer ? Buffer.from(wav) : null;
+    if (!buf || buf.length < 1000) return reply({ error: "Пустая запись" });
+    if (buf.length > MAX_VOICE_BYTES) return reply({ error: "Слишком длинно — до 15 секунд" });
+    if (!this.stt?.available()) return reply({ error: "Распознавание голоса на сервере не настроено" });
+    let text: string;
+    try {
+      text = (await this.stt.transcribe(buf)).trim();
+    } catch (e) {
+      console.error("[voice]", (e as Error).message);
+      return reply({ error: "Не получилось распознать" });
+    }
+    if (!text) return reply({ error: "Не расслышал, повторите" });
+    reply({ text });
+    if (to === "radio") this.onChat(s, text);
+    else this.onNpcTalk(s, { npcId: to, text });
   }
 
   /** D-62: «Завершить звонок» — сценарий сам решит, что с недостающими слотами */

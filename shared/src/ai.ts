@@ -64,8 +64,12 @@ export interface MemoryStore {
 
 export interface AiModule {
   say(req: NpcRequest): Promise<NpcResponse>;
-  /** Стриминг для чата: onToken вызывается по мере генерации, в конце — полный ответ */
-  sayStream?(req: NpcRequest, onToken: (t: string) => void): Promise<NpcResponse>;
+  /**
+   * Стриминг для чата: onToken вызывается по мере генерации, в конце — полный ответ.
+   * onOutcome (D-68): вызвать НЕ БОЛЬШЕ ОДНОГО РАЗА, как только итог известен (до генерации текста),
+   * — сервер сразу отдаст его сценарию. Тогда `outcome` в ответе должен совпадать; повторно он не отправится.
+   */
+  sayStream?(req: NpcRequest, onToken: (t: string) => void, onOutcome?: (outcome: string) => void): Promise<NpcResponse>;
   /** Сброс состояния диалога в начале нового прохождения (например, слоты диспетчера) */
   resetRun?(playerId: PlayerId): void;
 }

@@ -44,6 +44,11 @@ export interface ClientToServer {
   "npc:talk": (p: { npcId: NpcId; text: string }) => void;
   /** Игрок сам завершил разговор кнопкой (звонок 112, D-62) → dialogOutcome `call_ended` */
   "npc:hangup": (p: { npcId: NpcId }) => void;
+  /**
+   * Голос (D-69): WAV 16 кГц, моно, 16 бит, не длиннее 15 с. `to` — NPC или "radio".
+   * Сервер распознаёт (whisper.cpp) и дальше — как npc:talk / chat:send; текст возвращает в voice:text.
+   */
+  "voice:say": (p: { to: NpcId | "radio"; wav: ArrayBuffer }) => void;
   /** Чат между игроками (рация) */
   "chat:send": (p: { text: string }) => void;
 }
@@ -65,5 +70,7 @@ export interface ServerToClient {
   "npc:token": (p: { npcId: NpcId; token: string }) => void;
   "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" }) => void;
   "chat:msg": (p: { from: string; text: string; at: number }) => void;
+  /** Что распознано из голоса (или почему не получилось) */
+  "voice:text": (p: { to: NpcId | "radio"; text: string } | { to: NpcId | "radio"; error: string }) => void;
   "run:end": (p: { summary: RunSummary; debrief: string }) => void;
 }
