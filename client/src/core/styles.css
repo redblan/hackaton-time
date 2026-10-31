@@ -99,6 +99,11 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 .partner-arrow { display: inline-block; font-weight: 900; color: #86efac; transition: transform .2s; }
 .partner .muted { color: #cbd5e1; }
 
+.tabs { display: flex; gap: 4px; margin-top: 16px; background: #f1f5f9; padding: 4px; border-radius: 12px; }
+.tab { flex: 1; font: inherit; font-weight: 700; border: none; background: transparent; padding: 8px; border-radius: 9px; cursor: pointer; color: var(--muted); }
+.tab-on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.secure { color: #15803d; }
+
 /* Песочница */
 .sandbox { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr; background: #f8fafc; }
 .sandbox-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); background: #fff; }

@@ -30,9 +30,10 @@ export function savedAuth(): Auth | null {
   }
 }
 
-export async function login(name: string, password: string): Promise<string | null> {
+/** Вход (mode = "login") или регистрация ("register"). Возвращает текст ошибки или null */
+export async function login(name: string, password: string, mode: "login" | "register" = "login"): Promise<string | null> {
   try {
-    const res = await fetch("/api/login", {
+    const res = await fetch(mode === "register" ? "/api/register" : "/api/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name, password }),
@@ -60,6 +61,8 @@ export function leaveRoom() {
 }
 
 export function logout() {
+  const token = store.get().auth?.token;
+  if (token) void fetch("/api/logout", { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
   try {
     localStorage.removeItem(AUTH_KEY);
   } catch {

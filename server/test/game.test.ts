@@ -24,7 +24,7 @@ vi.mock("@game/shared", async (orig) => {
   };
 });
 
-const { login } = await import("../src/auth");
+const { register } = await import("../src/auth");
 const { ChunkStore } = await import("../src/chunks");
 const { MemStore } = await import("../src/db");
 const { Game } = await import("../src/game");
@@ -103,7 +103,7 @@ function client(url: string, token: string) {
 describe("сервер целиком", () => {
   it("сопровождение, left_behind и восстановление после перезапуска", async () => {
     const store = new MemStore();
-    const r = await login(store, "Тестер", "pw");
+    const r = await register(store, "Тестер", "pass1");
     if (!r.ok) throw new Error(r.error);
 
     let srv = await boot(store);
@@ -146,7 +146,7 @@ describe("сервер целиком", () => {
 describe("перезаход в мини-игру (D-53)", () => {
   it("сервер повторяет openMinigame, пока нет результата", async () => {
     const store = new MemStore();
-    const r = await login(store, "Мини", "pw");
+    const r = await register(store, "Мини", "pass1");
     if (!r.ok) throw new Error(r.error);
     const srv = await boot(store);
     cleanup.push(srv.stop);
@@ -184,7 +184,7 @@ describe("перезаход в мини-игру (D-53)", () => {
 describe("завершить звонок (D-62)", () => {
   it("npc:hangup → dialogOutcome call_ended от диспетчера, чужие NPC игнорируются", async () => {
     const store = new MemStore();
-    const r = await login(store, "Звонок", "pw");
+    const r = await register(store, "Звонок", "pass1");
     if (!r.ok) throw new Error(r.error);
     const srv = await boot(store);
     cleanup.push(srv.stop);
@@ -203,7 +203,7 @@ describe("завершить звонок (D-62)", () => {
 describe("рация в solo (M8)", () => {
   it("сообщение в рацию — отвечает Михалыч с channel: radio и именем игрока", async () => {
     const store = new MemStore();
-    const r = await login(store, "Рация", "pw");
+    const r = await register(store, "Рация", "pass1");
     if (!r.ok) throw new Error(r.error);
     const srv = await boot(store);
     cleanup.push(srv.stop);

@@ -2,8 +2,9 @@
  * Сетевые сообщения клиент ↔ сервер (Socket.IO). ВЛАДЕЛЕЦ: лид.
  * Для справки остальным: так ваши модули связаны по сети.
  *
- * Авторизация: POST /api/login { name, password } → { token }.
- * Сокет подключается с auth: { token }; без токена сервер рвёт соединение.
+ * Авторизация (D-65): POST /api/register или /api/login { name, password } → { token, playerId, name };
+ * POST /api/logout (Authorization: Bearer <token>). Сессия живёт 7 дней.
+ * Сокет подключается с auth: { token }; без токена сервер рвёт соединение. Всё снаружи — по HTTPS.
  */
 import type { ChunkData, ChunkId, Vec3 } from "./world";
 import type { Effect, GameEvent, RunSummary } from "./scenario/types";

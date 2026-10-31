@@ -6,6 +6,9 @@ import pg from "pg";
 import type { PlayerId, PlayerMemory, PlayerProfile, StageId, Vec3 } from "@game/shared";
 import type { RoomSnapshot } from "./rooms";
 
+/** Срок жизни сессии (дублирует auth.ts, чтобы не тянуть зависимость по кругу) */
+const SESSION_TTL_MS = 7 * 24 * 60 * 60_000;
+
 export interface PlayerRow {
   id: PlayerId;
   name: string;
@@ -24,6 +27,7 @@ export interface Store {
   createPlayer(row: PlayerRow): Promise<void>;
   createSession(token: string, playerId: PlayerId): Promise<void>;
   getSession(token: string): Promise<PlayerRow | null>;
+  deleteSession(token: string): Promise<void>;
   getProfile(playerId: PlayerId): Promise<PlayerProfile>;
   saveProfile(p: PlayerProfile): Promise<void>;
   getMemory(playerId: PlayerId): Promise<PlayerMemory>;
@@ -113,11 +117,15 @@ class PgStore implements Store {
   }
   async getSession(token: string) {
     const r = await this.pool.query(
-      "SELECT p.id, p.name, p.pass_hash FROM sessions s JOIN players p ON p.id = s.player_id WHERE s.token = $1",
-      [token],
+      `SELECT p.id, p.name, p.pass_hash FROM sessions s JOIN players p ON p.id = s.player_id
+       WHERE s.token = $1 AND s.created_at > now() - make_interval(secs => $2)`,
+      [token, SESSION_TTL_MS / 1000],
     );
     const row = r.rows[0];
     return row ? { id: row.id, name: row.name, passHash: row.pass_hash } : null;
+  }
+  async deleteSession(token: string) {
+    await this.pool.query("DELETE FROM sessions WHERE token = $1", [token]);
   }
   private async getJson<T>(table: string, playerId: PlayerId): Promise<T | null> {
     const r = await this.pool.query(`SELECT data FROM ${table} WHERE player_id = $1`, [playerId]);
@@ -160,7 +168,7 @@ class PgStore implements Store {
 export class MemStore implements Store {
   readonly kind = "memory";
   private players = new Map<string, PlayerRow>();
-  private sessions = new Map<string, PlayerId>();
+  private sessions = new Map<string, { playerId: PlayerId; at: number }>();
   private profiles = new Map<PlayerId, PlayerProfile>();
   private memory = new Map<PlayerId, PlayerMemory>();
   private progress = new Map<PlayerId, Progress>();
@@ -181,11 +189,15 @@ export class MemStore implements Store {
     this.players.set(p.name, p);
   }
   async createSession(token: string, playerId: PlayerId) {
-    this.sessions.set(token, playerId);
+    this.sessions.set(token, { playerId, at: Date.now() });
   }
   async getSession(token: string) {
-    const id = this.sessions.get(token);
-    return [...this.players.values()].find((p) => p.id === id) ?? null;
+    const s = this.sessions.get(token);
+    if (!s || Date.now() - s.at > SESSION_TTL_MS) return null;
+    return [...this.players.values()].find((p) => p.id === s.playerId) ?? null;
+  }
+  async deleteSession(token: string) {
+    this.sessions.delete(token);
   }
   async getProfile(id: PlayerId) {
     return structuredClone(this.profiles.get(id) ?? emptyProfile(id));

@@ -7,7 +7,7 @@ const U = process.env.E2E_URL ?? "http://localhost:3000";
 const TALK_TIMEOUT_MS = 30_000;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const name = "bot_" + Date.now().toString(36).slice(-4);
-const res = await fetch(U + "/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, password: "bot" }) });
+const res = await fetch(U + "/api/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, password: "bot-pass" }) });
 const { token } = await res.json();
 const s = io(U, { auth: { token }, rejectUnauthorized: false });
 const t0 = Date.now();

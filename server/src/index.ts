@@ -8,7 +8,7 @@ import express from "express";
 import { Server } from "socket.io";
 import { createAi } from "@game/ai";
 import type { ClientToServer, ServerToClient } from "@game/shared";
-import { login } from "./auth";
+import { login, LoginLimiter, register, type AuthResult } from "./auth";
 import { ChunkStore } from "./chunks";
 import { config } from "./config";
 import { openStore } from "./db";
@@ -50,18 +50,31 @@ const ai = createAi({ memory: dbMemoryStore(store), ollamaUrl: config.ollamaUrl,
 const app = express();
 app.use(express.json({ limit: "64kb" }));
 
-app.post("/api/login", async (req, res) => {
+const limiter = new LoginLimiter();
+const reply = (res: express.Response, r: AuthResult) => {
+  if (!r.ok) res.status(r.status).json({ error: r.error });
+  else res.json({ token: r.token, playerId: r.playerId, name: r.name });
+};
+app.post("/api/register", async (req, res) => {
   try {
-    const r = await login(store, req.body?.name, req.body?.password);
-    if (!r.ok) {
-      res.status(400).json({ error: r.error });
-      return;
-    }
-    res.json({ token: r.token, playerId: r.playerId, name: r.name });
+    reply(res, await register(store, req.body?.name, req.body?.password));
   } catch (e) {
     console.error("[auth]", e);
     res.status(500).json({ error: "Ошибка сервера" });
   }
+});
+app.post("/api/login", async (req, res) => {
+  try {
+    reply(res, await login(store, limiter, req.body?.name, req.body?.password));
+  } catch (e) {
+    console.error("[auth]", e);
+    res.status(500).json({ error: "Ошибка сервера" });
+  }
+});
+app.post("/api/logout", async (req, res) => {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
+  if (token) await store.deleteSession(token).catch(() => {});
+  res.json({ ok: true });
 });
 
 app.get("/api/health", (_req, res) => {
