@@ -51,6 +51,13 @@ export async function login(name: string, password: string): Promise<string | nu
   }
 }
 
+/** Выйти из комнаты в лобби */
+export function leaveRoom() {
+  socket?.emit("room:leave");
+  document.exitPointerLock?.();
+  store.resetGame();
+}
+
 export function logout() {
   try {
     localStorage.removeItem(AUTH_KEY);

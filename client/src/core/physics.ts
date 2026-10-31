@@ -5,8 +5,8 @@
 import type { Aabb, Vec3 } from "@game/shared";
 
 export const PHYS = {
-  HEIGHT: 1.75,
-  RADIUS: 0.3,
+  HEIGHT: 1.7,
+  RADIUS: 0.25,
   /** Максимальная ступенька, на которую шагаем без прыжка */
   STEP: 0.45,
   WALK: 3.2,

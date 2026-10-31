@@ -53,7 +53,9 @@ label.check { display: flex; align-items: center; gap: 6px; font-weight: 400; }
 .stage-name { font-weight: 800; font-size: 18px; color: #fdba74; }
 .stage-hint { margin-top: 4px; }
 .inventory { margin-top: 6px; font-size: 13px; opacity: .85; }
-.hud-chunks { position: absolute; top: 16px; right: 16px; background: rgba(15,23,42,.6); padding: 8px 12px; border-radius: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.hud-top-right { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; align-items: center; }
+.hud-leave { pointer-events: auto; padding: 6px 12px; font-size: 13px; text-shadow: none; }
+.hud-chunks { background: rgba(15,23,42,.6); padding: 8px 12px; border-radius: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .hud-offline { position: absolute; top: 60px; right: 16px; background: var(--danger); padding: 6px 10px; border-radius: 8px; }
 .crosshair { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 2px rgba(0,0,0,.3); }
 .hud-prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(15,23,42,.75); padding: 10px 16px; border-radius: 12px; font-size: 18px; font-weight: 700; }

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { NpcId } from "@game/shared";
 import { MAX_CHUNKS, TOTAL_CHUNKS } from "./chunkMath";
-import { getSocket } from "./net";
+import { getSocket, leaveRoom } from "./net";
 import { NPC_NAMES, STAGE_NAMES } from "./names";
 import { nextKey, store, useStore } from "./store";
 import { Button } from "./ui";
@@ -155,7 +155,7 @@ function RunEnd() {
         )}
         <div className="row">
           <Button onClick={playAgain}>Сыграть ещё</Button>
-          <Button variant="ghost" onClick={() => store.resetGame()}>
+          <Button variant="ghost" onClick={leaveRoom}>
             В лобби
           </Button>
         </div>
@@ -194,7 +194,12 @@ export function Hud() {
           </div>
         ))}
       </div>
-      <ChunkCounter />
+      <div className="hud-top-right">
+        <ChunkCounter />
+        <Button variant="ghost" className="hud-leave" onClick={leaveRoom}>
+          В лобби
+        </Button>
+      </div>
       {!connected && <div className="hud-offline">Нет связи с сервером…</div>}
       <div className="crosshair" />
       {prompt && (
@@ -202,7 +207,9 @@ export function Hud() {
           <kbd>E</kbd> — {prompt.label}
         </div>
       )}
-      {showClick && <div className="hud-click">Кликните по сцене, чтобы управлять · WASD, мышь, Shift — бег</div>}
+      {showClick && (
+        <div className="hud-click">Кликните по сцене, чтобы управлять · WASD, мышь, Shift — бег · Esc — отпустить мышь</div>
+      )}
       <NpcLines />
       <ChatBox />
       <RunEnd />

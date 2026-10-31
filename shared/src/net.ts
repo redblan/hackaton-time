@@ -31,6 +31,8 @@ export interface ClientToServer {
   /** Лобби */
   "room:join": (p: { mode: Mode }) => void;
   "room:ready": (p: { role: Role }) => void;
+  /** Выйти из комнаты в лобби (в коопе напарник играет дальше) */
+  "room:leave": () => void;
   /** Движение, ~15 раз в секунду */
   "player:move": (p: { pos: Vec3; rotY: number; anim: PlayerPublic["anim"] }) => void;
   /** Подгрузка мира: клиент сообщает, какие чанки хочет (по своей позиции) */

@@ -122,6 +122,7 @@ export class Game {
 
     s.on("room:join", (p) => this.safe(() => this.onJoin(s, p?.mode)));
     s.on("room:ready", (p) => this.safe(() => this.onReady(s, p?.role)));
+    s.on("room:leave", () => this.safe(() => this.leave(s.data.playerId)));
     s.on("player:move", (p) => this.safe(() => this.onMove(s, p)));
     s.on("chunk:want", (p) => this.safe(() => this.onChunkWant(s, p?.ids)));
     s.on("game:event", (e) => this.safe(() => this.onGameEvent(s, e)));
