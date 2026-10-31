@@ -264,6 +264,12 @@ export function createAi(opts: CreateAiOptions): Ai {
       text = cleanReply(raw);
       if (!text) throw new Error("ollama: пустой ответ");
       if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
+      // Повтор: модель 3B не всегда говорит «я уже говорил» — добавляем сами (прогон M4)
+      const repeat = !EMOTIONAL.has(req.npcId) && p.facts.some((f) => f.told > 0);
+      if (repeat && !/уже\s+(говорил|объяснял|рассказывал)/i.test(text)) {
+        const rest = text.replace(/^(позволю себе\s+)?(перефразирую|перефразировать|повторю)[^:.!]*[:.!]\s*/i, "");
+        text = `Я уже говорил. ${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;
+      }
       source = "llm";
     } catch {
       text = templateReply(req, p, memory, outcome).text;

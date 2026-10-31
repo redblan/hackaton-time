@@ -149,3 +149,13 @@ describe("рация и имя (M8, M14)", () => {
     for (let i = 0; i < 3; i++) expect((await ai.say(named("papa", "quake_started"))).text).not.toContain("Матвей");
   });
 });
+
+describe("повтор при ответе модели (прогон M4)", () => {
+  it("модель забыла «я уже говорил» — добавляем сами и убираем «позволю себе перефразировать»", async () => {
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Позволю себе перефразировать: перекрой кран и открой окна.") });
+    await ai.say(ask("papa", "Что делать, если пахнет газом?"));
+    const second = await ai.say(ask("papa", "Что делать, если пахнет газом?"));
+    expect(second.source).toBe("llm");
+    expect(second.text).toBe("Я уже говорил. Перекрой кран и открой окна.");
+  });
+});

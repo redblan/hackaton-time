@@ -39,7 +39,8 @@ export async function ollamaChat(call: OllamaCall): Promise<string> {
         stream: true,
         // Модель остаётся в памяти между репликами — иначе первая фраза после паузы грузится секундами
         keep_alive: "2h",
-        options: { num_predict: 120, temperature: 0.6 },
+        // 0.3: на 0.6 модель 3B дописывала от себя («газовое отопление»), прогон M4
+        options: { num_predict: 120, temperature: 0.3 },
       }),
       signal: ctrl.signal,
     });
