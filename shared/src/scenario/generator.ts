@@ -50,8 +50,8 @@ export function generateRun(input: GenerateRunInput): RunConfig {
     rng() < Math.min(0.95, base + 0.15 * fails(profiles, skills));
 
   const startFloor = randomInt(rng, 6, 9);
-  const flags: string[] = [];
-  if (chance(0.7, ["smoke"])) flags.push(`fire_f${randomInt(rng, 5, startFloor - 1)}`);
+  // Пожар обязателен на 5-м этаже, ниже любого этажа старта (6–9).
+  const flags: string[] = ["fire_f5"];
   // Обходной балкон есть только на 4-м этаже, поэтому обвал ставим только под ним.
   if (chance(0.7, ["route"])) flags.push("collapse_f4");
   if (chance(0.7, ["elevator"])) flags.push("lift_vanya");

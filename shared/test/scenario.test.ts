@@ -342,6 +342,17 @@ describe("устойчивость прохождения", () => {
 });
 
 describe("генератор", () => {
+  it.each(["solo", "coop2", "coop3"] as const)("%s: пожар всегда на 5-м этаже независимо от seed и навыка smoke", (mode) => {
+    const weak: PlayerProfile = { playerId: "p", runs: 3, skills: { smoke: { ok: 0, fail: 3 } } };
+    for (let seed = 0; seed < 300; seed++) {
+      for (const profiles of [[], [weak]]) {
+        const config = generateRun({ mode, profiles, seed });
+        expect(config.flags.filter(flag => flag.startsWith("fire_f"))).toEqual(["fire_f5"]);
+        expect(config.startFloor).toBeGreaterThan(5);
+      }
+    }
+  });
+
   it("одинаковый seed даёт одинаковый конфиг", () => {
     const input = { mode: "solo" as const, profiles: [], seed: 42 };
     expect(generateRun(input)).toEqual(generateRun(input));
