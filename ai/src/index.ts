@@ -6,6 +6,8 @@
  * который этот игрок ещё не слышал → обновляем память.
  */
 import type { AiModule, AiOptions, CharacterCard, NpcId, NpcRequest, NpcResponse, PlayerId, PlayerMemory, StageId } from "@game/shared";
+import { classifyIntent } from "./intents";
+import { actionPatch } from "./worldActions";
 import { factsBySkill, loadData, type AiData } from "./data";
 import { createDispatcher } from "./dispatcher";
 import { createGromov } from "./gromov";
@@ -76,6 +78,7 @@ export function createAi(opts: CreateAiOptions): Ai {
     temperature: 0.3, templatesOnly: false, factsOnly: true,
   }]));
   let available = false, lastMs = 0, totalMs = 0, measured = 0, llm = 0, template = 0;
+  let worldHook: Parameters<NonNullable<AiModule["setWorldHook"]>>[0] | undefined;
   const dispatcher = createDispatcher();
   const gromov = createGromov(data);
 
@@ -239,6 +242,21 @@ export function createAi(opts: CreateAiOptions): Ai {
   }
 
   async function respond(req: NpcRequest, onToken?: (t: string) => void, onOutcome?: (outcome: string) => void): Promise<NpcResponse> {
+    if (worldHook && req.event === "free_talk" && req.playerMessage) {
+      const intent = classifyIntent(req.playerMessage);
+      const action = intent && actionPatch(intent, req);
+      if (action) {
+        try {
+          worldHook(req.playerId, action.patch);
+        } catch { return { text: "Сейчас не получилось. Скажи спасателям, что нужно.", factIds: [], source: "template" }; }
+        const memory = await opts.memory.get(req.playerId);
+        const p = plan(req, memory);
+        remember(req, { ...p, facts: [] }, memory, action.text);
+        await opts.memory.save(memory);
+        onToken?.(action.text);
+        return { text: action.text, factIds: [], source: "template" };
+      }
+    }
     // Диспетчер 112 и доклад/разбор Громова — конечные автоматы без модели: отвечают сразу и одинаково
     const fsm =
       req.npcId === "dispatcher"
@@ -326,6 +344,7 @@ export function createAi(opts: CreateAiOptions): Ai {
 
   return {
     llmStats: () => queue.stats(),
+    setWorldHook(hook) { worldHook = hook; },
     say: (req) => tracked(req),
     sayStream: (req, onToken, onOutcome) => tracked(req, onToken, onOutcome),
     getCharacters: () => [...characters.values()].map(card => ({ ...card })),
