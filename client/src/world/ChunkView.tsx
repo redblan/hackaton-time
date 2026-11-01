@@ -254,7 +254,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return <Suspense key={o.id} fallback={<ModelPlaceholder object={o} objects={objects}/>}><Model object={o}/></Suspense>;
           case "npc": {
             const route = NPC_ROUTES[o.npcId];
-            if (route) return <NpcWalker key={o.id} color={npcColor(o.npcId)} pos={o.pos} route={route} seed={o.id.length} />;
+            if (route) return <NpcWalker key={o.id} color={npcColor(o.npcId)} pos={o.pos} route={route} seed={o.id.length} variant={npcVariant(o.npcId)} />;
             return (
               <group key={o.id} position={o.pos} rotation-y={o.rotY ?? 0}>
                 <Character color={npcColor(o.npcId)} pose={STANDING_NPCS[o.npcId] ? "stand" : o.pose} variant={npcVariant(o.npcId)} />

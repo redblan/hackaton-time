@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
 import type { Vec3 } from "@game/shared";
-import { Character } from "./Character";
+import { Character, type Variant } from "./Character";
 import { routePoint, type Route } from "./npcRoutes";
 
 const STOP_DISTANCE = 3.2;
@@ -15,8 +15,8 @@ function turnTo(body: Group, target: number, delta: number) {
   body.rotation.y += diff * (1 - Math.exp(-TURN_SPEED * delta));
 }
 
-export function NpcWalker(props: { color: string; pos: Vec3; route: Route; seed: number }) {
-  const { color, pos, route, seed } = props;
+export function NpcWalker(props: { color: string; pos: Vec3; route: Route; seed: number; variant?: Variant }) {
+  const { color, pos, route, seed, variant } = props;
   const group = useRef<Group>(null);
   const time = useRef(seed);
   const [walking, setWalking] = useState(false);
@@ -41,7 +41,7 @@ export function NpcWalker(props: { color: string; pos: Vec3; route: Route; seed:
 
   return (
     <group ref={group} position={pos}>
-      <Character color={color} anim={walking ? "walk" : "idle"} />
+      <Character color={color} anim={walking ? "walk" : "idle"} variant={variant} />
     </group>
   );
 }

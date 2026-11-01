@@ -1,11 +1,14 @@
 /**
- * Персонаж на моделях KayKit (CC0, N5). На каждый экземпляр свой скелет, микшер и материалы.
+ * Жители ITHappy при локальной установке; KayKit (CC0, N5) — запасной набор.
+ * На каждый экземпляр свой скелет и микшер, неизменяемые материалы переиспользуются.
  * Положением управляет клиент или сервер, здесь только вид и анимация.
  */
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { Box3, Color, Vector3, type Group, type Material, type Mesh, type MeshStandardMaterial } from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { ResidentModel, residentModelUrl } from './ResidentModel';
+import { residentFor, type Resident } from './characterPresets';
 
 const MODELS = {
   mage: "/assets/characters/mage.glb",
@@ -14,11 +17,12 @@ const MODELS = {
   barbarian: "/assets/characters/barbarian.glb",
 };
 
-export type Variant = keyof typeof MODELS;
-const VARIANTS = Object.keys(MODELS) as Variant[];
+type LegacyVariant = keyof typeof MODELS;
+export type Variant = LegacyVariant | Resident;
+const VARIANTS = Object.keys(MODELS) as LegacyVariant[];
 
 /** Кто как выглядит: у каждого NPC своя фигура, а не только цвет. */
-const NPC_VARIANTS: Record<string, Variant> = {
+const NPC_VARIANTS: Record<string, LegacyVariant> = {
   papa: "rogue",
   mihalych: "barbarian",
   vanya: "mage",
@@ -52,10 +56,11 @@ const NPC_COLORS: Record<string, string> = {
 };
 
 export const npcColor = (npcId: string) => NPC_COLORS[npcId] ?? "#c9844a";
-export const npcVariant = (npcId: string): Variant => NPC_VARIANTS[npcId] ?? variantFor(npcId);
+export const npcVariant = (npcId: string): Variant => residentModelUrl ? residentFor(npcId) : NPC_VARIANTS[npcId] ?? variantFor(npcId);
 
 /** Модель по строке (цвет или id игрока): один и тот же человек всегда выглядит одинаково. */
 export function variantFor(key: string): Variant {
+  if (residentModelUrl) return residentFor(key);
   const sum = [...key].reduce((total, char) => total + char.charCodeAt(0), 0);
   return VARIANTS[sum % VARIANTS.length]!;
 }
@@ -77,7 +82,7 @@ function tintMaterial(material: Material, color: Color) {
   return copy;
 }
 
-function Model({ color, anim, pose, variant }: { color: string; anim: Anim; pose: Pose; variant: Variant }) {
+function Model({ color, anim, pose, variant }: { color: string; anim: Anim; pose: Pose; variant: LegacyVariant }) {
   const root = useRef<Group>(null);
   const { scene, animations } = useGLTF(MODELS[variant], false, false);
   const { actions } = useAnimations(animations, root);
@@ -126,11 +131,17 @@ function Model({ color, anim, pose, variant }: { color: string; anim: Anim; pose
 
 export function Character(props: { color: string; anim?: Anim; pose?: Pose; variant?: Variant }) {
   const { color, anim = "idle", pose = "stand", variant } = props;
+  const selected = variant ?? variantFor(color);
+  const resident = !(selected in MODELS) && residentModelUrl;
+  const fallback = selected in MODELS ? selected as LegacyVariant : VARIANTS[0]!;
   return (
     <Suspense fallback={null}>
-      <Model color={color} anim={anim} pose={pose} variant={variant ?? variantFor(color)} />
+      {resident
+        ? <ResidentModel key={`${selected}:${pose}`} variant={selected as Resident} anim={anim} pose={pose} />
+        : <Model color={color} anim={anim} pose={pose} variant={fallback} />}
     </Suspense>
   );
 }
 
-for (const url of Object.values(MODELS)) useGLTF.preload(url, false, false);
+if (residentModelUrl) useGLTF.preload(residentModelUrl, false, false);
+else for (const url of Object.values(MODELS)) useGLTF.preload(url, false, false);
