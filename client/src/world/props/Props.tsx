@@ -17,12 +17,15 @@ import { getColliders } from "../ChunkView";
 import { isExtinguisher } from "../decor/Carry";
 import { FxParticles } from "../Effects";
 import { stepProp, throwVelocity, type PropBody } from "./propPhysics";
+import { PROP_KINDS, propGeometry, propKindOf, type PropKind } from "./models";
 
 type PropObject = Extract<WorldObject, { kind: "prop" }>;
 
 interface Live {
   id: string;
   label: string;
+  /** Вид (аптечка, фонарь…) — свой инстанс-меш на каждый вид */
+  kind: PropKind;
   mass: number;
   size: Vec3;
   rotY: number;
@@ -71,6 +74,7 @@ function toLive(o: PropObject): Live {
   return {
     id: o.id,
     label: o.label,
+    kind: propKindOf(o.id, o.label),
     mass: o.mass ?? 1,
     size: o.size,
     rotY: o.rotY ?? 0,
@@ -121,7 +125,7 @@ export function Props() {
   const remote = useStore((s) => s.props);
   const playerId = useStore((s) => s.auth?.playerId ?? null);
   const camera = useThree((s) => s.camera);
-  const mesh = useRef<InstancedMesh>(null);
+  const meshes = useRef<Partial<Record<PropKind, InstancedMesh | null>>>({});
   const live = useRef(new Map<string, Live>());
   const carried = useRef<Live | null>(null);
   const sentAt = useRef(0);
@@ -223,7 +227,7 @@ export function Props() {
       if (due) send(held, held.holder);
     }
 
-    let index = 0;
+    const counts: Partial<Record<PropKind, number>> = {};
     const loaded = store.get().chunks;
     for (const prop of live.current.values()) {
       if (prop.flying) {
@@ -236,19 +240,21 @@ export function Props() {
         const k = 1 - Math.exp(-FOLLOW_SPEED * delta);
         prop.body.pos = prop.body.pos.map((value, i) => value + (prop.target![i]! - value) * k) as Vec3;
       }
+      const index = counts[prop.kind] ?? 0;
       if (index >= CAPACITY) continue;
       const shown = Boolean(loaded[chunkAt(prop.body.pos)]);
       box.position.set(...prop.body.pos);
       box.rotation.y = prop.rotY;
       box.scale.set(shown ? prop.size[0] : 0, shown ? prop.size[1] : 0, shown ? prop.size[2] : 0);
       box.updateMatrix();
-      mesh.current?.setMatrixAt(index, box.matrix);
-      index++;
+      meshes.current[prop.kind]?.setMatrixAt(index, box.matrix);
+      counts[prop.kind] = index + 1;
     }
-    const markers = mesh.current;
-    if (markers) {
-      markers.count = index;
-      markers.instanceMatrix.needsUpdate = true;
+    for (const kind of PROP_KINDS) {
+      const m = meshes.current[kind];
+      if (!m) continue;
+      m.count = counts[kind] ?? 0;
+      m.instanceMatrix.needsUpdate = true;
     }
 
     // Огнетушитель: поднёс к огню и подержал
@@ -278,10 +284,21 @@ export function Props() {
 
   return (
     <>
-      <instancedMesh ref={mesh} args={[undefined, undefined, CAPACITY]} frustumCulled={false} castShadow receiveShadow>
-        <boxGeometry />
-        <meshStandardMaterial map={cardboard()} roughness={0.85} />
-      </instancedMesh>
+      {PROP_KINDS.map((kind) => (
+        // Свой инстанс-меш на вид предмета: модель из models.ts, картонные коробки — с текстурой картона
+        <instancedMesh
+          key={kind}
+          ref={(el) => void (meshes.current[kind] = el)}
+          args={[undefined, undefined, CAPACITY]}
+          geometry={kind === "cardboard_box" ? undefined : propGeometry(kind)}
+          frustumCulled={false}
+          castShadow
+          receiveShadow
+        >
+          {kind === "cardboard_box" && <boxGeometry />}
+          {kind === "cardboard_box" ? <meshStandardMaterial map={cardboard()} roughness={0.85} /> : <meshStandardMaterial vertexColors roughness={0.8} />}
+        </instancedMesh>
+      ))}
       {spray && <FxParticles object={{ id: "extinguisher-spray", kind: "fx", fx: "dust", pos: spray, size: 1.4 }} />}
       {hint && (
         <Html fullscreen zIndexRange={[6, 0]} style={{ pointerEvents: "none" }}>
