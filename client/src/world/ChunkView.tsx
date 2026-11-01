@@ -29,6 +29,8 @@ const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 
 /** Папа в данных стоит в квартирах 6–9 этажей; виден только на этаже старта (флаг сервера home_fN). */
 export function npcHere(o: WorldObject, chunkId: string, flags: readonly string[]): boolean {
+  // Во дворе трое пострадавших с мини-играми (генератор); напуганный без мини-игры — не показываем
+  if (o.kind === "npc" && o.npcId === "victim_scared") return false;
   if (o.kind !== "npc" || o.npcId !== "papa" || !flags.some((f) => f.startsWith("home_f"))) return true;
   const floor = parseFloorId(chunkId)?.floor;
   return floor !== undefined && flags.includes(`home_f${floor}`);

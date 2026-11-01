@@ -302,8 +302,6 @@ describe("ошибки мини-игр и адаптация (Y9)", () => {
     Array.from({ length: 200 }, (_, seed) => config(seed)).filter(has).length;
 
   it.each([
-    ["cpr", "cpr", (c: RunConfig) => c.victims.includes("cpr")],
-    ["recovery_position", "unconscious", (c: RunConfig) => c.victims.includes("unconscious")],
     ["elevator", "лифт", (c: RunConfig) => c.flags.includes("lift_vanya")],
     ["aftershock", "толчок", (c: RunConfig) => c.flags.includes("aftershock")],
   ] as const)("слабый навык %s выпадает чаще: %s", (skill, _, has) => {
@@ -311,6 +309,16 @@ describe("ошибки мини-игр и адаптация (Y9)", () => {
     const fresh = hits((seed) => generateRun({ mode: "solo", profiles: [], seed }), has);
     const trained = hits((seed) => generateRun({ mode: "solo", profiles: [weak], seed }), has);
     expect(trained).toBeGreaterThan(fresh);
+  });
+});
+
+describe("пострадавшие во дворе (01.11)", () => {
+  it("всегда трое, у каждого своя мини-игра; слабый навык игрока — первым", () => {
+    for (let seed = 0; seed < 50; seed++) {
+      expect([...generateRun({ mode: "solo", profiles: [], seed }).victims].sort()).toEqual(["bleeding", "cpr", "unconscious"]);
+    }
+    const weak: PlayerProfile = { playerId: "p", runs: 3, skills: { recovery_position: { ok: 0, fail: 3 } } };
+    expect(generateRun({ mode: "solo", profiles: [weak], seed: 1 }).victims[0]).toBe("unconscious");
   });
 });
 

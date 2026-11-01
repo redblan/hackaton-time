@@ -27,20 +27,17 @@ function fails(profiles: PlayerProfile[], skills: SkillId[]): number {
 }
 
 /** Выбор без повторов: вес растёт как квадрат числа ошибок по навыку. */
-function pickVictims(rng: () => number, profiles: PlayerProfile[]): VictimKind[] {
-  const pool = (Object.keys(VICTIM_SKILLS) as (keyof typeof VICTIM_SKILLS)[]).map((kind) => {
-    const fail = fails(profiles, [VICTIM_SKILLS[kind]]);
-    return { kind, weight: 1 + 3 * fail * fail };
-  });
-  const count = randomInt(rng, 2, 4);
-  const picked: VictimKind[] = [];
-  while (picked.length < count) {
-    const total = pool.reduce((sum, v) => sum + v.weight, 0);
-    let roll = rng() * total;
-    const index = pool.findIndex((v) => (roll -= v.weight) < 0);
-    picked.push(pool.splice(index === -1 ? pool.length - 1 : index, 1)[0]!.kind);
-  }
-  return picked;
+/**
+ * Пострадавшие во дворе (решение Егора 01.11): всегда трое, у каждого своя мини-игра —
+ * кровотечение (жгут), без дыхания (СЛР), без сознания (устойчивое боковое положение).
+ * Порядок по профилю: чаще ошибался — тот навык первым (адаптивность сохраняем, но без лотереи «есть/нет»).
+ */
+function pickVictims(_rng: () => number, profiles: PlayerProfile[]): VictimKind[] {
+  const kinds: VictimKind[] = ["bleeding", "cpr", "unconscious"];
+  return kinds
+    .map((kind) => ({ kind, fail: fails(profiles, [VICTIM_SKILLS[kind as keyof typeof VICTIM_SKILLS]]) }))
+    .sort((a, b) => b.fail - a.fail)
+    .map((v) => v.kind);
 }
 
 export function generateRun(input: GenerateRunInput): RunConfig {

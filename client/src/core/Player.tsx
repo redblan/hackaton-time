@@ -47,7 +47,6 @@ const ALLOWED_INTERACTS = new Set<string>([
   "elevator_shaft",
   "light_switch",
   "victim_bleeding",
-  "victim_scared",
   "victim_cpr",
   "victim_unconscious",
   "neighbor_leg",
