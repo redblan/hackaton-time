@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { Color, Object3D, Vector3, type InstancedMesh } from "three";
+import { CanvasTexture, Object3D, SRGBColorSpace, Vector3, type InstancedMesh } from "three";
 import type { PropState, Vec3, WorldObject } from "@game/shared";
 import { chunkAt, isActive } from "../../core/chunkMath";
 import { local } from "../../core/local";
@@ -24,7 +24,6 @@ interface Live {
   id: string;
   label: string;
   mass: number;
-  color: Color;
   size: Vec3;
   rotY: number;
   body: PropBody;
@@ -43,6 +42,28 @@ const EXTINGUISH_S = 1.5;
 const FOLLOW_SPEED = 12;
 const DEFAULT_SIZE: Vec3 = [0.3, 0.3, 0.3];
 
+let cardboardMap: CanvasTexture | null = null;
+
+/** Картон: бежевая основа, гофра и полоса скотча. Один на все коробки. */
+function cardboard() {
+  if (cardboardMap) return cardboardMap;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#d2b48c";
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = "rgba(120,86,50,.1)";
+  for (let y = 0; y < 256; y += 6) ctx.fillRect(0, y, 256, 2);
+  ctx.fillStyle = "rgba(232,212,176,.75)";
+  ctx.fillRect(106, 0, 44, 256);
+  ctx.strokeStyle = "rgba(96,68,40,.55)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, 256, 256);
+  cardboardMap = new CanvasTexture(canvas);
+  cardboardMap.colorSpace = SRGBColorSpace;
+  return cardboardMap;
+}
+
 const box = new Object3D();
 const forward = new Vector3();
 
@@ -51,7 +72,6 @@ function toLive(o: PropObject): Live {
     id: o.id,
     label: o.label,
     mass: o.mass ?? 1,
-    color: new Color(o.color ?? "#b08a4a"),
     size: o.size,
     rotY: o.rotY ?? 0,
     body: {
@@ -222,14 +242,12 @@ export function Props() {
       box.scale.set(shown ? prop.size[0] : 0, shown ? prop.size[1] : 0, shown ? prop.size[2] : 0);
       box.updateMatrix();
       mesh.current?.setMatrixAt(index, box.matrix);
-      mesh.current?.setColorAt(index, prop.color);
       index++;
     }
     const markers = mesh.current;
     if (markers) {
       markers.count = index;
       markers.instanceMatrix.needsUpdate = true;
-      if (markers.instanceColor) markers.instanceColor.needsUpdate = true;
     }
 
     // Огнетушитель: поднёс к огню и подержал
@@ -261,7 +279,7 @@ export function Props() {
     <>
       <instancedMesh ref={mesh} args={[undefined, undefined, CAPACITY]} frustumCulled={false} castShadow receiveShadow>
         <boxGeometry />
-        <meshStandardMaterial roughness={0.7} />
+        <meshStandardMaterial map={cardboard()} roughness={0.85} />
       </instancedMesh>
       {spray && <FxParticles object={{ id: "extinguisher-spray", kind: "fx", fx: "dust", pos: spray, size: 1.4 }} />}
       {hint && (

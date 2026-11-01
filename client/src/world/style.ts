@@ -1,8 +1,8 @@
 /**
  * Визуальный стиль мира: тёплый «золотой час», мягкая рисованная мультяшность.
- * Всё процедурное: без текстур и файлов, поэтому работает офлайн и дёшево для слабых ноутов.
+ * Всё процедурное: текстуры рисуются в коде, без файлов, поэтому работает офлайн и дёшево для слабых ноутов.
  */
-import { Color, type Material, type WebGLProgramParametersWithUniforms } from "three";
+import { CanvasTexture, Color, RepeatWrapping, type Material, type WebGLProgramParametersWithUniforms } from "three";
 
 export const PALETTE = {
   skyTop: "#4f76b5",
@@ -52,13 +52,82 @@ function withWorldPosition(shader: WebGLProgramParametersWithUniforms, paint: st
 
 /** Стены, полы и мебель: мазки краски и лёгкая теплота снизу, как на рисованной текстуре. */
 export function paintSurface(material: Material) {
-  material.onBeforeCompile = (shader) =>
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uPlaster = { value: plasterTexture() };
+    shader.fragmentShader = `uniform sampler2D uPlaster;\n${shader.fragmentShader}`;
     withWorldPosition(
       shader,
-      `float strokes = fbm3(vWorld * vec3(3.2, 1.6, 3.2));
-       diffuseColor.rgb *= 0.93 + 0.14 * strokes;
-       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 0.97, 0.86), 0.5);`,
+      `vec3 faceNormal = abs(normalize(cross(dFdx(vWorld), dFdy(vWorld))));
+       vec2 plasterUv = (faceNormal.y > 0.5 ? vWorld.xz : faceNormal.x > 0.5 ? vWorld.zy : vWorld.xy) / PLASTER_TILE_M;
+       float plaster = texture2D(uPlaster, plasterUv).r;
+       float strokes = fbm3(vWorld * vec3(3.2, 1.6, 3.2));
+       diffuseColor.rgb *= (0.93 + 0.14 * strokes) * (0.72 + 0.56 * plaster);
+       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 0.97, 0.86), 0.5);`.replace("PLASTER_TILE_M", PLASTER_TILE_M),
     );
+  };
+}
+
+const PLASTER_TILE_M = "2.2";
+let plaster: CanvasTexture | null = null;
+
+/** Штукатурка: мазки шпателя, крапинки и волосяные трещины. Один тайл, бесшовный, без файлов. */
+function plasterTexture() {
+  if (plaster) return plaster;
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const random = seededRandom(11);
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, size, size);
+  /** Рисуем со всеми сдвигами на тайл: что вышло за край, зайдёт с другой стороны */
+  const wrapped = (draw: () => void) => {
+    for (const dx of [-size, 0, size]) {
+      for (const dy of [-size, 0, size]) {
+        ctx.save();
+        ctx.translate(dx, dy);
+        draw();
+        ctx.restore();
+      }
+    }
+  };
+  ctx.lineCap = "round";
+  for (let i = 0; i < 420; i++) {
+    const [x, y, angle, length, bend] = [random() * size, random() * size, random() * Math.PI, 30 + random() * 90, (random() - 0.5) * 50];
+    const shade = random() < 0.5 ? "255,255,255" : "0,0,0";
+    const alpha = 0.03 + random() * 0.06;
+    const width = 6 + random() * 18;
+    wrapped(() => {
+      ctx.strokeStyle = `rgba(${shade},${alpha})`;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + Math.cos(angle) * length * 0.5 - Math.sin(angle) * bend, y + Math.sin(angle) * length * 0.5 + Math.cos(angle) * bend, x + Math.cos(angle) * length, y + Math.sin(angle) * length);
+      ctx.stroke();
+    });
+  }
+  for (let i = 0; i < 16000; i++) {
+    ctx.fillStyle = `rgba(${random() < 0.55 ? "0,0,0" : "255,255,255"},${0.05 + random() * 0.14})`;
+    ctx.fillRect(random() * size, random() * size, 1 + random() * 1.5, 1 + random() * 1.5);
+  }
+  for (let i = 0; i < 7; i++) {
+    const points: [number, number][] = [[random() * size, random() * size]];
+    for (let k = 0; k < 7; k++) {
+      const [px, py] = points[k]!;
+      points.push([px + (random() - 0.5) * 34, py + 6 + random() * 18]);
+    }
+    wrapped(() => {
+      ctx.strokeStyle = "rgba(0,0,0,.28)";
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      points.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.stroke();
+    });
+  }
+  plaster = new CanvasTexture(canvas);
+  plaster.wrapS = plaster.wrapT = RepeatWrapping;
+  plaster.anisotropy = 4;
+  return plaster;
 }
 
 /** Скалы: горизонтальные слои песчаника, как в каньоне. */

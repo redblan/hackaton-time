@@ -35,7 +35,8 @@ export function softTexture() {
 }
 
 const FX_LOOK: Record<Fx["fx"], { color: string; size: number; speed: number; count: number; opacity: number; glow: boolean; rise: number }> = {
-  fire: { color: "#ff8a2b", size: 0.55, speed: 0.9, count: 42, opacity: 0.8, glow: true, rise: 1.3 },
+  // высокое пламя: огонь в коридоре, его должно быть видно с лестницы поверх парапета в 1 м
+  fire: { color: "#ff8a2b", size: 0.8, speed: 0.9, count: 70, opacity: 0.8, glow: true, rise: 3.4 },
   smoke: { color: "#6d6660", size: 1.5, speed: 0.22, count: 36, opacity: 0.4, glow: false, rise: 2.4 },
   sparks: { color: "#ffe98a", size: 0.13, speed: 1.8, count: 40, opacity: 0.95, glow: true, rise: 1.5 },
   dust: { color: "#d4b998", size: 0.9, speed: 0.2, count: 30, opacity: 0.32, glow: false, rise: 1 },
