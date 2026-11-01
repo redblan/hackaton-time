@@ -13,6 +13,7 @@ import { NpcWalker } from "./NpcWalker";
 import { Crowd } from "./crowd/Crowd";
 import { FxParticles, InteractMarker } from "./Effects";
 import { Interior, parseFloorId } from "./decor/Interior";
+import { isYardAnimated, YardAnimated } from "./decor/YardAnimated";
 import { paintSurface } from "./style";
 import { uploadStaticBoxes, type StaticBox } from './staticBoxes';
 
@@ -75,7 +76,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)),[props.chunk,props.flags]);
   const boxes=useMemo(()=>{
     const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
-    return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
+    return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
   },[objects,Boolean(floor)]);
   return (
     <group name={props.chunk.id}>
@@ -107,7 +108,8 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return null; // zone, spawn — невидимые
         }
       })}
-      {floor && <Interior chunk={props.chunk} />}
+      {floor && <Interior chunk={props.chunk} flags={props.flags} />}
+      {!floor && <YardAnimated objects={objects} />}
     </group>
   );
 }

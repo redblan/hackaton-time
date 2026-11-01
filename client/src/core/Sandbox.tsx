@@ -12,6 +12,7 @@ import { ChunkView, getColliders } from "../world/ChunkView";
 import { Building } from "../world/decor/Building";
 import { Landscape } from "../world/Landscape";
 import { MINIGAME_NAMES, MinigameHost } from "./MinigameHost";
+import { store } from "./store";
 import { Button } from "./ui";
 
 function MinigamesTab() {
@@ -71,6 +72,8 @@ const VIEWS: Record<string, { eye: [number, number, number]; look: [number, numb
   "коридор": { eye: [8.6, 1.6, 3.3], look: [1, 1.2, 4.5] },
   "лестница": { eye: [11.2, 1.7, 2.7], look: [5, 0.0, 0.8] },
   "лифт": { eye: [9.6, 1.5, 1.4], look: [10, 1.1, 4.5] },
+  "окно кухни": { eye: [8.4, 1.6, 8.6], look: [8, 1.4, 11.8] },
+  "холодильник": { eye: [8.2, 1.5, 9.4], look: [7.8, 0.9, 11.4] },
   "двор": { eye: [10, 3, -16], look: [6, 4, 0] },
   "дом целиком": { eye: [-18, 16, -34], look: [10, 9, 4] },
 };
@@ -180,6 +183,9 @@ function ChunksTab() {
           <input type="checkbox" checked={crowd} onChange={(e) => setCrowd(e.target.checked)} />
           толпа (пример)
         </label>
+        <Button variant="ghost" onClick={() => store.set({ quake: { until: performance.now() + 4000, strength: 1 } })}>
+          Толчок (4 с)
+        </Button>
         {allFlags.length > 0 && <h3>Флаги</h3>}
         {allFlags.map((f) => (
           <label key={f} className="small check">

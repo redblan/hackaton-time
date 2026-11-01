@@ -13,6 +13,7 @@ import { BufferGeometry, DoubleSide, MeshStandardMaterial, type Group } from "th
 import type { ChunkData } from "@game/shared";
 import { useStore } from "../../core/store";
 import { paintSurface } from "../style";
+import { FloorAnimated } from "./Animated";
 import { Builder, labelAtlas, labelQuad, mergeQuads, rng } from "./build";
 import { ResourceCache } from './resourceCache';
 import { parquetMaterial, wallpaperMaterial } from "./patterns";
@@ -153,14 +154,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   b.add(P.radiator(7), { x: 10, y: 0.05, z: 0.3 });
   if (floor === 1) b.add(P.radiator(7), { x: 2, y: 0.05, z: 0.3 });
 
-  // ---------- люстры (без источников света — дорого; абажур с «горящей» лампочкой) ----------
-  for (const [x, z] of [
-    [10, 1.5],
-    [5, 4],
-    [3, 8.5],
-    [9, 8.5],
-  ])
-    b.add(P.ceilingLamp(), { x, y: CEIL, z });
+  // люстры, створки лифта, шторы, дверца холодильника и крышка плиты двигаются — они в Animated.tsx (G10)
 
   // ---------- двери ----------
   for (const d of floorDoors(entrance, floor)) {
@@ -179,7 +173,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   b.box(0.3, 0.84, 0.01, "#cfe3ea", { x: 2.6, y: 1.5, z: 5.105 });
 
   // ---------- лифт: двери на z 3.75 (лицом к площадке), кабина уходит до стены коридора; Ваня стоит внутри (10, 0, 4) ----------
-  b.add(P.elevator({ depth: 1.15 }), { x: 10, y: 0, z: LIFT_Z, ry: Math.PI });
+  b.add(P.elevator({ depth: 1.15, doors: false }), { x: 10, y: 0, z: LIFT_Z, ry: Math.PI });
 
   // ---------- вещи в коридоре по теме этажа: у парапета, лицом в коридор ----------
   theme.hallProps.forEach((kind, i) => {
@@ -212,8 +206,8 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   b.box(2.6, 0.06, 1.25, "#bf8f5f", { x: 8, y: 0.87, z: 8.83 }); // стол
   for (const dx of [-1.2, 1.2]) for (const dz of [-0.5, 0.5]) b.box(0.08, 0.84, 0.08, "#8f6238", { x: 8 + dx, y: 0.42, z: 8.83 + dz });
   b.add(P.chair("#956944"), { x: 8.4, y: 0, z: 9.75, ry: Math.PI });
-  b.add(P.fridge(), { x: 6.6, y: 0, z: 11.4 });
-  b.add(P.stove(), { x: 10.2, y: 0, z: 11.4, ry: -Math.PI / 2 });
+  b.add(P.fridge({ door: false }), { x: 6.6, y: 0, z: 11.4, ry: Math.PI }); // лицом в кухню
+  b.add(P.stove({ lid: false }), { x: 10.2, y: 0, z: 11.4, ry: -Math.PI / 2 });
   b.box(0.02, 0.6, 4.2, "#e9eef0", { x: 11.8 - 0.01, y: 1.2, z: 9 }); // кухонный фартук
   b.add(P.picture(theme.pictures[2]!, 0.6, 0.45), { x: 6.075 + OFF, y: 1.75, z: 9.5, ry: Math.PI / 2 });
   // ---------- окна квартиры: комната x 2.5 (всё наше) и кухня x 8 (стекло — из данных, бьётся по флагу) ----------
@@ -225,7 +219,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
     b.box(0.05, 1.5, 0.04, "#f9ebd5", { x: wx, y: 1.7, z: zf - 0.015 });
     b.box(2.0, 0.05, 0.04, "#f9ebd5", { x: wx, y: 1.7, z: zf - 0.015 });
     b.box(2.3, 0.06, 0.25, "#f6e1bd", { x: wx, y: 0.92, z: 11.68 });
-    b.add(P.curtains(2.0, 1.7, theme.curtain), { x: wx, y: 0.8, z: 11.62 });
+    b.add(P.curtains(2.0, 1.7, theme.curtain, { panels: false }), { x: wx, y: 0.8, z: 11.62 });
     b.add(P.radiator(8), { x: wx, y: 0.05, z: 11.6, ry: Math.PI });
   }
 
@@ -348,10 +342,10 @@ function AnimatedDoor({ chunkId, parts, spec, plate, plateMaterial }: { chunkId:
 const solidMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.82 });
 paintSurface(solidMaterial);
 
-export function Interior({ chunk }: { chunk: ChunkData }) {
+export function Interior({ chunk, flags = [] }: { chunk: ChunkData; flags?: readonly string[] }) {
   const parsed = parseFloorId(chunk.id);
   if (!parsed) return null;
-  return <FloorInterior chunkId={chunk.id} entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} />;
+  return <FloorInterior chunkId={chunk.id} entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} flags={flags} />;
 }
 
 export function buildFloorResources(entrance:number,floor:number) {
@@ -389,7 +383,7 @@ export function disposeFloorResources(r:FloorResources) {
 // Max six cached floors / ~32 MiB of buffers+label mipmaps; active floors stay pinned.
 export const floorResourceCache=new ResourceCache<FloorResources>({entries:6,bytes:32*1024*1024},floorResourceBytes,disposeFloorResources);
 
-function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; entrance: number; floor: number; origin: readonly number[] }) {
+function FloorInterior({ chunkId, entrance, floor, origin, flags }: { chunkId: string; entrance: number; floor: number; origin: readonly number[]; flags: readonly string[] }) {
   const key=`${entrance}:${floor}`;
   const [resource,setResource]=useState<{key:string;value:FloorResources}|null>(null);
   // Acquire at commit, not during render: StrictMode/abandoned renders must not leak leases.
@@ -409,6 +403,7 @@ function FloorInterior({ chunkId, entrance, floor, origin }: { chunkId: string; 
       <mesh geometry={ceiling} material={solidMaterial} />
       <mesh geometry={labels.geometry} material={materials.label} />
       <AnimatedDoor chunkId={chunkId} parts={parts} spec={mainDoor} plate={labels.plate} plateMaterial={materials.label} />
+      <FloorAnimated origin={origin} floor={floor} curtain={floorTheme(entrance, floor).curtain} flags={flags} />
     </group>
   );
 }

@@ -105,7 +105,7 @@ export function doorPlate(opts: DoorOptions = {}) {
  * Лифт: кабина глубиной `depth` за порталом (пол, стены, потолок, поручень, лампа), створки раздвинуты
  * на `gap` — внутри видно человека. Лицо (двери) на z = 0, кабина уходит в −z.
  */
-export function elevator(opts: { depth?: number; gap?: number } = {}): BufferGeometry {
+export function elevator(opts: { depth?: number; gap?: number; doors?: boolean } = {}): BufferGeometry {
   const b = new Builder();
   const w = 1.3;
   const h = 2.3;
@@ -118,7 +118,7 @@ export function elevator(opts: { depth?: number; gap?: number } = {}): BufferGeo
   b.box(w + 0.3, 0.04, 0.4, METAL_DARK, { y: 0.02 });
   // створки, раздвинутые на gap (застряли)
   const lw = w / 2 - 0.02;
-  for (const s of [-1, 1]) b.box(lw, h - 0.04, 0.06, METAL, { x: s * (lw / 2 + gap / 2), y: h / 2 }, s < 0 ? 1 : 0.92);
+  if (opts.doors !== false) for (const s of [-1, 1]) b.box(lw, h - 0.04, 0.06, METAL, { x: s * (lw / 2 + gap / 2), y: h / 2 }, s < 0 ? 1 : 0.92);
   // кабина: пол, стены, потолок, задняя стенка с поручнем и зеркалом, лампа
   const cab = "#b9b1a4";
   b.box(w, 0.04, depth, "#6f6a62", { y: 0.02, z: -depth / 2 });
@@ -140,7 +140,7 @@ export function elevator(opts: { depth?: number; gap?: number } = {}): BufferGeo
 }
 
 /** Газовая плита: белый корпус, 4 конфорки с решёткой, духовка, ручки, откинутая крышка. */
-export function stove(): BufferGeometry {
+export function stove(opts: { lid?: boolean } = {}): BufferGeometry {
   const b = new Builder();
   b.box(0.6, 0.82, 0.6, WHITE, { y: 0.45 });
   b.box(0.62, 0.03, 0.62, "#dcd9d2", { y: 0.875 });
@@ -159,7 +159,7 @@ export function stove(): BufferGeometry {
   for (const x of [-0.29, 0, 0.29]) b.box(0.015, 0.012, 0.6, BLACK, { x, y: 0.9 });
   for (const z of [-0.29, 0, 0.29]) b.box(0.6, 0.012, 0.015, BLACK, { y: 0.9, z });
   // откинутая крышка-щиток
-  b.box(0.6, 0.58, 0.02, "#d9ddd8", { y: 1.19, z: -0.3, rx: -0.12 });
+  if (opts.lid !== false) b.box(0.6, 0.58, 0.02, "#d9ddd8", { y: 1.19, z: -0.3, rx: -0.12 });
   return b.build();
 }
 
@@ -178,14 +178,43 @@ export function nightstand(): BufferGeometry {
 }
 
 /** Холодильник. */
-export function fridge(): BufferGeometry {
+export function fridge(opts: { door?: boolean } = {}): BufferGeometry {
   const b = new Builder();
-  b.box(0.65, 1.75, 0.65, WHITE, { y: 0.875 });
-  b.box(0.6, 0.02, 0.02, "#d2cfc8", { y: 1.2, z: 0.33 });
-  b.box(0.03, 0.5, 0.03, METAL, { x: 0.25, y: 1.45, z: 0.34 });
-  b.box(0.03, 0.8, 0.03, METAL, { x: 0.25, y: 0.75, z: 0.34 });
+  if (opts.door === false) {
+    // корпус без дверцы: дверца — fridgeDoor(), открывается отдельно
+    b.box(0.65, 1.75, 0.6, WHITE, { y: 0.875, z: -0.025 });
+    b.box(0.57, 1.6, 0.01, "#e9eef0", { y: 0.9, z: 0.276 }, 0.95); // внутренность
+    for (const y of [0.55, 0.95, 1.35]) b.box(0.55, 0.015, 0.45, "#dfe6ea", { y, z: 0.05 });
+    b.box(0.12, 0.2, 0.1, "#d9824a", { x: -0.12, y: 1.06, z: 0.12 });
+    b.box(0.1, 0.12, 0.1, "#e8d26a", { x: 0.1, y: 0.62, z: 0.12 });
+  } else {
+    b.box(0.65, 1.75, 0.65, WHITE, { y: 0.875 });
+    b.box(0.6, 0.02, 0.02, "#d2cfc8", { y: 1.2, z: 0.33 });
+    b.box(0.03, 0.5, 0.03, METAL, { x: 0.25, y: 1.45, z: 0.34 });
+    b.box(0.03, 0.8, 0.03, METAL, { x: 0.25, y: 0.75, z: 0.34 });
+  }
   b.box(0.6, 0.05, 0.55, "#2f3236", { y: 0.03 });
   return b.build();
+}
+
+/** Дверца холодильника: петля в нуле (левый край, у корпуса), дверца вдоль +x, смотрит на +z. */
+export function fridgeDoor(): BufferGeometry {
+  return new Builder()
+    .box(0.65, 1.68, 0.05, WHITE, { x: 0.325, y: 0.9, z: 0.025 })
+    .box(0.6, 0.02, 0.02, "#d2cfc8", { x: 0.325, y: 1.2, z: 0.055 })
+    .box(0.03, 0.5, 0.03, METAL, { x: 0.575, y: 1.45, z: 0.065 })
+    .box(0.03, 0.8, 0.03, METAL, { x: 0.575, y: 0.75, z: 0.065 })
+    .build();
+}
+
+/** Створка лифта: центр в нуле по x, низ на y 0. */
+export function elevatorLeaf(): BufferGeometry {
+  return new Builder().box(1.3 / 2 - 0.02, 2.3 - 0.04, 0.06, METAL, { y: 2.3 / 2 }).build();
+}
+
+/** Крышка-щиток плиты: петля в нуле (задний край плиты), крышка вверх по y. */
+export function stoveLid(): BufferGeometry {
+  return new Builder().box(0.6, 0.58, 0.02, "#d9ddd8", { y: 0.29 }).build();
 }
 
 /** Батарея под окном: секции, две трубы. */
@@ -389,13 +418,20 @@ export function sled(): BufferGeometry {
 }
 
 /** Шторы: карниз и два собранных полотна по бокам окна шириной w. */
-export function curtains(w: number, h: number, color: string): BufferGeometry {
+export function curtains(w: number, h: number, color: string, opts: { panels?: boolean } = {}): BufferGeometry {
   const b = new Builder();
   b.cylinder(0.02, 0.02, w + 0.5, "#6b4b36", { y: h + 0.12, rz: Math.PI / 2 }, 6);
-  for (const s of [-1, 1]) {
+  if (opts.panels !== false) for (const s of [-1, 1]) {
     const x0 = (s * (w + 0.15)) / 2;
     for (let i = 0; i < 4; i++) b.box(0.07, h + 0.1, 0.06 + (i % 2) * 0.04, color, { x: x0 + s * (i - 1.5) * 0.06, y: h / 2 + 0.05, z: 0.02 }, 0.92 + (i % 2) * 0.12);
   }
+  return b.build();
+}
+
+/** Одна штора (4 складки), подвешена в нуле — верх у карниза, висит вниз по −y. s: −1 левая, 1 правая. */
+export function curtainPanel(h: number, color: string, s: -1 | 1): BufferGeometry {
+  const b = new Builder();
+  for (let i = 0; i < 4; i++) b.box(0.07, h + 0.1, 0.06 + (i % 2) * 0.04, color, { x: s * (i - 1.5) * 0.06, y: -(h + 0.1) / 2, z: 0.02 }, 0.92 + (i % 2) * 0.12);
   return b.build();
 }
 
