@@ -25,8 +25,10 @@ export interface NpcPublic {
   npcId: NpcId;
   pos: Vec3;
   rotY: number;
-  /** За кем идёт; null — стоит на месте */
+  /** За кем идёт; null — не сопровождает */
   following: PlayerId | null;
+  /** Идёт сам (к месту сбора после помощи, D-76) — клиент включает анимацию ходьбы */
+  walking?: boolean;
 }
 
 export interface ClientToServer {

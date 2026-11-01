@@ -36,7 +36,7 @@ import {
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
 import type { Stt, Tts } from "@game/ai";
-import { checkLeftBehind, recordTrail, startEscort, stepEscort } from "./escort";
+import { checkLeftBehind, recordTrail, startEscort, startWalk, stepEscort, stepWalk } from "./escort";
 import {
   canStart,
   findOpenRoom,
@@ -72,6 +72,14 @@ const RESTORE_MAX_AGE_MS = 3 * 60 * 60_000;
 /** 15 с × 16 кГц × 2 байта + заголовок — с запасом */
 const MAX_VOICE_BYTES = 520_000;
 const ANIMS = new Set<PlayerPublic["anim"]>(["idle", "walk", "run", "crouch", "carry"]);
+/** Где стоят спасённые у места сбора (y12: x 12..24, z −36..−24), в стороне от песочницы, качелей и спауна */
+const ASSEMBLY_SPOTS: Vec3[] = [
+  [19.2, 0, -28.8],
+  [20.4, 0, -28.0],
+  [18.4, 0, -27.4],
+  [21.4, 0, -29.2],
+  [17.6, 0, -29.6],
+];
 
 const isVec3 = (v: unknown): v is Vec3 =>
   Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1e4);
@@ -409,6 +417,10 @@ export class Game {
       if (!room.started || room.finished) continue;
       const running = room.clock.runningSince !== null;
       for (const e of room.npcs.values()) {
+        if (e.goal && !e.playerId) {
+          if (running) stepWalk(e, dtMs);
+          continue;
+        }
         const leader = e.playerId ? room.players.get(e.playerId) : undefined;
         if (!running || !leader?.online) continue;
         stepEscort(e, leader.pos, dtMs);
@@ -499,9 +511,11 @@ export class Game {
       console.error(`[scenario] reduce упал на ${event.type}:`, e);
       return;
     }
+    const stableBefore = new Set(Object.entries(room.run.victims ?? {}).filter(([, v]) => v.state === "stable").map(([id]) => id));
     room.run = result.state;
     room.dirty = true;
     this.trackEscort(room, event);
+    this.sendStableToAssembly(room, stableBefore);
     for (const eff of result.effects) this.safe(() => this.execute(room, eff));
   }
 
@@ -526,6 +540,24 @@ export class Game {
           e.trail = [];
         }
       }
+    }
+  }
+
+  /**
+   * D-76: пострадавший, которому помогли, не лежит дальше — встаёт и сам идёт к месту сбора (z_safe_area, y12),
+   * там стоит с остальными. Двигает сервер, как Валентину; в чанке его больше не рисуют.
+   */
+  private sendStableToAssembly(room: Room, stableBefore: Set<string>) {
+    const victims = room.run?.victims ?? {};
+    let n = [...room.npcs.values()].filter((e) => e.goal).length;
+    for (const [id, v] of Object.entries(victims)) {
+      if (v.state !== "stable" || stableBefore.has(id) || room.npcs.has(id as NpcId) || !includes(NPC_IDS, id)) continue;
+      const from = this.chunks.findNpc(id, room.flags);
+      if (!from) continue;
+      const spot = ASSEMBLY_SPOTS[n % ASSEMBLY_SPOTS.length]!;
+      n++;
+      room.npcs.set(id, startWalk(id, [from[0], from[1], from[2]], spot));
+      console.log(`[walk] ${id} идёт к месту сбора`);
     }
   }
 

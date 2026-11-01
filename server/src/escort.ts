@@ -25,7 +25,45 @@ export interface Escort {
   trail: Vec3[];
   /** Игровое время последнего left_behind */
   lastLeftBehindAt: number | null;
+  /** D-76: идёт сам к точке (пострадавший после помощи — к месту сбора); дошёл — стоит рядом и переминается */
+  goal?: Vec3 | null;
+  /** Сейчас в движении (для анимации на клиенте) */
+  walking?: boolean;
+  /** Куда переминается у цели и когда менять точку (мс реального времени) */
+  wander?: { to: Vec3; until: number };
 }
+
+export const WALK = { speed: 1.6, wanderRadius: 1.3, wanderSpeed: 0.7 };
+
+/** Самостоятельный поход: от точки к цели, потом неспешно ходить вокруг цели */
+export function startWalk(npcId: NpcId, from: Vec3, goal: Vec3): Escort {
+  return { npcId, playerId: null, pos: [...from], rotY: 0, trail: [], lastLeftBehindAt: null, goal: [...goal], walking: true };
+}
+
+export function stepWalk(e: Escort, dtMs: number, now = Date.now()) {
+  if (!e.goal) return;
+  const target = e.wander?.to ?? e.goal;
+  const speed = e.wander ? WALK.wanderSpeed : WALK.speed;
+  const dx = target[0] - e.pos[0];
+  const dz = target[2] - e.pos[2];
+  const d = Math.hypot(dx, dz);
+  const budget = (speed * dtMs) / 1000;
+  if (d > 0.05) {
+    e.rotY = Math.atan2(-dx, -dz);
+    const k = Math.min(1, budget / d);
+    e.pos = [e.pos[0] + dx * k, target[1], e.pos[2] + dz * k];
+    e.walking = true;
+    return;
+  }
+  // у цели: постоять, потом сделать пару шагов в сторону
+  e.walking = false;
+  if (!e.wander || now > e.wander.until) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * WALK.wanderRadius;
+    e.wander = { to: [e.goal[0] + Math.cos(a) * r, e.goal[1], e.goal[2] + Math.sin(a) * r], until: now + 4000 + Math.random() * 6000 };
+  }
+}
+
 
 export const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 

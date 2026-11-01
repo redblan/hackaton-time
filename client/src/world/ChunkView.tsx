@@ -154,7 +154,7 @@ function Sign({ object, big }: { object: Extract<WorldObject, { kind: "sign" }>;
 
 const dimensions: Record<string, [number, number, number]> = {
   'table-top':[2,.98,1.2], bed:[2,.7,1.5], wardrobe:[.8,2.2,1.6],
-  kitchen:[1.5,1,4], stove:[.8,1,.8], lift:[2,2.5,.25], door:[2,2.5,.2],
+  kitchen:[.8,1,4], stove:[.8,1,.8], lift:[2,2.5,.25], door:[2,2.5,.2],
   'stairs-a':[3,1.5,3], 'stairs-b':[3,1.5,3], tree:[2.5,4.2,2.5],
   bench:[2,.7,.6], pole:[.5,5,.5], 'play-stairs':[2,1.1,2], ambulance:[2.5,2.4,5],
 };

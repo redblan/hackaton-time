@@ -203,14 +203,12 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   b.add(P.picture(theme.pictures[1]!, 0.5, 0.6), { x: 5.925 - OFF, y: 1.8, z: 8.0, ry: -Math.PI / 2 });
   // ---------- правая комната / кухня ----------
   b.add(P.rug(1.6, 1.0, theme.rug), { x: 8.5, y: 0.014, z: 10.3 });
-  // комод и стол под вещи для сборов: prop-* лежат на y 0.9..1.1 в сетке x 7..9, z 7..9 (generate.ts)
-  b.box(2.6, 0.86, 1.4, "#a97a4d", { x: 8, y: 0.43, z: 7.5 });
-  b.box(2.7, 0.04, 1.5, "#bf8f5f", { x: 8, y: 0.88, z: 7.5 });
-  for (const dx of [-0.85, 0, 0.85]) for (const y of [0.25, 0.6]) b.box(0.16, 0.03, 0.02, "#d9a441", { x: 8 + dx, y, z: 6.81 });
-  for (const dx of [-0.43, 0.43]) b.box(0.015, 0.8, 0.02, "#8f6238", { x: 8 + dx, y: 0.43, z: 6.805 });
-  b.box(2.6, 0.06, 1.25, "#bf8f5f", { x: 8, y: 0.87, z: 8.83 }); // стол
-  for (const dx of [-1.2, 1.2]) for (const dz of [-0.5, 0.5]) b.box(0.08, 0.84, 0.08, "#8f6238", { x: 8 + dx, y: 0.42, z: 8.83 + dz });
-  b.add(P.chair("#956944"), { x: 8.4, y: 0, z: 9.75, ry: Math.PI });
+  // узкий комод под вещи для сборов: prop-* лежат на y 0.9..1.1 в сетке x 6.9..9.9, z 7..7.6 (generate.ts); середина кухни свободна
+  b.box(3.5, 0.86, 1.1, "#a97a4d", { x: 8.4, y: 0.43, z: 7.3 });
+  b.box(3.6, 0.04, 1.2, "#bf8f5f", { x: 8.4, y: 0.88, z: 7.3 });
+  for (const dx of [-1.15, 0, 1.15]) for (const y of [0.25, 0.6]) b.box(0.16, 0.03, 0.02, "#d9a441", { x: 8.4 + dx, y, z: 6.76 });
+  for (const dx of [-0.58, 0.58]) b.box(0.015, 0.8, 0.02, "#8f6238", { x: 8.4 + dx, y: 0.43, z: 6.755 });
+  b.add(P.chair("#956944"), { x: 7.0, y: 0, z: 9.9, ry: Math.PI });
   b.add(P.fridge({ door: false }), { x: 6.6, y: 0, z: 11.4, ry: Math.PI }); // лицом в кухню
   b.add(P.stove({ lid: false }), { x: 10.2, y: 0, z: 11.4, ry: -Math.PI / 2 });
   b.box(0.02, 0.6, 4.2, "#e9eef0", { x: 11.8 - 0.01, y: 1.2, z: 9 }); // кухонный фартук

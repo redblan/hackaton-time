@@ -159,7 +159,7 @@ export function connect(auth: Auth) {
   });
 
   s.on("npcs:update", ({ npcs }) => {
-    for (const n of npcs) pushSnapshot({ id: `npc:${n.npcId}`, pos: n.pos, rotY: n.rotY, anim: n.following ? "walk" : "idle" });
+    for (const n of npcs) pushSnapshot({ id: `npc:${n.npcId}`, pos: n.pos, rotY: n.rotY, anim: n.following || n.walking ? "walk" : "idle" });
     const sig = (l: { npcId: string; following: string | null }[]) => l.map((n) => `${n.npcId}:${n.following}`).join("|");
     if (sig(npcs) !== sig(store.get().npcs)) store.set({ npcs: npcs.map(({ npcId, following }) => ({ npcId, following })) });
   });

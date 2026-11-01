@@ -378,12 +378,12 @@
       "id": "kitchen",
       "kind": "box",
       "pos": [
-        10.9,
+        11.35,
         0.5,
         9
       ],
       "size": [
-        1.5,
+        0.8,
         1,
         4
       ],
@@ -451,7 +451,7 @@
       "kind": "model",
       "src": "furniture/kitchenCabinet.glb",
       "pos": [
-        10.9,
+        11.35,
         0,
         9
       ],
@@ -698,7 +698,7 @@
       "id": "prop-documents",
       "kind": "box",
       "pos": [
-        7,
+        6.9,
         1,
         7
       ],
@@ -715,7 +715,7 @@
       "kind": "interactable",
       "target": "item_documents",
       "pos": [
-        7,
+        6.9,
         1,
         7
       ],
@@ -726,7 +726,7 @@
       "id": "prop-phone",
       "kind": "box",
       "pos": [
-        8,
+        7.65,
         1,
         7
       ],
@@ -743,7 +743,7 @@
       "kind": "interactable",
       "target": "item_phone",
       "pos": [
-        8,
+        7.65,
         1,
         7
       ],
@@ -790,9 +790,9 @@
       "id": "prop-warm_clothes",
       "kind": "box",
       "pos": [
-        9,
+        6.9,
         1,
-        8
+        7.6
       ],
       "size": [
         0.25,
@@ -807,9 +807,9 @@
       "kind": "interactable",
       "target": "item_warm_clothes",
       "pos": [
-        9,
+        6.9,
         1,
-        8
+        7.6
       ],
       "radius": 1.5,
       "label": "Тёплая одежда"
@@ -818,9 +818,9 @@
       "id": "prop-bandage",
       "kind": "box",
       "pos": [
-        7,
+        7.65,
         1,
-        9
+        7.6
       ],
       "size": [
         0.25,
@@ -835,9 +835,9 @@
       "kind": "interactable",
       "target": "item_bandage",
       "pos": [
-        7,
+        7.65,
         1,
-        9
+        7.6
       ],
       "radius": 1.5,
       "label": "Бинт"
@@ -846,9 +846,9 @@
       "id": "prop-laptop",
       "kind": "box",
       "pos": [
-        8,
+        8.4,
         1,
-        9
+        7.6
       ],
       "size": [
         0.25,
@@ -863,9 +863,9 @@
       "kind": "interactable",
       "target": "item_laptop",
       "pos": [
-        8,
+        8.4,
         1,
-        9
+        7.6
       ],
       "radius": 1.5,
       "label": "Ноутбук"
@@ -874,9 +874,9 @@
       "id": "prop-console",
       "kind": "box",
       "pos": [
-        9,
+        9.15,
         1,
-        9
+        7.6
       ],
       "size": [
         0.25,
@@ -891,9 +891,9 @@
       "kind": "interactable",
       "target": "item_console",
       "pos": [
-        9,
+        9.15,
         1,
-        9
+        7.6
       ],
       "radius": 1.5,
       "label": "Приставка"

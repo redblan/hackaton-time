@@ -68,12 +68,12 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   for(const a of [-.8,.8]) for(const b of [-.4,.4]) box(`leg-${a}-${b}`,[3+a,.45,8+b],[.12,.9,.12],'#956944');
   box('bed',[2,.35,10.5],[2,.7,1.5],'#7fa7ae');
   box('wardrobe',[.6,1.1,6.5],[.8,2.2,1.6],'#b78159');
-  box('kitchen',[10.9,.5,9],[1.5,1,4],'#81a99c');
+  box('kitchen',[11.35,.5,9],[.8,1,4],'#81a99c'); // узкая тумба вдоль стены — комната просторнее
   box('lift',[10,1.25,4],[2,2.5,.25],'#9da5ad');
   model('visual:table-top','furniture/table.glb',[3,0,8]);
   model('visual:bed','furniture/bedDouble.glb',[2,0,10.5]);
   model('visual:wardrobe','furniture/bookcaseClosedDoors.glb',[.6,0,6.5]);
-  model('visual:kitchen','furniture/kitchenCabinet.glb',[10.9,0,9]);
+  model('visual:kitchen','furniture/kitchenCabinet.glb',[11.35,0,9]);
   model('visual:stove','furniture/kitchenStove.glb',[10.2,0,10.5]);
   model('visual:lift','furniture/doorwayFront.glb',[10,0,4]);
   model('visual:door','furniture/doorwayOpen.glb',[5,0,5]);
@@ -96,7 +96,7 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
   interact('cover_wardrobe',[1.5,0,6.5],'Встать у шкафа');
   interact('cover_run_out',[5,0,5.5],'Выбежать из квартиры');
   ITEMS.forEach((item,i)=> {
-    const pos: Vec3=[7+(i%3),1,7+Math.floor(i/3)];
+    const pos: Vec3=[6.9+(i%5)*.75,1,7+Math.floor(i/5)*.6]; // 5×2 на узком комоде у перегородки
     box(`prop-${item}`,pos,[.25,.2,.25],['laptop','console','mugs'].includes(item)?'#8b96ac':'#efc56c');
     interact(`item_${item}`,pos,itemLabels[item]);
   });

@@ -167,5 +167,5 @@ export function fromSnapshot(s: RoomSnapshot): Room {
 }
 
 export function publicNpcs(room: Room): NpcPublic[] {
-  return [...room.npcs.values()].map((e) => ({ npcId: e.npcId, pos: e.pos, rotY: e.rotY, following: e.playerId }));
+  return [...room.npcs.values()].map((e) => ({ npcId: e.npcId, pos: e.pos, rotY: e.rotY, following: e.playerId, ...(e.walking ? { walking: true } : {}) }));
 }
