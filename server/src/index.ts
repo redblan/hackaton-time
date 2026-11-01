@@ -60,7 +60,7 @@ function loadCert(): { key: Buffer; cert: Buffer } | null {
   return { key: readFileSync(key), cert: readFileSync(cert) };
 }
 
-const store = await openStore(config.databaseUrl);
+const store = await openStore(config.databaseUrl, { allowMemoryFallback: config.allowMemoryStore });
 const chunks = new ChunkStore(config.chunksDir);
 const ai = createAi({ memory: dbMemoryStore(store), ollamaUrl: config.ollamaUrl, model: config.ollamaModel ?? "qwen2.5:3b-instruct" });
 

@@ -20,6 +20,7 @@ export const config = {
   /** HTTPS с самоподписанным сертификатом. По умолчанию включён в `npm run start`, выключен в dev. */
   https: process.env.HTTPS ? process.env.HTTPS === "1" : isProd,
   databaseUrl: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/hackaton",
+  allowMemoryStore: process.env.ALLOW_MEMORY_STORE === "1",
   ollamaUrl: process.env.OLLAMA_URL ?? "http://127.0.0.1:11434",
   ollamaModel: process.env.OLLAMA_MODEL,
   chunksDir: join(ROOT, "world", "chunks"),

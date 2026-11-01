@@ -6,7 +6,7 @@
 
 - [ ] `git pull && npm install` — зависимости на месте.
 - [ ] Ollama запущена, модель скачана: `ollama list` показывает `qwen2.5:7b-instruct` (D-03). Прогрев: `npm run chat -- papa`, один вопрос.
-- [ ] Postgres: `npm run db` (docker) — или без него, сервер работает в памяти (D-05).
+- [ ] Postgres: `npm run db` (Docker), затем `/api/health` показывает `db: postgres`. Для аккаунтов и прогресса нужна постоянная БД (D-74).
 - [ ] `npm run world` — чанки собраны (30 шт.), `npm run check` зелёный.
 
 ## Методика: ИИ на живой модели (Матвей, на своём ноуте)
@@ -16,7 +16,7 @@
 **Подготовка (один раз, пока есть интернет)**
 1. `git pull && npm install`.
 2. Ollama: `ollama serve` в отдельном окне (не закрывать), `ollama pull qwen2.5:3b-instruct`, если хватает памяти (≥ 16 ГБ) — ещё `ollama pull qwen2.5:7b-instruct`. Проверка: `ollama list`. VPN/прокси с fake-ip ломает скачивание — выключить.
-3. `.env` в корне: `OLLAMA_URL=http://127.0.0.1:11434` и `OLLAMA_MODEL=qwen2.5:3b-instruct`. Postgres не обязателен (без него — память, D-05).
+3. `.env` в корне: `OLLAMA_URL=http://127.0.0.1:11434` и `OLLAMA_MODEL=qwen2.5:3b-instruct`. Запустить Postgres: `npm run db`. Временный режим без сохранения включается только явно через `ALLOW_MEMORY_STORE=1` (D-05, D-74).
 4. `npm run dev`. В логе: `[ai] модель … прогрета за N с`. Нет строки — модель не та или Ollama не запущена.
 
 **Прогон (на каждой модели: 3b, потом 7b)**

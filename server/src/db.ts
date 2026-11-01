@@ -1,5 +1,5 @@
 /**
- * Хранилище: Postgres, а если он недоступен — память процесса (демо не падает).
+ * Хранилище: Postgres. Память процесса разрешена только явно для временного демо.
  * Схема создаётся при старте (CREATE TABLE IF NOT EXISTS), миграций нет.
  */
 import pg from "pg";
@@ -23,6 +23,7 @@ export interface Progress {
 
 export interface Store {
   readonly kind: "postgres" | "memory";
+  close?(): Promise<void>;
   findPlayer(name: string): Promise<PlayerRow | null>;
   createPlayer(row: PlayerRow): Promise<void>;
   createSession(token: string, playerId: PlayerId): Promise<void>;
@@ -103,6 +104,10 @@ class PgStore implements Store {
 
   readonly kind = "postgres";
   constructor(private pool: pg.Pool) {}
+
+  close() {
+    return this.pool.end();
+  }
 
   async findPlayer(name: string) {
     const r = await this.pool.query("SELECT id, name, pass_hash FROM players WHERE name = $1", [name]);
@@ -219,7 +224,7 @@ export class MemStore implements Store {
   }
 }
 
-export async function openStore(databaseUrl: string): Promise<Store> {
+export async function openStore(databaseUrl: string, options: { allowMemoryFallback?: boolean } = {}): Promise<Store> {
   const pool = new pg.Pool({ connectionString: databaseUrl, connectionTimeoutMillis: 3000 });
   pool.on("error", (e) => console.error("[db] ошибка пула:", e.message));
   try {
@@ -227,11 +232,19 @@ export async function openStore(databaseUrl: string): Promise<Store> {
     console.log("[db] Postgres подключён");
     return new PgStore(pool);
   } catch (e) {
+    await pool.end().catch(() => {});
+    if (!options.allowMemoryFallback) {
+      throw new Error(
+        "PostgreSQL недоступен: аккаунты и прогресс должны сохраняться в БД. " +
+        "Запустите npm run db и проверьте DATABASE_URL. " +
+        "Для временного демо без сохранения можно явно задать ALLOW_MEMORY_STORE=1.",
+        { cause: e },
+      );
+    }
     console.warn(
       `[db] Postgres недоступен (${(e as Error).message}). Работаю в памяти — данные пропадут при перезапуске.\n` +
         "     Поднять базу: npm run db  (docker compose up -d db)",
     );
-    await pool.end().catch(() => {});
     return new MemStore();
   }
 }
