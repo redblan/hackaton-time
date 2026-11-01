@@ -12,6 +12,7 @@ import { getSocket } from "../core/net";
 import { store, useStore, type State } from "../core/store";
 import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES, peakOf } from "./wav";
 import "./voice.css";
+import { RadioAudio } from "./RadioAudio";
 
 type To = NpcId | "radio";
 type Status =
@@ -19,7 +20,7 @@ type Status =
   | { kind: "rec"; to: To; level: number }
   | { kind: "wait"; to: To }
   | { kind: "error"; text: string }
-  | { kind: "off" };
+  | { kind: "sent"; text: string };
 
 /** Ключи реплик голоса — из своего диапазона, чтобы не пересечься с ключами HUD */
 let nextVoiceKey = 1_000_000;
@@ -34,30 +35,42 @@ export function voiceTarget(s: Pick<State, "chatTarget" | "stage" | "nearNpc" | 
   return s.nearNpc ?? s.npcLines.findLast((l) => !l.fromPlayer)?.npcId ?? "radio";
 }
 
-/** Сообщение сервера «голос выключен» → тихо прячем голос до конца сессии */
-const isVoiceOff = (error: string) => /whisper|выключен|недоступ|не настро/i.test(error);
-
 export function VoiceButton() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const rec = useRef<{ ctx: AudioContext; stream: MediaStream; node: ScriptProcessorNode; chunks: Float32Array[]; to: To; timer: number } | null>(null);
   const starting = useRef(false);
+  const held = useRef(false);
+  const mounted = useRef(true);
   const connected = useStore((s) => s.connected);
   const target = useStore((s) => voiceTarget(s));
 
   async function start() {
     const st = store.get();
-    if (rec.current || starting.current || st.minigame || status.kind === "off") return;
+    if (rec.current || starting.current || st.minigame || status.kind === "wait" || !st.connected) return;
+    held.current = true;
     if (!navigator.mediaDevices?.getUserMedia) {
       setStatus({ kind: "error", text: "Микрофон работает только по https://" });
       return;
     }
     starting.current = true;
     const to = voiceTarget(st);
+    let pendingStream: MediaStream | null = null;
+    let pendingContext: AudioContext | null = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+      pendingStream = stream;
+      if (!held.current || !mounted.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
       const ctx = new AudioContext();
+      pendingContext = ctx;
       // Контекст создан после await — браузер мог оставить его «спящим»: тогда в записи тишина
       await ctx.resume();
+      if (!held.current || !mounted.current) {
+        stream.getTracks().forEach(t => t.stop());
+        await ctx.close(); return;
+      }
       const src = ctx.createMediaStreamSource(stream);
       // ScriptProcessor устарел, но работает во всех браузерах и не требует отдельного файла воркера
       const node = ctx.createScriptProcessor(4096, 1, 1);
@@ -73,6 +86,9 @@ export function VoiceButton() {
       rec.current = { ctx, stream, node, chunks, to, timer };
       setStatus({ kind: "rec", to, level: 0 });
     } catch {
+      pendingStream?.getTracks().forEach(t => t.stop());
+      if (pendingContext && pendingContext.state !== "closed") void pendingContext.close().catch(() => {});
+      if (!mounted.current) return;
       setStatus({ kind: "error", text: "Нет доступа к микрофону — разреши его в адресной строке" });
     } finally {
       starting.current = false;
@@ -80,6 +96,7 @@ export function VoiceButton() {
   }
 
   async function stop() {
+    held.current = false;
     const r = rec.current;
     if (!r) return;
     rec.current = null;
@@ -88,6 +105,7 @@ export function VoiceButton() {
     r.stream.getTracks().forEach((t) => t.stop());
     const rate = r.ctx.sampleRate;
     await r.ctx.close();
+    if (!mounted.current) return;
     const samples = downsample(concat(r.chunks), rate).subarray(0, 16000 * MAX_SECONDS);
     if (samples.length < 16000 * 0.3) {
       setStatus({ kind: "idle" }); // короче 0.3 с — случайное нажатие
@@ -104,7 +122,7 @@ export function VoiceButton() {
       return;
     }
     const s = getSocket();
-    if (!s) {
+    if (!s?.connected) {
       setStatus({ kind: "error", text: "Нет связи с сервером" });
       return;
     }
@@ -112,13 +130,29 @@ export function VoiceButton() {
     s.emit("voice:say", { to: r.to, wav });
   }
 
+  useEffect(() => {
+    if (connected) return;
+    held.current = false;
+    setStatus({ kind: "idle" });
+    const r = rec.current; rec.current = null;
+    if (r) {
+      window.clearTimeout(r.timer); r.node.disconnect();
+      r.stream.getTracks().forEach(t => t.stop());
+      void r.ctx.close().catch(() => {});
+    }
+  }, [connected]);
+
   // Ответ сервера: текст → в ленту как реплика игрока; ошибка → подсказка или тихое «недоступен»
   useEffect(() => {
     const s = getSocket();
     if (!s) return;
     const onText = (p: { to: To; text: string } | { to: To; error: string }) => {
       if ("error" in p) {
-        setStatus(isVoiceOff(p.error) ? { kind: "off" } : { kind: "error", text: p.error });
+        if (p.to === "radio" && p.error.startsWith("Голос отправлен")) {
+          setStatus({ kind: "sent", text: p.error });
+          return;
+        }
+        setStatus({ kind: "error", text: p.error });
         return;
       }
       setStatus({ kind: "idle" });
@@ -133,6 +167,22 @@ export function VoiceButton() {
       s.off("voice:text", onText);
     };
   }, [connected]);
+
+  useEffect(() => {
+    mounted.current = true;
+    const cancel = () => { held.current = false; void stop(); };
+    window.addEventListener("blur", cancel);
+    return () => {
+      mounted.current = false; held.current = false;
+      window.removeEventListener("blur", cancel);
+      const r = rec.current; rec.current = null;
+      if (r) {
+        window.clearTimeout(r.timer); r.node.disconnect();
+        r.stream.getTracks().forEach(t => t.stop());
+        void r.ctx.close().catch(() => {});
+      }
+    };
+  }, []);
 
   // V — только когда не печатаем в чат (иначе это буква); в чате — кнопка мышкой
   useEffect(() => {
@@ -151,16 +201,14 @@ export function VoiceButton() {
   });
 
   useEffect(() => {
-    if (status.kind !== "error") return;
+    if (status.kind !== "error" && status.kind !== "sent") return;
     const t = window.setTimeout(() => setStatus({ kind: "idle" }), 4000);
     return () => window.clearTimeout(t);
   }, [status]);
 
-  if (status.kind === "off") return <div className="voice voice-off">голос недоступен</div>;
-
   const who = (to: To) => (to === "radio" ? "в рацию" : "NPC");
   return (
-    <div className={`voice voice-${status.kind}`} aria-live="polite">
+    <><RadioAudio /><div className={`voice voice-${status.kind}`} aria-live="polite">
       <button
         type="button"
         className="voice-mic"
@@ -171,6 +219,7 @@ export function VoiceButton() {
         }}
         onPointerUp={() => void stop()}
         onPointerLeave={() => void stop()}
+        onPointerCancel={() => void stop()}
       >
         🎙
       </button>
@@ -182,6 +231,7 @@ export function VoiceButton() {
       )}
       {status.kind === "wait" && <span>Распознаю…</span>}
       {status.kind === "error" && <span className="voice-error">{status.text}</span>}
-    </div>
+      {status.kind === "sent" && <span>{status.text}</span>}
+    </div></>
   );
 }

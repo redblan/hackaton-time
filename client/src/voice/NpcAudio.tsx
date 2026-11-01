@@ -34,13 +34,16 @@ export function NpcAudio() {
   useEffect(() => {
     const wake = () => {
       ctx.current ??= new AudioContext();
-      void ctx.current.resume();
+      void ctx.current.resume().catch(() => {});
     };
     window.addEventListener("pointerdown", wake);
     window.addEventListener("keydown", wake);
     return () => {
       window.removeEventListener("pointerdown", wake);
       window.removeEventListener("keydown", wake);
+      queue.current.clear(); stopCurrent();
+      void ctx.current?.close().catch(() => {});
+      ctx.current = null;
     };
   }, []);
 
@@ -87,11 +90,13 @@ export function NpcAudio() {
       if (mutedRef.current || !ctx.current) return;
       const interrupt = queue.current.push({ npcId: p.npcId, audio: p.wav });
       if (interrupt) stopCurrent();
-      if (!source.current) void playNext();
+      // playing is set before decodeAudioData: a different NPC must wait during decoding too.
+      if (!queue.current.playing || interrupt) void playNext();
     };
     sock.on("npc:audio", onAudio);
     return () => {
       sock.off("npc:audio", onAudio);
+      queue.current.clear(); stopCurrent();
     };
   }, [connected]);
 
