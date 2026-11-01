@@ -164,7 +164,7 @@ export function createTts(opts: TtsOptions = {}) {
           clearTimeout(job.timer);running=true;
           const finish=(wav:Buffer|null)=>{pending.delete(key);running=false;pump();complete(wav);};
           void Promise.resolve().then(()=>run(bin,args,say,timeoutMs)).then(wav=>rvc.convert(npcId,wav)).then(wav=>{
-            synthesized++;remember(key,wav);finish(wav);
+            synthesized++;if(wav) remember(key,wav);finish(wav);
           },e=>{console.error('[tts]',(e as Error).message);finish(null);});
         },
       };

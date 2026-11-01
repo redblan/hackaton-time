@@ -9,6 +9,8 @@ export interface RvcOptions {
   bin?: string;
   args?: string[];
   timeoutMs?: number;
+  npcIds?: string[];
+  skipOnFailure?: boolean;
   run?: (bin: string, args: string[], timeoutMs: number) => Promise<void>;
 }
 const defaultRun: NonNullable<RvcOptions["run"]> = (bin,args,timeoutMs) => new Promise((resolve,reject) => {
@@ -29,11 +31,14 @@ export function createRvc(opts: RvcOptions = {}) {
   const requested = opts.timeoutMs ?? Number(process.env.RVC_TIMEOUT_MS ?? 3000);
   const timeoutMs = Number.isFinite(requested) ? Math.max(50,Math.min(10000,requested)) : 3000;
   const run = opts.run ?? defaultRun;
+  const npcIds = opts.npcIds ?? (process.env.RVC_NPCS ? process.env.RVC_NPCS.split(",").map(s=>s.trim()) : null);
+  const skipOnFailure = opts.skipOnFailure ?? process.env.RVC_SKIP_ON_FAILURE === "1";
   return {
     enabled: enabled && !!bin && valid,
-    /** Failure/timeout always preserves Piper; never rejects or waits indefinitely. */
-    async convert(npcId: NpcId, wav: Buffer): Promise<Buffer> {
-      if (!enabled || !bin || !valid) return wav;
+    /** Failure returns Piper by default, or silence when a fixed voice is required. */
+    async convert(npcId: NpcId, wav: Buffer): Promise<Buffer | null> {
+      if (!enabled || !bin || !valid || (npcIds && !npcIds.includes(npcId))) return wav;
+      const fallback = () => skipOnFailure ? null : wav;
       let dir: string | undefined;
       try {
         dir=await mkdtemp(join(tmpdir(),"game-rvc-"));
@@ -41,9 +46,9 @@ export function createRvc(opts: RvcOptions = {}) {
         await writeFile(input,wav);
         await run(bin,[...args,"--npc",npcId,"--input",input,"--output",output],timeoutMs);
         const converted=await readFile(output);
-        if (converted.length<44 || converted.toString("ascii",0,4)!=="RIFF" || converted.toString("ascii",8,12)!=="WAVE") return wav;
+        if (converted.length<44 || converted.toString("ascii",0,4)!=="RIFF" || converted.toString("ascii",8,12)!=="WAVE") return fallback();
         return converted;
-      } catch { return wav; }
+      } catch { return fallback(); }
       finally { if(dir) await rm(dir,{recursive:true,force:true}).catch(()=>{}); }
     },
   };
