@@ -2,11 +2,12 @@
  * Игрок от первого лица: мышь (pointer lock) + WASD, гравитация, столкновения по getColliders(),
  * подъём на ступеньки. Здесь же: менеджер чанков, подсказка «E — …», зоны, отправка позиции.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
-import { Euler } from "three";
-import type { InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
+import { Euler, Vector3, type Group } from "three";
+import type { Aabb, InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
+import { Character, variantFor } from "../world/Character";
 import { getColliders } from "../world/ChunkView";
 import { chunkAt, isActive, wantedChunks, movementChunksReady, transitionChunks } from "./chunkMath";
 import { local } from "./local";
@@ -16,6 +17,15 @@ import { getSocket, sendEvent } from "./net";
 import { store, useStore } from "./store";
 
 const EYE = 1.6;
+const THIRD_DIST = 3.2;
+
+/** Точка внутри какой-нибудь коробки столкновений (с запасом 0.2 м, чтобы камера не резала стену) */
+function insideAny(p: Vector3, cols: Aabb[]) {
+  for (const c of cols) {
+    if (p.x > c.min[0] - 0.2 && p.x < c.max[0] + 0.2 && p.y > c.min[1] - 0.2 && p.y < c.max[1] + 0.2 && p.z > c.min[2] - 0.2 && p.z < c.max[2] + 0.2) return true;
+  }
+  return false;
+}
 const { WALK, RUN } = PHYS;
 const SEND_MS = 66; // ~15 Гц
 const NPC_TALK_RADIUS = 4;
@@ -51,6 +61,7 @@ export function Player() {
           store.set((st) => ({ doors: { ...st.doors, [id]: !(st.doors[id] ?? true) } }));
         }
       }
+      if (e.code === "KeyC" && !e.repeat && !store.get().typing) store.set((st) => ({ thirdPerson: !st.thirdPerson }));
     };
     const up = (e: KeyboardEvent) => keys.delete(e.code);
     const blur = () => keys.clear();
@@ -141,6 +152,8 @@ export function Player() {
   };
 
   const stepState = useRef({ moving: false, running: false });
+  const avatar = useRef<Group>(null);
+  const [selfAnim, setSelfAnim] = useState<"idle" | "walk" | "run">("idle");
 
   const afterStep = () => {
     if (!local.ready) return;
@@ -151,6 +164,25 @@ export function Player() {
 
     // --- камера + тряска ---
     camera.position.set(pos[0], pos[1] + EYE, pos[2]);
+    if (st.thirdPerson) {
+      // от третьего лица: камера за спиной и чуть выше; подтягиваем, если упёрлась в стену
+      const dir = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const eye = new Vector3(pos[0], pos[1] + EYE + 0.5, pos[2]);
+      let d = THIRD_DIST;
+      for (; d > 0.5; d -= 0.2) {
+        const c = eye.clone().addScaledVector(dir, -d);
+        if (!insideAny(c, colliders)) break;
+      }
+      camera.position.copy(eye.addScaledVector(dir, -d));
+    }
+    const me = avatar.current;
+    if (me) {
+      me.visible = st.thirdPerson;
+      me.position.set(pos[0], pos[1], pos[2]);
+      me.rotation.y = yaw;
+      const next = moving ? (running ? "run" : "walk") : "idle";
+      if (next !== selfAnim) setSelfAnim(next);
+    }
     const q = st.quake;
     if (q) {
       const now = performance.now();
@@ -220,12 +252,17 @@ export function Player() {
   };
 
   return (
-    <PointerLockControls
+    <>
+      <group ref={avatar} visible={false}>
+        <Character color="#4a7fb5" anim={selfAnim} variant={variantFor(store.get().auth?.playerId ?? "me")} />
+      </group>
+      <PointerLockControls
       ref={controls as never}
       selector="#scene"
       pointerSpeed={sensitivity}
       onLock={() => store.set({ locked: true })}
       onUnlock={() => store.set({ locked: false })}
     />
+    </>
   );
 }

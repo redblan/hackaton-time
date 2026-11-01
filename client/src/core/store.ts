@@ -68,6 +68,8 @@ export interface State {
   sensitivity: number;
   /** Дверь квартиры по чанкам: false — закрыта (E на «Дверь квартиры»). По умолчанию открыта. Только вид, без коллизий. */
   doors: Record<string, boolean>;
+  /** Вид от третьего лица (C): видно своего персонажа и его анимацию */
+  thirdPerson: boolean;
 }
 
 const initial: State = {
@@ -95,6 +97,7 @@ const initial: State = {
   debug: false,
   sensitivity: readSensitivity(),
   doors: {},
+  thirdPerson: false,
 };
 
 function readSensitivity() {

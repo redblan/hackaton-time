@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, SRGBColorSpace, type Group } from "three";
-import { Character, npcColor } from "../world/Character";
+import { Character, npcColor, npcVariant, variantFor, type Variant } from "../world/Character";
 import { NPC_NAMES } from "./names";
 import { sample } from "./remote";
 import { useStore } from "./store";
@@ -36,7 +36,7 @@ function Nameplate({ name }: { name: string }) {
   );
 }
 
-function Avatar({ id, name, color }: { id: string; name: string; color: string }) {
+function Avatar({ id, name, color, variant }: { id: string; name: string; color: string; variant: Variant }) {
   const ref = useRef<Group>(null);
   const [anim, setAnim] = useState<"idle" | "walk" | "run">("idle");
   useFrame(() => {
@@ -51,7 +51,7 @@ function Avatar({ id, name, color }: { id: string; name: string; color: string }
   });
   return (
     <group ref={ref} visible={false}>
-      <Character color={color} anim={anim} />
+      <Character color={color} anim={anim} variant={variant} />
       <Nameplate name={name} />
     </group>
   );
@@ -63,10 +63,10 @@ export function RemotePlayers() {
   return (
     <>
       {npcs.map((n) => (
-        <Avatar key={`npc:${n.npcId}`} id={`npc:${n.npcId}`} name={NPC_NAMES[n.npcId]} color={npcColor(n.npcId)} />
+        <Avatar key={`npc:${n.npcId}`} id={`npc:${n.npcId}`} name={NPC_NAMES[n.npcId]} color={npcColor(n.npcId)} variant={npcVariant(n.npcId)} />
       ))}
       {others.map((p) => (
-        <Avatar key={p.id} id={p.id} name={p.name} color={p.role ? ROLE_COLORS[p.role] : "#94a3b8"} />
+        <Avatar key={p.id} id={p.id} name={p.name} color={p.role ? ROLE_COLORS[p.role] : "#94a3b8"} variant={variantFor(p.id)} />
       ))}
     </>
   );

@@ -39,7 +39,7 @@ function World() {
 export function Game() {
   return (
     <div className="game">
-      <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 600 }} dpr={[1, 1.5]}>
+      <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 600 }} dpr={[1, 2]}>
         <Atmosphere />
         <Landscape />
         <QuakeDust />

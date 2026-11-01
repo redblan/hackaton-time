@@ -10,9 +10,27 @@ import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.j
 const MODELS = {
   mage: "/assets/characters/mage.glb",
   rogue: "/assets/characters/rogue.glb",
+  knight: "/assets/characters/knight.glb",
+  barbarian: "/assets/characters/barbarian.glb",
 };
 
-type Variant = keyof typeof MODELS;
+export type Variant = keyof typeof MODELS;
+const VARIANTS = Object.keys(MODELS) as Variant[];
+
+/** Кто как выглядит: у каждого NPC своя фигура, а не только цвет. */
+const NPC_VARIANTS: Record<string, Variant> = {
+  papa: "rogue",
+  mihalych: "barbarian",
+  vanya: "mage",
+  valentina: "mage",
+  gromov: "knight",
+  dispatcher: "knight",
+  victim_bleeding: "rogue",
+  victim_cpr: "barbarian",
+  victim_unconscious: "knight",
+  victim_scared: "mage",
+  neighbor_leg: "barbarian",
+};
 type Anim = "idle" | "walk" | "run";
 type Pose = "stand" | "lie" | "sit";
 
@@ -34,11 +52,12 @@ const NPC_COLORS: Record<string, string> = {
 };
 
 export const npcColor = (npcId: string) => NPC_COLORS[npcId] ?? "#c9844a";
+export const npcVariant = (npcId: string): Variant => NPC_VARIANTS[npcId] ?? variantFor(npcId);
 
-/** Модель выбирается по цвету, поэтому один и тот же NPC всегда выглядит одинаково. */
-function variantFor(color: string): Variant {
-  const sum = [...color].reduce((total, char) => total + char.charCodeAt(0), 0);
-  return sum % 2 === 0 ? "mage" : "rogue";
+/** Модель по строке (цвет или id игрока): один и тот же человек всегда выглядит одинаково. */
+export function variantFor(key: string): Variant {
+  const sum = [...key].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return VARIANTS[sum % VARIANTS.length]!;
 }
 
 function tintMaterial(material: Material, color: Color) {
@@ -105,14 +124,13 @@ function Model({ color, anim, pose, variant }: { color: string; anim: Anim; pose
   );
 }
 
-export function Character(props: { color: string; anim?: Anim; pose?: Pose }) {
-  const { color, anim = "idle", pose = "stand" } = props;
+export function Character(props: { color: string; anim?: Anim; pose?: Pose; variant?: Variant }) {
+  const { color, anim = "idle", pose = "stand", variant } = props;
   return (
     <Suspense fallback={null}>
-      <Model color={color} anim={anim} pose={pose} variant={variantFor(color)} />
+      <Model color={color} anim={anim} pose={pose} variant={variant ?? variantFor(color)} />
     </Suspense>
   );
 }
 
-useGLTF.preload(MODELS.mage, false, false);
-useGLTF.preload(MODELS.rogue, false, false);
+for (const url of Object.values(MODELS)) useGLTF.preload(url, false, false);

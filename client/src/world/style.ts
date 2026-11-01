@@ -55,8 +55,8 @@ export function paintSurface(material: Material) {
   material.onBeforeCompile = (shader) =>
     withWorldPosition(
       shader,
-      `float strokes = fbm3(vWorld * vec3(1.4, 0.7, 1.4));
-       diffuseColor.rgb *= 0.86 + 0.28 * strokes;
+      `float strokes = fbm3(vWorld * vec3(3.2, 1.6, 3.2));
+       diffuseColor.rgb *= 0.93 + 0.14 * strokes;
        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 0.97, 0.86), 0.5);`,
     );
 }
