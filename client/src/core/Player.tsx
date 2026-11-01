@@ -44,7 +44,6 @@ const ALLOWED_INTERACTS = new Set<string>([
   "cover_wall",
   "cover_wardrobe",
   "cover_window",
-  "cover_run_out",
   "balcony_door",
   "elevator_shaft",
   "light_switch",
