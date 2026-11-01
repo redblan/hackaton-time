@@ -308,6 +308,8 @@ export function createAi(opts: CreateAiOptions): Ai {
     try {
       if (req.npcId === "victim_cpr" || req.npcId === "victim_unconscious") throw new Error("без сознания — только описания из карточки");
       if (characters.get(req.npcId)?.templatesOnly) throw new Error("включены только шаблоны");
+      // 7B bench: gas advice must stay verbatim in the verified knowledge base.
+      if (req.event === "gas_smell" || req.context.mistake?.skill === "gas" || p.facts.some(f => f.fact.skill === "gas")) throw new Error("газ — проверенные заготовки");
       if (p.injection) throw new Error("попытка вывести NPC из роли — отвечаем шаблоном");
       // Через очередь: срок — timeoutMs с момента запроса, а не с момента, когда дошла очередь
       const raw = await queue.run(req.playerId, timeoutMs, async (remaining) => {

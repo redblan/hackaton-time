@@ -43,3 +43,10 @@ describe("D-70 unconscious NPCs", () => {
     expect(response.outcome).toBeUndefined(); expect(calls).toBe(0);
   });
 });
+
+it("uses verified gas advice rather than a model-invented instruction",async()=>{
+ let calls=0;
+ const ai=createAi({memory:createInMemoryStore(),fetchImpl:(async()=>{calls++;return new Response(JSON.stringify({message:{content:"Выключи выключатель на улице"}})+"\n");}) as typeof fetch});
+ const reply=await ai.say({...req,playerMessage:"Что делать, если пахнет газом?"});
+ expect(reply.source).toBe("template");expect(calls).toBe(0);expect(reply.text).not.toContain("выключатель на улице");
+});

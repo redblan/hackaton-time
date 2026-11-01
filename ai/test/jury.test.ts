@@ -170,11 +170,11 @@ describe("рация и имя (M8, M14)", () => {
 
 describe("повтор при ответе модели (прогон M4)", () => {
   it("модель забыла «я уже говорил» — добавляем сами и убираем «позволю себе перефразировать»", async () => {
-    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Позволю себе перефразировать: перекрой кран и открой окна.") });
-    await ai.say(ask("papa", "Что делать, если пахнет газом?"));
-    const second = await ai.say(ask("papa", "Что делать, если пахнет газом?"));
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: llmSaying("Позволю себе перефразировать: укройся под столом.") });
+    await ai.say(event("papa", "quake_started"));
+    const second = await ai.say(event("papa", "quake_started"));
     expect(second.source).toBe("llm");
-    expect(second.text).toBe("Я уже говорил. Перекрой кран и открой окна.");
+    expect(second.text).toBe("Я уже говорил. Укройся под столом.");
   });
 });
 
