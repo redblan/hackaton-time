@@ -3,15 +3,16 @@
  * Локальные GLB, инстансинг архитектуры, частицы и таблички без внешних ресурсов.
  * Модели visual:X заменяют только вид коробок; физика остаётся в getColliders.
  */
+import { useThree } from "@react-three/fiber";
 import { Clone, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type InstancedMesh, type MeshStandardMaterial } from "three";
+import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type Group, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
 import { Crowd } from "./crowd/Crowd";
-import { FxParticles, InteractMarker } from "./Effects";
+import { FxParticles, InteractMarkers, type Interact } from "./Effects";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { isYardAnimated, YardAnimated } from "./decor/YardAnimated";
 import { paintSurface } from "./style";
@@ -71,17 +72,34 @@ function paintOnce(material: MeshStandardMaterial | null) {
   material.needsUpdate = true;
 }
 
+/** Чанк появляется, когда его шейдеры готовы: синхронная сборка стоит секунды зависания. */
+function useCompiledReveal() {
+  const group = useRef<Group>(null);
+  const get = useThree(s=>s.get);
+  useEffect(()=>{
+    const node=group.current;
+    if(!node) return;
+    const {gl,camera,scene}=get();
+    node.visible=false;
+    void gl.compileAsync(node,camera,scene).catch(()=>{}).finally(()=>{node.visible=true;});
+  },[get]);
+  return group;
+}
+
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
+  const root = useCompiledReveal();
   const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
   const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)),[props.chunk,props.flags]);
   const boxes=useMemo(()=>{
     const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
     return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
   },[objects,Boolean(floor)]);
+  const markers=useMemo(()=>objects.filter((o):o is Interact=>o.kind==='interactable'),[objects]);
   return (
-    <group name={props.chunk.id}>
+    <group ref={root} name={props.chunk.id}>
       <StaticBoxes boxes={boxes}/>
       <Crowd objects={objects} origin={props.chunk.bounds.min} />
+      <InteractMarkers objects={markers} />
       {objects.map((o) => {
         switch (o.kind) {
           case "box":
@@ -89,8 +107,6 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
           case "model":
             if (floor && OWN_MODELS.has(o.id.replace('visual:',''))) return null; // дверь, лифт, плита — в Interior
             return <Suspense key={o.id} fallback={<ModelPlaceholder object={o} objects={objects}/>}><Model object={o}/></Suspense>;
-          case "interactable":
-            return <InteractMarker key={o.id} object={o} />;
           case "npc": {
             const route = NPC_ROUTES[o.npcId];
             if (route) return <NpcWalker key={o.id} color={npcColor(o.npcId)} pos={o.pos} route={route} seed={o.id.length} />;

@@ -4,11 +4,17 @@
  */
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { PerformanceMonitor } from "@react-three/drei";
 import { ACESFilmicToneMapping, BackSide, Color, Vector3, type DirectionalLight, type Mesh, type Object3D } from "three";
+import { RenderStats } from "./RenderStats";
 import { PALETTE } from "./style";
 
 const SUN_DIRECTION = new Vector3(-0.7, 0.26, -0.66).normalize();
 const SHADOW_RANGE = 34;
+/** Карта теней перерисовывается реже кадра: на встроенной видеокарте это треть времени кадра. */
+const SHADOW_INTERVAL = 1 / 12;
+/** Шаг следования за камерой: иначе края теней дрожат при каждом шаге игрока. */
+const SHADOW_SNAP = 2;
 
 const SKY_VERTEX = /* glsl */ `
   varying vec3 vDir;
@@ -67,7 +73,8 @@ function Sky() {
     uniforms.uTime.value = clock.elapsedTime;
   });
   return (
-    <mesh ref={ref} frustumCulled={false} renderOrder={-1}>
+    // Небо рисуется последним из непрозрачного: за стенами и домом оно не тратит ни пикселя.
+    <mesh ref={ref} frustumCulled={false} renderOrder={1}>
       <sphereGeometry args={[280, 32, 16]} />
       <shaderMaterial
         vertexShader={SKY_VERTEX}
@@ -85,15 +92,27 @@ function Sky() {
 function Sun() {
   const light = useRef<DirectionalLight>(null);
   const target = useRef<Object3D>(null);
-  const { scene } = useThree();
+  const wait = useRef(0);
+  const { scene, gl } = useThree();
   useEffect(() => {
     if (!light.current || !target.current) return;
     light.current.target = target.current;
   }, [scene]);
-  useFrame(({ camera }) => {
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false;
+    return () => {
+      gl.shadowMap.autoUpdate = true;
+    };
+  }, [gl]);
+  useFrame(({ camera }, delta) => {
     if (!light.current || !target.current) return;
-    target.current.position.set(camera.position.x, camera.position.y, camera.position.z);
+    wait.current -= delta;
+    if (wait.current > 0) return;
+    wait.current = SHADOW_INTERVAL;
+    const snap = (value: number) => Math.round(value / SHADOW_SNAP) * SHADOW_SNAP;
+    target.current.position.set(snap(camera.position.x), snap(camera.position.y), snap(camera.position.z));
     light.current.position.copy(target.current.position).addScaledVector(SUN_DIRECTION, 70);
+    gl.shadowMap.needsUpdate = true;
   });
   return (
     <>
@@ -118,6 +137,12 @@ function Sun() {
   );
 }
 
+/** Слабый ноутбук один раз снижает разрешение. Переключать чаще нельзя: каждая смена сама даёт рывок. */
+function AdaptiveResolution() {
+  const setDpr = useThree((s) => s.setDpr);
+  return <PerformanceMonitor onDecline={() => setDpr(1)} />;
+}
+
 export function Atmosphere() {
   const { gl } = useThree();
   useEffect(() => {
@@ -126,6 +151,8 @@ export function Atmosphere() {
   }, [gl]);
   return (
     <>
+      <RenderStats />
+      <AdaptiveResolution />
       <color attach="background" args={[PALETTE.fog]} />
       <fog attach="fog" args={[PALETTE.fog, 60, 240]} />
       <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.6]} />

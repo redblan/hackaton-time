@@ -16,6 +16,8 @@ import {
   type InstancedMesh,
 } from "three";
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type { Vec3 } from "@game/shared";
+import { LocalLights } from "./LocalLights";
 import { paintGround, paintRock, PALETTE, seededRandom } from "./style";
 
 const CENTER = { x: 18, z: -18 };
@@ -192,8 +194,9 @@ function Ground() {
   );
 }
 
-/** Фонари по краям двора: всего 4 точечных света, без теней. */
+/** Фонари по краям двора. Светят через LocalLights, без теней. */
 const LAMPS: [number, number][] = [[-1.5, -12], [37.5, -12], [-1.5, -36], [37.5, -36]];
+const LAMP_LIGHTS = LAMPS.map(([x, z]): Vec3 => [x, 4.3, z]);
 
 function YardLamps() {
   return (
@@ -208,9 +211,9 @@ function YardLamps() {
             <sphereGeometry args={[0.24, 12, 10]} />
             <meshStandardMaterial color="#ffe2a8" emissive="#ffc46b" emissiveIntensity={3} />
           </mesh>
-          <pointLight position={[0, 4.3, 0]} color="#ffc98a" intensity={22} distance={15} decay={1.8} />
         </group>
       ))}
+      <LocalLights lamps={LAMP_LIGHTS} />
     </>
   );
 }

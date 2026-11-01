@@ -1,19 +1,21 @@
 /** Эффекты без файлов: мягкие частицы из canvas-текстуры, подсветка интерактива. */
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   AdditiveBlending,
   CanvasTexture,
+  Color,
   NormalBlending,
-  type Mesh,
-  type MeshStandardMaterial,
-  type PointLight,
+  Object3D,
+  PointsMaterial,
+  type InstancedMesh,
   type Points,
 } from "three";
 import type { WorldObject } from "@game/shared";
+import { useFireLight } from "./LocalLights";
 
 type Fx = Extract<WorldObject, { kind: "fx" }>;
-type Interact = Extract<WorldObject, { kind: "interactable" }>;
+export type Interact = Extract<WorldObject, { kind: "interactable" }>;
 
 let softDot: CanvasTexture | null = null;
 
@@ -39,10 +41,35 @@ const FX_LOOK: Record<Fx["fx"], { color: string; size: number; speed: number; co
   dust: { color: "#d4b998", size: 0.9, speed: 0.2, count: 30, opacity: 0.32, glow: false, rise: 1 },
 };
 
+function FireGlow({ object }: { object: Fx }) {
+  useFireLight(object.pos);
+  return null;
+}
+
+/** Материалы частиц общие и живут всегда: удалённый шейдер пришлось бы собирать заново. */
+const fxMaterials = new Map<Fx["fx"], PointsMaterial>();
+
+function fxMaterial(fx: Fx["fx"]) {
+  let material = fxMaterials.get(fx);
+  if (!material) {
+    const look = FX_LOOK[fx];
+    material = new PointsMaterial({
+      map: softTexture(),
+      color: look.color,
+      size: look.size,
+      transparent: true,
+      opacity: look.opacity,
+      depthWrite: false,
+      blending: look.glow ? AdditiveBlending : NormalBlending,
+    });
+    fxMaterials.set(fx, material);
+  }
+  return material;
+}
+
 export function FxParticles({ object }: { object: Fx }) {
   const look = FX_LOOK[object.fx];
   const ref = useRef<Points>(null);
-  const light = useRef<PointLight>(null);
   const positions = useMemo(() => new Float32Array(look.count * 3), [look.count]);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
@@ -55,47 +82,51 @@ export function FxParticles({ object }: { object: Fx }) {
       positions[i * 3 + 2] = Math.cos(i * 9.7 + t * 0.3) * width;
     }
     if (ref.current) ref.current.geometry.attributes.position!.needsUpdate = true;
-    if (light.current) light.current.intensity = 10 + Math.sin(t * 13) * 2 + Math.sin(t * 29) * 1.5;
   });
   return (
     <group position={object.pos}>
-      <points ref={ref} frustumCulled={false}>
+      <points ref={ref} frustumCulled={false} material={fxMaterial(object.fx)} dispose={null}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         </bufferGeometry>
-        <pointsMaterial
-          map={softTexture()}
-          color={look.color}
-          size={look.size}
-          transparent
-          opacity={look.opacity}
-          depthWrite={false}
-          blending={look.glow ? AdditiveBlending : NormalBlending}
-        />
       </points>
-      {object.fx === "fire" && <pointLight ref={light} position={[0, 0.6, 0]} color="#ff9440" distance={9} decay={1.8} />}
+      {object.fx === "fire" && <FireGlow object={object} />}
     </group>
   );
 }
 
-/** Метка интерактива: рядом с игроком растёт и светится ярче. */
-export function InteractMarker({ object }: { object: Interact }) {
-  const mesh = useRef<Mesh>(null);
-  const material = useRef<MeshStandardMaterial>(null);
-  const [x, y, z] = object.pos;
+const MARKER_IDLE = new Color("#facc15").multiplyScalar(1.1);
+const MARKER_NEAR = new Color("#facc15").multiplyScalar(2.6);
+const marker = new Object3D();
+
+/** Метки интерактива всего чанка одним вызовом: рядом с игроком метка растёт и светится ярче. */
+export function InteractMarkers({ objects }: { objects: Interact[] }) {
+  const mesh = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    objects.forEach((_, i) => mesh.current?.setColorAt(i, MARKER_IDLE));
+  }, [objects]);
   useFrame(({ camera, clock }) => {
-    if (!mesh.current || !material.current) return;
-    const near = Math.hypot(camera.position.x - x, camera.position.z - z) < object.radius + 0.6
-      && Math.abs(camera.position.y - y) < 2.5;
-    const pulse = near ? 1.5 + Math.sin(clock.elapsedTime * 6) * 0.25 : 1;
-    mesh.current.scale.setScalar(pulse);
-    mesh.current.position.y = y + 0.6 + Math.sin(clock.elapsedTime * 2 + x) * 0.05;
-    material.current.emissiveIntensity = near ? 2.6 : 0.8;
+    const markers = mesh.current;
+    if (!markers) return;
+    const t = clock.elapsedTime;
+    objects.forEach((object, i) => {
+      const [x, y, z] = object.pos;
+      const near = Math.hypot(camera.position.x - x, camera.position.z - z) < object.radius + 0.6
+        && Math.abs(camera.position.y - y) < 2.5;
+      marker.position.set(x, y + 0.6 + Math.sin(t * 2 + x) * 0.05, z);
+      marker.scale.setScalar(near ? 1.5 + Math.sin(t * 6) * 0.25 : 1);
+      marker.updateMatrix();
+      markers.setMatrixAt(i, marker.matrix);
+      markers.setColorAt(i, near ? MARKER_NEAR : MARKER_IDLE);
+    });
+    markers.instanceMatrix.needsUpdate = true;
+    if (markers.instanceColor) markers.instanceColor.needsUpdate = true;
   });
+  if (objects.length === 0) return null;
   return (
-    <mesh ref={mesh} position={[x, y + 0.6, z]}>
-      <sphereGeometry args={[0.12, 12, 12]} />
-      <meshStandardMaterial ref={material} color="#facc15" emissive="#facc15" emissiveIntensity={0.8} />
-    </mesh>
+    <instancedMesh key={objects.length} ref={mesh} args={[undefined, undefined, objects.length]} frustumCulled={false}>
+      <sphereGeometry args={[0.12, 10, 8]} />
+      <meshBasicMaterial />
+    </instancedMesh>
   );
 }

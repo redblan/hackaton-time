@@ -60,9 +60,20 @@ export function variantFor(key: string): Variant {
   return VARIANTS[sum % VARIANTS.length]!;
 }
 
+/**
+ * Один материал на текстуру и цвет, навсегда: цветов мало, а с последним персонажем
+ * three удалил бы шейдер и собирал бы его заново на следующем этаже, это полсекунды зависания.
+ */
+const tinted = new Map<string, MeshStandardMaterial>();
+
 function tintMaterial(material: Material, color: Color) {
-  const copy = material.clone() as MeshStandardMaterial;
-  copy.color = new Color("#ffffff").lerp(color, TINT);
+  const key = `${material.uuid}:${color.getHexString()}`;
+  let copy = tinted.get(key);
+  if (!copy) {
+    copy = material.clone() as MeshStandardMaterial;
+    copy.color = new Color("#ffffff").lerp(color, TINT);
+    tinted.set(key, copy);
+  }
   return copy;
 }
 
@@ -94,17 +105,6 @@ function Model({ color, anim, pose, variant }: { color: string; anim: Anim; pose
     const scale = GAME_HEIGHT / Math.max(size.y, 0.001);
     return { body, scale, offset: -box.min.y * scale };
   }, [scene, color]);
-
-  useEffect(
-    () => () =>
-      body.traverse((node) => {
-        const mesh = node as Mesh;
-        if (!mesh.isMesh) return;
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        materials.forEach((m) => m.dispose());
-      }),
-    [body],
-  );
 
   const clip = POSE_CLIPS[pose] ?? CLIPS[anim];
   useEffect(() => {
