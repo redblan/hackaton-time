@@ -32,5 +32,5 @@ export function RadioAudio() {
       player.dispose();
     };
   }, []);
-  return speaker ? <div className="radio-speaking" role="status">🔊 говорит {speaker}</div> : null;
+  return speaker ? <div className="radio-speaking" role="status">🔊 {speaker} → всем напарникам</div> : null;
 }

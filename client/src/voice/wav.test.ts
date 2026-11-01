@@ -34,7 +34,7 @@ describe("голос: кому говорим", () => {
   const base = { chatTarget: null, stage: null, nearNpc: null, npcLines: [] };
   it("открыт чат — тому, с кем он открыт", () => expect(voiceTarget({ ...base, chatTarget: "valentina", nearNpc: "vanya" })).toBe("valentina"));
   it("открыт чат рации — в рацию", () => expect(voiceTarget({ ...base, chatTarget: "radio", nearNpc: "vanya" })).toBe("radio"));
-  it("звонок 112 → рация", () => expect(voiceTarget({ ...base, nearNpc: "vanya", stage: { stage: "call_112", hint: "" } })).toBe("radio"));
+  it("звонок 112 → диспетчер, а не общий голосовой чат", () => expect(voiceTarget({ ...base, nearNpc: "vanya", stage: { stage: "call_112", hint: "" } })).toBe("dispatcher"));
   it("NPC рядом", () => expect(voiceTarget({ ...base, nearNpc: "vanya" })).toBe("vanya"));
   it("никого рядом — последний, кто говорил", () =>
     expect(voiceTarget({ ...base, npcLines: [{ key: 1, npcId: "papa", text: "…", done: true }] })).toBe("papa"));

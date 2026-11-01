@@ -76,7 +76,7 @@ function ChatBox() {
   const npcTarget = nearNpc ?? lastNpc;
 
   // Цель открытого чата — в стор, чтобы голос (client/src/voice) шёл тому же адресату
-  useEffect(() => store.set({ chatTarget: typing ? target : null }), [typing, target]);
+  useEffect(() => store.set({ chatTarget: target }), [target]);
 
   // Enter — открыть ввод (к NPC, если он рядом), Т — рация.
   // E рядом с человеком — тоже открывает разговор с ним, если E не занята действием (мини-игра, предмет);

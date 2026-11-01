@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import type { NpcId } from "@game/shared";
+import { NPC_NAMES } from "../core/names";
 import { getSocket } from "../core/net";
 import { store, useStore, type State } from "../core/store";
 import { concat, downsample, encodeWav, level, MAX_SECONDS, MAX_WAV_BYTES, peakOf } from "./wav";
@@ -31,7 +32,7 @@ let nextVoiceKey = 1_000_000;
  */
 export function voiceTarget(s: Pick<State, "chatTarget" | "stage" | "nearNpc" | "npcLines">): To {
   if (s.chatTarget) return s.chatTarget;
-  if (s.stage?.stage === "call_112") return "radio";
+  if (s.stage?.stage === "call_112") return "dispatcher";
   return s.nearNpc ?? s.npcLines.findLast((l) => !l.fromPlayer)?.npcId ?? "radio";
 }
 
@@ -42,7 +43,11 @@ export function VoiceButton() {
   const held = useRef(false);
   const mounted = useRef(true);
   const connected = useStore((s) => s.connected);
-  const target = useStore((s) => voiceTarget(s));
+  const room = useStore(s => s.room);
+  const me = useStore(s => s.auth?.playerId);
+  const target = useStore(s => voiceTarget(s));
+  const teammates = room?.players.filter(p => p.id !== me).map(p => p.name).join(", ") || "напарников нет";
+  const address = (to: To) => to === "radio" ? (room?.mode === "solo" ? "Михалыч по рации" : `всем напарникам: ${teammates}`) : NPC_NAMES[to];
 
   async function start() {
     const st = store.get();
@@ -155,7 +160,7 @@ export function VoiceButton() {
         setStatus({ kind: "error", text: p.error });
         return;
       }
-      setStatus({ kind: "idle" });
+      setStatus(p.to === "radio" ? { kind: "sent", text: "Запись отправлена напарникам" } : { kind: "idle" });
       if (!p.text) return;
       if (p.to === "radio") return; // рация: сервер сам разошлёт реплику в общий чат
       store.set((st) => ({
@@ -206,7 +211,7 @@ export function VoiceButton() {
     return () => window.clearTimeout(t);
   }, [status]);
 
-  const who = (to: To) => (to === "radio" ? "в рацию" : "NPC");
+
   return (
     <><RadioAudio /><div className={`voice voice-${status.kind}`} aria-live="polite">
       <button
@@ -223,13 +228,13 @@ export function VoiceButton() {
       >
         🎙
       </button>
-      {status.kind === "idle" && <span className="voice-hint">V — сказать голосом {who(target)}</span>}
+      {status.kind === "idle" && <span className="voice-hint">Удерживай V → {address(target)} · отпусти, чтобы отправить</span>}
       {status.kind === "rec" && (
         <span>
-          Слушаю… <span className="voice-level" style={{ width: `${Math.round(status.level * 60)}px` }} />
+          Запись → {address(status.to)}… <span className="voice-level" style={{ width: `${Math.round(status.level * 60)}px` }} />
         </span>
       )}
-      {status.kind === "wait" && <span>Распознаю…</span>}
+      {status.kind === "wait" && <span>Отправлено → {address(status.to)}{status.to !== "radio" ? " · распознаю…" : " · запись услышат после отпускания V"}</span>}
       {status.kind === "error" && <span className="voice-error">{status.text}</span>}
       {status.kind === "sent" && <span>{status.text}</span>}
     </div></>
