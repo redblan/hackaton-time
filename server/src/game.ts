@@ -391,6 +391,9 @@ export class Game {
     if (config.flags.includes("lift_vanya")) room.flags.add(`vanya_f${Math.max(5, Math.min(8, config.startFloor - 1))}`);
     // Папа в данных стоит в квартирах 6–9 этажей; клиент показывает его только на этаже старта
     room.flags.add(`home_f${config.startFloor}`);
+    // Табличка с адресом на доме (y00) — адрес именно этого прохождения: его и ждёт диспетчер 112
+    const plate = this.chunks.get("y00")?.objects.find((o) => o.id === "address" && o.kind === "sign");
+    if (plate?.kind === "sign" && config.address) this.patchWorld(room.id, { chunkId: "y00", add: [{ ...plate, text: config.address }], remove: [] });
     for (const p of room.players.values()) {
       const sp = this.chunks.findSpawn(p.role!, config.startFloor);
       p.pos = [sp.pos[0], sp.pos[1], sp.pos[2]];
