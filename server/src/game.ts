@@ -480,6 +480,12 @@ export class Game {
       const me = room.players.get(event.playerId);
       if (me?.openMinigame?.game === event.result.game) me.openMinigame = undefined;
     }
+    // Перекрыл газ — на плите этой квартиры гаснет огонь (у всех в комнате): флаг gas_off_<чанк>
+    if (event.type === "interact" && event.target === "gas_valve") {
+      const pos = room.players.get(event.playerId)?.pos;
+      const chunkId = pos ? this.chunks.chunkAt(pos) : null;
+      if (chunkId) this.setFlag(room.id, `gas_off_${chunkId}`, true);
+    }
     this.dispatch(room, event);
   }
 

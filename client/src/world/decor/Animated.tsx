@@ -9,6 +9,7 @@
  *   холодильник и плита — дверца и крышка хлопают при толчке
  *   свет      — выключатель у двери квартиры (E): гаснут люстры комнат и их свет, клавиша щёлкает
  *   окна      — прозрачное стекло (стены с проёмами рисует ChunkView)
+ *   плита     — горят две конфорки; перекрыл газ (E на кране, флаг сервера gas_off_<чанк>) — гаснут
  */
 import { useMemo, useRef } from "react";
 import { useFrame, type RootState } from "@react-three/fiber";
@@ -60,6 +61,25 @@ const glassGeometry = () =>
       .build(),
     kitchen: new Builder().box(2.0, 1.5, 0.02, "#ffffff", { x: 8, y: 1.7, z: 11.8 }).build(),
   });
+
+/** Пламя конфорки: венчик голубых язычков, низ на y 0 */
+let flameGeo: BufferGeometry | null = null;
+const flame = () => {
+  if (flameGeo) return flameGeo;
+  const b = new Builder();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    b.cone(0.012, 0.05, "#ffffff", { x: Math.cos(a) * 0.045, y: 0.025, z: Math.sin(a) * 0.045 }, 4);
+  }
+  b.cone(0.03, 0.03, "#ffffff", { y: 0.015 }, 8);
+  return (flameGeo = b.build());
+};
+const flameMaterial = new MeshStandardMaterial({ vertexColors: true, color: "#2f6dff", emissive: "#1f4fe0", emissiveIntensity: 1.1, transparent: true, opacity: 0.85, depthWrite: false });
+/** Горящие конфорки (в координатах плиты: передние) */
+const BURNERS: [number, number][] = [
+  [-0.15, 0.15],
+  [0.15, -0.15],
+];
 
 let leverGeo: BufferGeometry | null = null;
 const lever = () => (leverGeo ??= new Builder().box(0.03, 0.045, 0.02, "#f4f2ee", { z: 0.01 }).build());
@@ -116,6 +136,8 @@ export function FloorAnimated({ chunkId, origin, floor, curtain, flags }: { chun
   const gap = useRef(0);
   const stuck = flags.includes("lift_vanya") || flags.includes(`vanya_f${floor}`);
   const broken = flags.includes("window_broken");
+  const gasOn = !flags.includes(`gas_off_${chunkId}`);
+  const flames = useRef<(Group | null)[]>([]);
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
@@ -145,6 +167,13 @@ export function FloorAnimated({ chunkId, origin, floor, curtain, flags }: { chun
       const kitchen = i >= 2;
       const wind = kitchen && broken ? 0.18 + 0.12 * Math.sin(t * 2.3 + i) + 0.05 * Math.sin(t * 6.1 + i * 2) : 0;
       p.rotation.x = 0.02 * Math.sin(t * 1.1 + i * 0.8) + wind + Math.min(1, q) * 0.1 * Math.sin(t * 5 + i);
+    });
+
+    // пламя конфорок: дрожит
+    flames.current.forEach((f, i) => {
+      if (!f) return;
+      const k = 0.85 + 0.15 * Math.sin(t * 23 + i * 2) + 0.08 * Math.sin(t * 41 + i);
+      f.scale.set(1, k, 1);
     });
 
     // холодильник и плита: хлопают при толчке
@@ -190,6 +219,12 @@ export function FloorAnimated({ chunkId, origin, floor, curtain, flags }: { chun
         </group>
       </group>
       <group position={[STOVE[0], 0, STOVE[1]]} rotation-y={-Math.PI / 2}>
+        {gasOn &&
+          BURNERS.map(([x, z], i) => (
+            <group key={i} ref={(el) => void (flames.current[i] = el)} position={[x, 0.915, z]}>
+              <mesh geometry={flame()} material={flameMaterial} renderOrder={3} />
+            </group>
+          ))}
         <group ref={lid} position={[0, 0.9, -0.3]} rotation-x={-0.12}>
           <mesh geometry={g.lid} material={material} />
         </group>
