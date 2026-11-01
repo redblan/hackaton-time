@@ -2,6 +2,7 @@
  * Переносимые предметы (G11): E взять и положить, ЛКМ бросить. Предмет может уйти из своего чанка,
  * поэтому они живут здесь, а не в ChunkView. Все рисуются одним инстансом: вид пока коробка цвета `color`.
  * Кто несёт или бросил, тот считает физику и шлёт `prop:move`; остальные плавно идут за ним.
+ * Огнетушитель носит Player (decor/Carry), здесь только тушение огня, пока он в руках.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -13,6 +14,7 @@ import { local } from "../../core/local";
 import { getSocket } from "../../core/net";
 import { store, useStore } from "../../core/store";
 import { getColliders } from "../ChunkView";
+import { isExtinguisher } from "../decor/Carry";
 import { FxParticles } from "../Effects";
 import { stepProp, throwVelocity, type PropBody } from "./propPhysics";
 
@@ -43,8 +45,6 @@ const DEFAULT_SIZE: Vec3 = [0.3, 0.3, 0.3];
 
 const box = new Object3D();
 const forward = new Vector3();
-
-const isExtinguisher = (prop: Live) => prop.id.includes("extinguisher");
 
 function toLive(o: PropObject): Live {
   return {
@@ -115,7 +115,7 @@ export function Props() {
     const seen = new Set<string>();
     for (const chunk of Object.values(chunks)) {
       for (const o of chunk.objects) {
-        if (o.kind !== "prop" || !isActive(o, flags)) continue;
+        if (o.kind !== "prop" || isExtinguisher(o.id) || !isActive(o, flags)) continue;
         seen.add(o.id);
         if (!live.current.has(o.id)) live.current.set(o.id, toLive(o));
       }
@@ -129,7 +129,7 @@ export function Props() {
   // Чужие предметы по сети
   useEffect(() => {
     for (const state of Object.values(remote)) {
-      if (state.holder === playerId || carried.current?.id === state.id) continue;
+      if (state.holder === playerId || carried.current?.id === state.id || isExtinguisher(state.id)) continue;
       let prop = live.current.get(state.id);
       if (!prop) {
         prop = toLive({ id: state.id, kind: "prop", pos: state.pos, size: DEFAULT_SIZE, label: "Предмет" });
@@ -234,8 +234,9 @@ export function Props() {
 
     // Огнетушитель: поднёс к огню и подержал
     let fire: Vec3 | null = null;
-    if (held && isExtinguisher(held)) {
-      const [x, y, z] = held.body.pos;
+    const inHands = store.get().held;
+    if (inHands && isExtinguisher(inHands)) {
+      const [x, y, z] = local.pos;
       for (const o of flagFires()) {
         if (o.kind === "fx" && Math.hypot(o.pos[0] - x, o.pos[1] - y, o.pos[2] - z) < FIRE_RADIUS) fire = o.pos;
       }
