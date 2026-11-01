@@ -137,7 +137,14 @@ function paintOnce(material: MeshStandardMaterial | null) {
   material.needsUpdate = true;
 }
 
-/** Чанк появляется, когда его шейдеры готовы: синхронная сборка стоит секунды зависания. */
+/** Дольше чанк не прячем: лучше короткий рывок, чем дом без стен. */
+const REVEAL_LIMIT_MS = 1000;
+
+/**
+ * Чанк появляется, когда его шейдеры готовы: синхронная сборка стоит секунды зависания.
+ * Не gl.compileAsync: если материал пересоздан во время ожидания (сменились флаги), он падает
+ * внутри таймера, промис не завершается никогда, и чанк остаётся невидимым.
+ */
 function useCompiledReveal() {
   const group = useRef<Group>(null);
   const get = useThree(s=>s.get);
@@ -145,8 +152,20 @@ function useCompiledReveal() {
     const node=group.current;
     if(!node) return;
     const {gl,camera,scene}=get();
+    const materials=gl.compile(node,camera,scene);
+    const deadline=performance.now()+REVEAL_LIMIT_MS;
+    let frame=0;
+    const check=()=>{
+      for(const material of materials) {
+        const {currentProgram}=gl.properties.get(material) as {currentProgram?:{isReady():boolean}};
+        if(!currentProgram||currentProgram.isReady()) materials.delete(material);
+      }
+      if(materials.size===0||performance.now()>deadline) node.visible=true;
+      else frame=requestAnimationFrame(check);
+    };
     node.visible=false;
-    void gl.compileAsync(node,camera,scene).catch(()=>{}).finally(()=>{node.visible=true;});
+    check();
+    return ()=>cancelAnimationFrame(frame);
   },[get]);
   return group;
 }
