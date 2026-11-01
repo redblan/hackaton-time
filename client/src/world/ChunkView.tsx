@@ -8,6 +8,7 @@ import { Clone, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type Group, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type Vec3, type WorldObject } from "@game/shared";
+import { useStore } from "../core/store";
 import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
@@ -122,6 +123,13 @@ function LampGlow({pos}:{pos:Vec3}) {
   return null;
 }
 
+/** Шкаф: пока я сижу внутри (core/hide.ts), у меня он не рисуется — стенки изнутри закрывают обзор; щель рисует HUD */
+function Wardrobe({ object, objects }: { object: Extract<WorldObject, { kind: "model" }>; objects: WorldObject[] }) {
+  const inside = useStore((s) => s.hide?.kind === "wardrobe");
+  if (inside) return null;
+  return <Suspense fallback={<ModelPlaceholder object={object} objects={objects} />}><Model object={object} /></Suspense>;
+}
+
 function paintOnce(material: MeshStandardMaterial | null) {
   if (!material || material.userData.painted) return;
   material.userData.painted = true;
@@ -162,6 +170,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return null;
           case "model":
             if (floor && OWN_MODELS.has(o.id.replace('visual:',''))) return null; // дверь, лифт, плита — в Interior
+            if (o.id === "visual:wardrobe") return <Wardrobe key={o.id} object={o} objects={objects} />;
             return <Suspense key={o.id} fallback={<ModelPlaceholder object={o} objects={objects}/>}><Model object={o}/></Suspense>;
           case "npc": {
             const route = NPC_ROUTES[o.npcId];
