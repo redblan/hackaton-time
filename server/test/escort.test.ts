@@ -37,3 +37,14 @@ describe("сопровождение", () => {
     expect(checkLeftBehind(e, far, 6000)).toBe(true);
   });
 });
+
+describe("уход по маршруту (папа спускается во двор)", () => {
+  it("идёт по точкам, на последней «спускается» — сразу во дворе и стоит там", async () => {
+    const { startWalk, stepWalk } = await import("../src/escort");
+    const e = startWalk("papa", [4, 15, 9], [5, 15, 6.4], [{ to: [5, 15, 4.2] }, { to: [10, 15, 1.6] }, { to: [19, 0, -28], jump: true }]);
+    for (let i = 0; i < 200; i++) stepWalk(e, 100, i * 100);
+    expect(e.pos[1]).toBe(0);
+    expect(Math.hypot(e.pos[0] - 19, e.pos[2] + 28)).toBeLessThan(1.5);
+    expect(e.path).toEqual([]);
+  });
+});

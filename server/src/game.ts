@@ -74,6 +74,17 @@ const RESTORE_MAX_AGE_MS = 3 * 60 * 60_000;
 const MAX_VOICE_BYTES = 520_000;
 const ANIMS = new Set<PlayerPublic["anim"]>(["idle", "walk", "run", "crouch", "carry"]);
 /** Где стоят спасённые у места сбора (y12: x 12..24, z −36..−24), в стороне от песочницы, качелей и спауна */
+/** Что NPC могут дать в руки («дай аптечку»): как спросили, как подписан предмет, вид для моделей (props/models.ts) */
+const GIVE_ITEMS: { asked: RegExp; label: RegExp; kind: string; name: string; size: Vec3; color: string }[] = [
+  { asked: /аптечк/i, label: /аптечк/i, kind: "first_aid_kit", name: "Аптечка", size: [0.5, 0.56, 0.33], color: "#b83c36" },
+  { asked: /фонар/i, label: /фонар/i, kind: "flashlight", name: "Фонарь", size: [0.18, 0.18, 0.42], color: "#e2b64a" },
+  { asked: /вод[уыа]|попить|бутылк/i, label: /вод/i, kind: "water", name: "Бутылка воды", size: [0.16, 0.42, 0.16], color: "#74b8ca" },
+  { asked: /кружк|чашк/i, label: /кружк/i, kind: "mug", name: "Кружка", size: [0.22, 0.19, 0.16], color: "#e7dfc4" },
+  { asked: /огнетуш/i, label: /огнетуш/i, kind: "extinguisher", name: "Огнетушитель", size: [0.26, 0.75, 0.26], color: "#bf4035" },
+  { asked: /одеял|плед/i, label: /одеял/i, kind: "blankets", name: "Одеяла", size: [0.8, 0.2, 0.6], color: "#71928e" },
+  { asked: /стул/i, label: /стул/i, kind: "chair", name: "Стул", size: [0.48, 0.9, 0.5], color: "#98704f" },
+];
+
 const ASSEMBLY_SPOTS: Vec3[] = [
   [19.2, 0, -28.8],
   [20.4, 0, -28.0],
@@ -510,24 +521,19 @@ export class Game {
   }
 
   /**
-   * «Дай аптечку» рядом с NPC: если такой предмет лежит на этаже (не в чужих руках) — NPC даёт его игроку в руки.
-   * Нет такого рядом — false, дальше отвечает ИИ (он может сам «принести» объект через флаги D-73).
+   * «Аптечку дай» / «есть вода?» рядом с NPC: такой предмет лежит рядом (не в чужих руках) — NPC даёт его в руки;
+   * рядом нет — «достаёт» новый (патч мира) и тоже даёт. Предмет не назван — false, отвечает ИИ.
    */
+  private givenSeq = 0;
+
   private giveItem(room: Room, playerId: PlayerId, npcId: NpcId, text: string): boolean {
-    if (!/(дай|дайте|подай|принеси|принесите|нужн|можно|передай|где)/i.test(text)) return false;
+    // Упомянул предмет — значит просит (кроме «не нужна», «не надо»)
+    if (/не\s+(нужн|надо|хочу|давай)/i.test(text)) return false;
     const me = room.players.get(playerId);
     if (!me?.pos) return false;
-    const WANT: [RegExp, RegExp][] = [
-      [/аптечк/i, /аптечк/i],
-      [/фонар/i, /фонар/i],
-      [/вод[уыа]|попить|бутылк/i, /вод/i],
-      [/кружк|чашк/i, /кружк/i],
-      [/огнетуш/i, /огнетуш/i],
-      [/одеял|плед/i, /одеял/i],
-      [/стул/i, /стул/i],
-    ];
-    const want = WANT.find(([asked]) => asked.test(text))?.[1];
-    if (!want) return false;
+    const item = GIVE_ITEMS.find((i) => i.asked.test(text));
+    if (!item) return false;
+    const want = item.label;
     const here = this.chunks.chunkAt(me.pos);
     if (!here) return false;
     const held = new Set([...room.props.values()].filter((p) => p.holder).map((p) => p.id));
@@ -545,6 +551,17 @@ export class Game {
         const d = Math.hypot(at[0] - me.pos[0], at[2] - me.pos[2]);
         if (d < 25 && (!best || d < best.d)) best = { id: o.id, label: o.label, d };
       }
+    }
+    if (!best) {
+      // Рядом такого нет — у человека с собой нашлось: предмет появляется и сразу у игрока в руках
+      const id = `given${++this.givenSeq}-prop-${item.kind}`;
+      const name = item.name;
+      this.patchWorld(room.id, {
+        chunkId: here,
+        add: [{ id, kind: "prop", pos: [me.pos[0], me.pos[1] + item.size[1] / 2, me.pos[2]], size: item.size, label: name, color: item.color, mass: 1, bounce: 0.05 }],
+        remove: [],
+      });
+      best = { id, label: name, d: 0 };
     }
     if (!best) return false;
     const state: PropState = { id: best.id, chunkId: here, pos: [me.pos[0], me.pos[1] + 1, me.pos[2]], rotY: 0, holder: playerId };
@@ -630,6 +647,23 @@ export class Game {
    * D-76: пострадавший, которому помогли, не лежит дальше — встаёт и сам идёт к месту сбора (z_safe_area, y12),
    * там стоит с остальными. Двигает сервер, как Валентину; в чанке его больше не рисуют.
    */
+  /**
+   * Папа «ушёл» (papa_left): не исчезает — выходит из квартиры, идёт к лестнице, спускается и ждёт во дворе у места сбора.
+   * Внутри дома путь по точкам этажа; на площадке «уходит вниз» (сразу во дворе), там стоит с остальными.
+   */
+  private papaLeaves(room: Room) {
+    if (room.npcs.has("papa")) return;
+    const home = [...room.flags].find((f) => /^home_f\d$/.test(f))?.slice(6);
+    const chunk = home ? this.chunks.get(`e1f${home}`) : undefined;
+    const papa = chunk?.objects.find((o) => o.kind === "npc" && o.npcId === "papa");
+    if (!chunk || !papa || papa.kind !== "npc") return;
+    const [ox, oy, oz] = chunk.bounds.min;
+    const at = (x: number, z: number): Vec3 => [ox + x, oy, oz + z];
+    const spot = ASSEMBLY_SPOTS[[...room.npcs.values()].filter((e) => e.goal).length % ASSEMBLY_SPOTS.length]!;
+    room.npcs.set("papa", startWalk("papa", [...papa.pos], at(5, 6.4), [{ to: at(5, 4.2) }, { to: at(8.6, 3.6) }, { to: at(10, 1.6) }, { to: spot, jump: true }]));
+    console.log(`[walk] papa уходит из квартиры к месту сбора`);
+  }
+
   private sendStableToAssembly(room: Room, stableBefore: Set<string>) {
     const victims = room.run?.victims ?? {};
     let n = [...room.npcs.values()].filter((e) => e.goal).length;
@@ -679,6 +713,7 @@ export class Game {
         void this.recordSkill(eff.entry.playerId, eff.entry.skill, eff.entry.outcome === "ok");
         break;
       case "setFlag":
+        if (eff.flag === "papa_left" && !room.flags.has("papa_left")) this.papaLeaves(room);
         room.flags.add(eff.flag);
         toRoom.emit("run:flags", { flags: [...room.flags] });
         break;

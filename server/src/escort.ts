@@ -29,6 +29,8 @@ export interface Escort {
   goal?: Vec3 | null;
   /** Сейчас в движении (для анимации на клиенте) */
   walking?: boolean;
+  /** Следующие точки маршрута после goal; jump — дошёл до goal и сразу оказался в этой точке (ушёл по лестнице вниз) */
+  path?: { to: Vec3; jump?: boolean }[];
   /** Куда переминается у цели и когда менять точку (мс реального времени) */
   wander?: { to: Vec3; until: number };
 }
@@ -36,8 +38,8 @@ export interface Escort {
 export const WALK = { speed: 1.6, wanderRadius: 1.3, wanderSpeed: 0.7 };
 
 /** Самостоятельный поход: от точки к цели, потом неспешно ходить вокруг цели */
-export function startWalk(npcId: NpcId, from: Vec3, goal: Vec3): Escort {
-  return { npcId, playerId: null, pos: [...from], rotY: 0, trail: [], lastLeftBehindAt: null, goal: [...goal], walking: true };
+export function startWalk(npcId: NpcId, from: Vec3, goal: Vec3, path: { to: Vec3; jump?: boolean }[] = []): Escort {
+  return { npcId, playerId: null, pos: [...from], rotY: 0, trail: [], lastLeftBehindAt: null, goal: [...goal], walking: true, path };
 }
 
 export function stepWalk(e: Escort, dtMs: number, now = Date.now()) {
@@ -53,6 +55,13 @@ export function stepWalk(e: Escort, dtMs: number, now = Date.now()) {
     const k = Math.min(1, budget / d);
     e.pos = [e.pos[0] + dx * k, target[1], e.pos[2] + dz * k];
     e.walking = true;
+    return;
+  }
+  // дошёл до точки маршрута — следующая (или «спустился по лестнице» — сразу в следующей точке)
+  if (!e.wander && e.path?.length) {
+    const next = e.path.shift()!;
+    if (next.jump) e.pos = [...next.to];
+    e.goal = [...next.to];
     return;
   }
   // у цели: постоять, потом сделать пару шагов в сторону

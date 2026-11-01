@@ -144,9 +144,14 @@ function Sign({ object, big }: { object: Extract<WorldObject, { kind: "sign" }>;
   useEffect(() => () => texture.dispose(), [texture]);
   return (
     <group position={object.pos} rotation-y={object.rotY ?? 0}>
+      {/* две стороны, обе читаются правильно (DoubleSide показывал текст сзади зеркально) */}
       <mesh>
         <planeGeometry args={[w, h]} />
-        <meshStandardMaterial map={texture} roughness={0.5} side={DoubleSide} />
+        <meshStandardMaterial map={texture} roughness={0.5} />
+      </mesh>
+      <mesh rotation-y={Math.PI}>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial map={texture} roughness={0.5} />
       </mesh>
     </group>
   );
