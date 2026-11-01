@@ -193,11 +193,13 @@ export function Props() {
     const key = (e: KeyboardEvent) => {
       const st = store.get();
       if (e.code !== "KeyE" || e.repeat || st.minigame || st.typing) return;
-      if (carried.current) {
+      // Рядом есть действие (пострадавший, дверь…) — E достаётся ему, предмет остаётся в руках
+      if (carried.current && !st.prompt) {
         e.stopImmediatePropagation(); // иначе Player заодно нажмёт на интерактив рядом
         release([0, 0, 0]);
         return;
       }
+      if (carried.current) return;
       if (st.prompt || !local.ready) return;
       const prop = nearestProp(live.current.values());
       if (!prop) return;
@@ -290,7 +292,7 @@ export function Props() {
     if (!due) return;
     const st = store.get();
     const near = held || st.prompt || !local.ready ? null : nearestProp(live.current.values());
-    const text = fire ? "Тушим огонь…" : held ? `E — положить · ЛКМ — бросить: ${held.label}` : near ? `E — взять: ${near.label}` : null;
+    const text = fire ? "Тушим огонь…" : held ? (st.prompt ? `ЛКМ — бросить: ${held.label}` : `E — положить · ЛКМ — бросить: ${held.label}`) : near ? `E — взять: ${near.label}` : null;
     if (text !== hint) setHint(text);
   });
 
