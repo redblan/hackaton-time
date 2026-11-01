@@ -5,7 +5,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
-import { ACESFilmicToneMapping, BackSide, Color, Vector3, type DirectionalLight, type Mesh, type Object3D } from "three";
+import { ACESFilmicToneMapping, BackSide, Color, PMREMGenerator, Vector3, type DirectionalLight, type Mesh, type Object3D } from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { Grade } from "./Grade";
 import { Props } from "./props/Props";
 import { RenderStats } from "./RenderStats";
 import { WorldNews } from "./WorldNews";
@@ -121,8 +123,8 @@ function Sun() {
       <object3D ref={target} />
       <directionalLight
         ref={light}
-        color="#ffb877"
-        intensity={2.6}
+        color="#ffdcb8"
+        intensity={2.8}
         castShadow
         shadow-mapSize={[1536, 1536]}
         shadow-bias={-0.0004}
@@ -149,20 +151,33 @@ function AdaptiveResolution() {
 }
 
 export function Atmosphere() {
-  const { gl } = useThree();
+  const { gl, scene } = useThree();
   useEffect(() => {
     gl.toneMapping = ACESFilmicToneMapping;
-    gl.toneMappingExposure = 1.05;
+    gl.toneMappingExposure = 0.95;
   }, [gl]);
+  // Окружение вместо ровной заливки: объём на предметах и отражения на полу и дверях
+  useEffect(() => {
+    const generator = new PMREMGenerator(gl);
+    const environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
+    generator.dispose();
+    scene.environment = environment;
+    scene.environmentIntensity = 0.4;
+    return () => {
+      scene.environment = null;
+      environment.dispose();
+    };
+  }, [gl, scene]);
   return (
     <>
       <RenderStats />
       <AdaptiveResolution />
+      <Grade />
       <Props />
       <WorldNews />
       <color attach="background" args={[PALETTE.fog]} />
       <fog attach="fog" args={[PALETTE.fog, 60, 240]} />
-      <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.6]} />
+      <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.05]} />
       <Sky />
       <Sun />
     </>

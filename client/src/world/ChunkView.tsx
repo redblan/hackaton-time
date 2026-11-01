@@ -206,7 +206,7 @@ function StaticBoxes({boxes}:{boxes:StaticBox[]}) {
 }
 
 /** Коробки для столкновений. Объекты с `when` не из flags не сталкиваются. */
-export function getColliders(chunk: ChunkData, flags: string[]): Aabb[] {
+export function getColliders(chunk: ChunkData, flags: string[], doors?: Record<string, boolean>): Aabb[] {
   const out: Aabb[] = [];
   // Коробка «lift» из данных — стенка сразу за дверями лифта: без неё в открытый лифт можно зайти.
   // Боковых стенок кабины не ставим: за лифтом (z 4.1..4.9) проход, по нему идёт обход через балкон 4-го этажа.
@@ -224,6 +224,11 @@ export function getColliders(chunk: ChunkData, flags: string[]): Aabb[] {
       min: [o.pos[0] - hx, o.pos[1] - hy, o.pos[2] - hz],
       max: [o.pos[0] + hx, o.pos[1] + hy, o.pos[2] + hz],
     });
+  }
+  // Дверь квартиры: в данных проём открыт, закрытая створка держит игрока. Без `doors` — проём свободен
+  if (doors && !doors[chunk.id] && parseFloorId(chunk.id)) {
+    const [x, y, z] = chunk.bounds.min;
+    out.push({ min: [x + 4, y, z + 4.95], max: [x + 6, y + 2.5, z + 5.05] });
   }
   if (parseFloorId(chunk.id)?.floor === 1) {
     const [x, y, z] = chunk.bounds.min;

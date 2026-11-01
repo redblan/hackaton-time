@@ -128,7 +128,8 @@ export function Props() {
   const spraying = useRef(0);
   const [spray, setSpray] = useState<Vec3 | null>(null);
   const [hint, setHint] = useState<string | null>(null);
-  const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags)), [chunks, flags]);
+  const doors = useStore((s) => s.doors);
+  const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags, doors)), [chunks, flags, doors]);
 
   // Предметы из чанков. Убранные патчем исчезают, чужой чанк не трогает предмет, который несут
   useEffect(() => {

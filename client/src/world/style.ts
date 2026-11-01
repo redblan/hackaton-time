@@ -5,19 +5,19 @@
 import { CanvasTexture, Color, RepeatWrapping, type Material, type WebGLProgramParametersWithUniforms } from "three";
 
 export const PALETTE = {
-  skyTop: "#4f76b5",
-  skyHorizon: "#ffb98a",
-  sun: "#ffd9a8",
-  fog: "#eeb68c",
-  hemiSky: "#cfe2ff",
-  hemiGround: "#e6ad78",
-  rock: "#f2a766",
-  rockDark: "#cf7440",
-  sand: "#e3a866",
-  grass: "#b3c25a",
-  pine: "#5fa05c",
-  pineLight: "#6fa35a",
-  trunk: "#7a4a2b",
+  skyTop: "#5f7fa8",
+  skyHorizon: "#e6c3a6",
+  sun: "#ffe2c0",
+  fog: "#d9bfa6",
+  hemiSky: "#d4e0ee",
+  hemiGround: "#bfa084",
+  rock: "#c9a07a",
+  rockDark: "#94694b",
+  sand: "#bda07c",
+  grass: "#7f8f52",
+  pine: "#44694a",
+  pineLight: "#587a52",
+  trunk: "#5a3f2c",
 };
 
 const NOISE = /* glsl */ `
@@ -53,6 +53,15 @@ function withWorldPosition(shader: WebGLProgramParametersWithUniforms, paint: st
 /** Стены, полы и мебель: мазки краски и лёгкая теплота снизу, как на рисованной текстуре. */
 export function paintSurface(material: Material) {
   material.onBeforeCompile = (shader) => {
+    // рельеф: нормаль наклоняется по штукатурке, свет цепляется за неровности
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <normal_fragment_maps>",
+      `#include <normal_fragment_maps>
+       vec3 bumpX = dFdx(-vViewPosition), bumpY = dFdy(-vViewPosition);
+       vec3 bumpA = cross(bumpY, normal), bumpB = cross(normal, bumpX);
+       float bumpDet = dot(bumpX, bumpA);
+       normal = normalize(abs(bumpDet) * normal - sign(bumpDet) * 0.004 * (dFdx(plaster) * bumpA + dFdy(plaster) * bumpB));`,
+    );
     shader.uniforms.uPlaster = { value: plasterTexture() };
     shader.fragmentShader = `uniform sampler2D uPlaster;\n${shader.fragmentShader}`;
     withWorldPosition(
@@ -61,6 +70,10 @@ export function paintSurface(material: Material) {
        vec2 plasterUv = (faceNormal.y > 0.5 ? vWorld.xz : faceNormal.x > 0.5 ? vWorld.zy : vWorld.xy) / PLASTER_TILE_M;
        float plaster = texture2D(uPlaster, plasterUv, -0.7).r;
        diffuseColor.rgb *= 0.7 + 0.6 * plaster;
+       // тень в углах у пола и потолка: только внутри дома (z 0..12) и только на стенах
+       float storey = fract(vWorld.y / 3.0);
+       float inside = step(0.2, vWorld.z) * step(vWorld.z, 11.8) * step(faceNormal.y, 0.5);
+       diffuseColor.rgb *= mix(1.0, 0.72 + 0.28 * smoothstep(0.0, 0.22, storey) * smoothstep(1.0, 0.8, storey), inside);
        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 0.97, 0.86), 0.5);`.replace("PLASTER_TILE_M", PLASTER_TILE_M),
     );
   };

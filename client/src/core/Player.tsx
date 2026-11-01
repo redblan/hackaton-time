@@ -88,7 +88,8 @@ export function Player() {
   const controls = useRef<{ lock: () => void; unlock: () => void; isLocked: boolean } | null>(null);
   const { camera } = useThree();
 
-  const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags)), [chunks, flags]);
+  const doors = useStore((s) => s.doors);
+  const colliders = useMemo(() => Object.values(chunks).flatMap((c) => getColliders(c, flags, doors)), [chunks, flags, doors]);
   const body = useRef<Body>({ pos: local.pos, vy: 0, grounded: false });
   const lastSafe = useRef<Vec3 | null>(null);
   const waitingAt = useRef<Vec3 | null>(null);

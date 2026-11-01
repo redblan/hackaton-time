@@ -73,9 +73,10 @@ export function wallpaperMaterial(base: string, accent: string, pattern: Wallpap
         }
         k = clamp(petals, 0.0, 1.0) * 0.85 + (1.0 - sharp(0.04, length(c))) * 0.4;
       }
-      float dirt = 0.94 + 0.06 * hashP(floor(vWorldPos.xz * 3.0) + floor(v * 3.0));
       float paper = texture2D(uPlaster, vec2(u, v) / PLASTER_TILE_M, -0.7).r;
-      diffuseColor.rgb = mix(uBase, uAccent, k) * dirt * (0.82 + 0.36 * paper);
+      float storey = fract(v / 3.0);
+      float corner = 0.74 + 0.26 * smoothstep(0.0, 0.2, storey) * smoothstep(1.0, 0.82, storey);
+      diffuseColor.rgb = mix(uBase, uAccent, k) * (0.82 + 0.36 * paper) * corner;
       `.replace("PLASTER_TILE_M", PLASTER_TILE_M),
     );
   };
@@ -112,7 +113,7 @@ export function brickMaterial(brick: string, mortar: string) {
 
 /** Паркет «ёлочкой» или доски: base/alt — два оттенка планок. */
 export function parquetMaterial(base: string, alt: string, planks = true) {
-  const m = new MeshStandardMaterial({ roughness: 0.75, color: "#ffffff" });
+  const m = new MeshStandardMaterial({ roughness: planks ? 0.5 : 0.35, color: "#ffffff" });
   const uBase = { value: new Color(base) };
   const uAlt = { value: new Color(alt) };
   const uPlanks = { value: planks ? 1 : 0 };
@@ -126,16 +127,25 @@ export function parquetMaterial(base: string, alt: string, planks = true) {
       /* glsl */ `
       vec2 q = vWorldPos.xz;
       float k;
+      float tone;
       if (uPlanks == 1) {
         float row = floor(q.x / 0.18);
         float seg = floor(q.y / 1.2 + mod(row, 3.0) * 0.33);
         k = hashP(vec2(row, seg));
         float gap = min(fract(q.x / 0.18), fract(q.y / 1.2 + mod(row, 3.0) * 0.33));
-        k = mix(k, 0.0, 1.0 - smoothstep(0.02, 0.05, gap));
+        k = mix(k, 0.0, 1.0 - sharp(0.02, gap));
+        // волокна дерева вдоль доски
+        float board = hashP(vec2(row, seg + 3.0)) * 40.0;
+        tone = 0.86 + 0.14 * (0.5 + 0.5 * sin(q.x * 150.0 + sin(q.y * 2.3 + board) * 2.4 + board));
+        tone *= 1.0 - 0.45 * (1.0 - sharp(0.012, gap));
       } else {
-        k = step(0.5, fract((floor(q.x / 0.5) + floor(q.y / 0.5)) * 0.5)) * 0.6 + 0.2 * hashP(floor(q / 0.5));
+        vec2 tile = q / 0.5;
+        k = step(0.5, fract((floor(tile.x) + floor(tile.y)) * 0.5)) * 0.6 + 0.12 * hashP(floor(tile));
+        // шов между плитками
+        vec2 edge = min(fract(tile), 1.0 - fract(tile));
+        tone = 0.72 + 0.28 * sharp(0.012, min(edge.x, edge.y));
       }
-      diffuseColor.rgb = mix(uBase, uAlt, k) * (0.9 + 0.1 * hashP(floor(q * 7.0)));
+      diffuseColor.rgb = mix(uBase, uAlt, k) * tone;
       `,
     );
   };
