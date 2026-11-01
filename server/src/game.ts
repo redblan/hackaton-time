@@ -597,6 +597,8 @@ export class Game {
       const pos = room.players.get(event.playerId)?.pos;
       const chunkId = pos ? this.chunks.chunkAt(pos) : null;
       if (chunkId) this.setFlag(room.id, `gas_off_${chunkId}`, true);
+      // Газ перекрыт для всей комнаты: у напарников (в других квартирах) плита тоже гаснет
+      this.setFlag(room.id, "gas_off", true);
     }
     this.dispatch(room, event);
   }

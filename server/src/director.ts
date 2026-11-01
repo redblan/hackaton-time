@@ -82,7 +82,7 @@ export function direct(
   // ---- газ ----
   if (homeChunk) {
     const base = chunk(homeChunk)?.bounds.min;
-    const closed = room.flags.has(`gas_off_${homeChunk}`);
+    const closed = room.flags.has(`gas_off_${homeChunk}`) || room.flags.has("gas_off");
     if (base && closed && d.gas > 0) {
       // рассеивается по одному облаку в секунду, с конца (из коридора)
       d.gas--;

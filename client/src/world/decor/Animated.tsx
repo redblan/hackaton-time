@@ -136,7 +136,7 @@ export function FloorAnimated({ chunkId, origin, floor, curtain, flags }: { chun
   const gap = useRef(0);
   const stuck = flags.includes("lift_vanya") || flags.includes(`vanya_f${floor}`);
   const broken = flags.includes("window_broken");
-  const gasOn = !flags.includes(`gas_off_${chunkId}`);
+  const gasOn = !flags.includes(`gas_off_${chunkId}`) && !flags.includes("gas_off");
   const flames = useRef<(Group | null)[]>([]);
 
   useFrame((state, dt) => {
