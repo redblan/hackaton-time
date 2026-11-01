@@ -304,7 +304,6 @@ describe("ошибки мини-игр и адаптация (Y9)", () => {
   it.each([
     ["cpr", "cpr", (c: RunConfig) => c.victims.includes("cpr")],
     ["recovery_position", "unconscious", (c: RunConfig) => c.victims.includes("unconscious")],
-    ["route", "обвал", (c: RunConfig) => c.flags.includes("collapse_f4")],
     ["elevator", "лифт", (c: RunConfig) => c.flags.includes("lift_vanya")],
     ["aftershock", "толчок", (c: RunConfig) => c.flags.includes("aftershock")],
   ] as const)("слабый навык %s выпадает чаще: %s", (skill, _, has) => {

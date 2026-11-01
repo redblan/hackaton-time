@@ -51,9 +51,8 @@ export function generateRun(input: GenerateRunInput): RunConfig {
 
   const startFloor = randomInt(rng, 6, 9);
   // Пожар обязателен на 5-м этаже, ниже любого этажа старта (6–9).
-  const flags: string[] = ["fire_f5"];
-  // Обходной балкон есть только на 4-м этаже, поэтому обвал ставим только под ним.
-  if (chance(0.7, ["route"])) flags.push("collapse_f4");
+  const flags: string[] = ["fire_f5", "collapse_f4"];
+  // Обвал тоже обязателен: обходной балкон есть только на 4-м этаже, поэтому обвал всегда там.
   if (chance(0.7, ["elevator"])) flags.push("lift_vanya");
   // Довести соседку вниз — обязательное задание. При обвале обход идёт через 2-й подъезд, поэтому
   // она ждёт там, иначе до неё не дойти. В coop3 её ведёт игрок с 3-го этажа 1-го подъезда.
