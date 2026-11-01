@@ -1,6 +1,6 @@
 /** Состояние клиента: маленький стор на useSyncExternalStore (без лишних зависимостей). */
 import { useSyncExternalStore } from "react";
-import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId, PropState } from "@game/shared";
+import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId, PropState, AgentIntent } from "@game/shared";
 
 export interface Auth {
   token: string;
@@ -19,6 +19,8 @@ export interface NpcLine {
   text: string;
   done: boolean;
   source?: "llm" | "template" | "admin";
+  /** Что ИИ понял из моей реплики (D-73, F3) */
+  intent?: AgentIntent;
   /** Реплика игрока (то, что он написал NPC) */
   fromPlayer?: boolean;
 }

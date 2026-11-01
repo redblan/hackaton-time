@@ -212,11 +212,11 @@ export function connect(auth: Auth) {
       return { npcLines: lines.slice(-30) };
     }),
   );
-  s.on("npc:done", ({ npcId, text, source }) =>
+  s.on("npc:done", ({ npcId, text, source, intent }) =>
     store.set((st) => {
       const lines = [...st.npcLines];
       const i = lines.findLastIndex((l) => l.npcId === npcId && !l.done && !l.fromPlayer);
-      const line = { npcId, text, done: true, source };
+      const line = { npcId, text, done: true, source, ...(intent ? { intent } : {}) };
       if (i >= 0) lines[i] = { ...lines[i]!, ...line };
       else lines.push({ key: nextKey(), ...line });
       return { npcLines: lines.slice(-30) };

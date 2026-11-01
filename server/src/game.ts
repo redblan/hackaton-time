@@ -5,6 +5,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 import {
+  AGENT_FLAGS,
   INTERACTABLES,
   MODES,
   NPC_IDS,
@@ -14,6 +15,7 @@ import {
   generateRun,
   initRun,
   reduce,
+  type AgentFlag,
   type AiModule,
   type ChunkData,
   type ChunkId,
@@ -28,6 +30,7 @@ import {
   type PropState,
   type ServerToClient,
   type Vec3,
+  type WorldEvent,
   type WorldPatch,
 } from "@game/shared";
 import { planChunks, type ChunkStore } from "./chunks";
@@ -96,6 +99,8 @@ export class Game {
     io.on("connection", (s) => this.onConnection(s));
     // Агенты Матвея меняют мир: ИИ отдаёт патч, мы применяем к комнате игрока
     ai.setWorldHook?.((playerId, patch) => this.safe(() => this.patchWorld(this.roomOf.get(playerId) ?? "", patch)));
+    // D-73: агент включает флаг из AGENT_FLAGS (объекты Никиты «по запросу») — один раз за прохождение
+    ai.setFlagHook?.((playerId, flag) => this.agentFlag(playerId, flag));
   }
 
   /** Поднять незаконченные комнаты из БД (после перезапуска сервера). Игроки вернутся сами при перезаходе. */
@@ -181,8 +186,46 @@ export class Game {
       holder: q.holder === s.data.playerId ? s.data.playerId : null,
       ...(isVec3(q.vel) ? { vel: q.vel } : {}),
     };
+    const before = room.props.get(state.id)?.holder ?? null;
     room.props.set(state.id, state);
     s.to(`r:${room.id}`).emit("prop:move", state);
+    // D-73 (M23): взял / положил / бросил — сообщаем ИИ (он может ответить репликой NPC)
+    const me = s.data.playerId;
+    const type = !before && state.holder === me ? "prop_picked" : before === me && !state.holder ? (state.vel && Math.hypot(...state.vel) > 1 ? "prop_thrown" : "prop_dropped") : null;
+    if (type) {
+      const label = this.chunks.get(state.chunkId)?.objects.find((o) => o.id === state.id && o.kind === "prop");
+      const name = label?.kind === "prop" ? label.label : state.id;
+      void this.worldEvent(room, me, { type, playerId: me, propId: state.id, label: name, chunkId: state.chunkId, pos: state.pos });
+    }
+  }
+
+  /** D-73: флаг от агента — только из AGENT_FLAGS, только включить, один раз */
+  private agentFlag(playerId: PlayerId, flag: AgentFlag): boolean {
+    const room = this.myRoom(playerId);
+    if (!room || !(AGENT_FLAGS as readonly string[]).includes(flag) || room.flags.has(flag)) return false;
+    console.log(`[ai] агент включил ${flag} (комната ${room.id})`);
+    return this.setFlag(room.id, flag, true);
+  }
+
+  private worldEventAt = new Map<PlayerId, number>();
+  /** D-73 (M23): событие мира → ИИ; ответ показываем игроку как реплику NPC. Не чаще раза в 8 с на игрока */
+  private async worldEvent(room: Room, playerId: PlayerId, e: WorldEvent) {
+    if (!this.ai.onWorldEvent) return;
+    const now = Date.now();
+    if (now - (this.worldEventAt.get(playerId) ?? 0) < 8000) return;
+    this.worldEventAt.set(playerId, now);
+    try {
+      const res = await this.ai.onWorldEvent(e, this.npcContext(room, playerId) as NpcRequest["context"]);
+      if (res && includes(NPC_IDS, res.npcId) && res.text.trim()) {
+        const to = this.io.to(`p:${playerId}`);
+        const text = res.text.trim().slice(0, 500);
+        to.emit("npc:done", { npcId: res.npcId, text, source: "template" });
+        this.remember(room, res.npcId, playerId, text, "world");
+        if (this.tts?.available()) void this.speak(to, res.npcId, text);
+      }
+    } catch (err) {
+      console.error("[ai] onWorldEvent упал:", err);
+    }
   }
 
   private rejoin(s: Sock, room: Room) {
@@ -553,7 +596,7 @@ export class Game {
       const res = this.ai.sayStream
         ? await this.ai.sayStream(req, (token) => to.emit("npc:token", { npcId: req.npcId, token }), sendOutcome)
         : await this.ai.say(req);
-      to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source });
+      to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source, ...(res.intent ? { intent: res.intent } : {}) });
       this.remember(room, req.npcId, playerId, res.text, res.source, Date.now() - started);
       if (res.outcome) sendOutcome(res.outcome);
       if (res.text && this.tts?.available()) void this.speak(to, req.npcId, res.text);
@@ -748,6 +791,15 @@ export class Game {
     else room.flags.delete(flag);
     room.dirty = true;
     this.io.to(`r:${room.id}`).emit("run:flags", { flags: [...room.flags] });
+    return true;
+  }
+
+  /** Админка включила флаг: сообщить ИИ (D-73, M23) — NPC может прокомментировать игрокам комнаты */
+  adminFlag(roomId: string, flag: string, on: boolean): boolean {
+    const room = this.rooms.get(roomId);
+    const had = room?.flags.has(flag);
+    if (!this.setFlag(roomId, flag, on)) return false;
+    if (room && on && !had) for (const p of room.players.values()) void this.worldEvent(room, p.id, { type: "flag_set", playerId: p.id, flag, by: "admin" });
     return true;
   }
 

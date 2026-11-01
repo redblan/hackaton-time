@@ -8,6 +8,7 @@
  */
 import type { ChunkData, ChunkId, Vec3, WorldPatch } from "./world";
 import type { Effect, GameEvent, RunSummary } from "./scenario/types";
+import type { AgentIntent } from "./ai";
 import type { Mode, NpcId, PlayerId, Role } from "./ids";
 
 export interface PlayerPublic {
@@ -94,7 +95,8 @@ export interface ServerToClient {
   "game:effect": (e: Effect) => void;
   /** Реплика NPC, стримом: сначала токены, потом done */
   "npc:token": (p: { npcId: NpcId; token: string }) => void;
-  "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" | "admin" }) => void;
+  /** `intent` — что ИИ понял из реплики игрока (D-73, для F3) */
+  "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" | "admin"; intent?: AgentIntent }) => void;
   "chat:msg": (p: { from: string; text: string; at: number }) => void;
   /** Что распознано из голоса (или почему не получилось) */
   /** Озвучка реплики NPC (D-70): WAV Piper, только адресату, приходит после npc:done */

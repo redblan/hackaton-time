@@ -69,6 +69,7 @@ export function DebugOverlay() {
   const ids = Object.keys(chunks).sort();
   const npcDone = lines.filter((l) => l.done && !l.fromPlayer);
   const llm = npcDone.filter((l) => l.source === "llm").length;
+  const intent = npcDone.findLast((l) => l.intent)?.intent;
   const facts = me ? Object.entries(me.memory.toldFacts).filter(([k]) => !k.startsWith("tpl:")) : [];
   const met = me ? Object.entries(me.memory.npc) : [];
   const skills = me ? Object.entries(me.profile.skills) : [];
@@ -85,6 +86,9 @@ export function DebugOverlay() {
       <div>Флаги прохождения: {flags.join(", ") || "—"}</div>
       <div>
         ИИ: реплик {npcDone.length}, из них локальной моделью {llm}, шаблоном {npcDone.length - llm} · БД: {me?.db ?? "…"}
+      </div>
+      <div>
+        Намерение: {intent ? `${intent.id} (${intent.source === "rule" ? "правило" : "модель"}, ${intent.ms} мс)` : "—"}
       </div>
       {me && (
         <>

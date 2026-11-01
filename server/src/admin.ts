@@ -130,7 +130,7 @@ export function adminRouter(game: Game, ai: AiModule, chunks: ChunkStore, starte
 
   r.post("/room/:id/flag", (req, res) => {
     const { flag, on } = req.body ?? {};
-    ok(res, typeof flag === "string" && game.setFlag(req.params.id, flag, Boolean(on)));
+    ok(res, typeof flag === "string" && game.adminFlag(req.params.id, flag, Boolean(on)));
   });
   r.post("/room/:id/quake", (req, res) => {
     const { strength, durationMs } = req.body ?? {};

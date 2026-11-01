@@ -6,7 +6,7 @@
  * Если модель недоступна или отвечает дольше таймаута — ответ из шаблонов.
  */
 import type { NpcEvent, NpcId, PlayerId, SkillId, StageId } from "./ids";
-import type { WorldPatch } from "./world";
+import type { ChunkId, Vec3, WorldPatch } from "./world";
 
 export interface NpcRequest {
   npcId: NpcId;
@@ -41,7 +41,39 @@ export interface NpcResponse {
   source: "llm" | "template";
   /** Для диспетчера 112: что уже собрано */
   slots?: Record<string, string>;
+  /** D-73 (M21/M25): какое намерение игрока распознано — сервер шлёт в npc:done, клиент показывает в F3 */
+  intent?: AgentIntent;
 }
+
+/** D-73: распознанное намерение игрока. `id` — свободная строка (`bring_first_aid`, `call_lift`…), `none` — не распознано */
+export interface AgentIntent {
+  id: string;
+  /** Правило (ключевые слова, M21) или модель (M25) */
+  source: "rule" | "llm";
+  /** Сколько заняло распознавание, мс */
+  ms: number;
+}
+
+/**
+ * D-73: флаги, которые агент может включить сам (объекты Никиты, N13). Только включить, не выключить;
+ * сервер применяет один раз за прохождение и рассылает `run:flags`. Прочие флаги — отказ (false).
+ */
+export const AGENT_FLAGS = ["spawn_first_aid", "spawn_ladder", "spawn_blankets", "spawn_exit", "power_on"] as const;
+export type AgentFlag = (typeof AGENT_FLAGS)[number];
+
+/** D-73 (M23): что случилось в мире — сервер сообщает ИИ, ИИ может ответить репликой NPC */
+export type WorldEvent =
+  | {
+      /** picked — взял в руки; dropped — положил; thrown — бросил (была скорость) */
+      type: "prop_picked" | "prop_dropped" | "prop_thrown";
+      playerId: PlayerId;
+      propId: string;
+      /** Подпись предмета из данных: «Аптечка», «Огнетушитель» */
+      label: string;
+      chunkId: ChunkId;
+      pos: Vec3;
+    }
+  | { type: "flag_set"; playerId: PlayerId; flag: string; by: "agent" | "admin" };
 
 /** Память игрока между прохождениями. Хранится на сервере (сначала JSON, потом БД). */
 export interface PlayerMemory {
@@ -84,6 +116,13 @@ export interface AiModule {
    * сервер применяет к комнате и рассылает `world:patch`. Сервер передаёт эту функцию через `setWorldHook`.
    */
   setWorldHook?(hook: (playerId: PlayerId, patch: WorldPatch) => void): void;
+  /** D-73 (M21): агент включает флаг из AGENT_FLAGS. Хук вернёт false, если флаг не разрешён или уже включён */
+  setFlagHook?(hook: (playerId: PlayerId, flag: AgentFlag) => boolean): void;
+  /**
+   * D-73 (M23): событие мира. Вернуть реплику — сервер покажет её игроку как ответ NPC (с озвучкой), null — промолчать.
+   * Сервер зовёт не чаще раза в 8 с на игрока; context — как в NpcRequest.
+   */
+  onWorldEvent?(e: WorldEvent, context: NpcRequest["context"]): Promise<{ npcId: NpcId; text: string } | null>;
 }
 
 /** Поведение агента, которое можно редактировать из админки */
