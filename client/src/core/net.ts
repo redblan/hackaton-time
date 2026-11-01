@@ -128,6 +128,7 @@ export function connect(auth: Auth) {
     }),
   );
   s.on("prop:move", (p) => store.set((st) => ({ props: { ...st.props, [p.id]: p } })));
+  s.on("door:set", ({ chunkId, open }) => store.set((st) => ({ doors: { ...st.doors, [chunkId]: open } })));
   s.on("voice:chat", (p) => voiceChatListeners.forEach((fn) => fn(p)));
   s.on("player:teleport", ({ pos, rotY }) => teleport(pos, rotY ?? local.rotY));
   s.on("disconnect", () => store.set({ connected: false }));

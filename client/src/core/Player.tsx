@@ -54,6 +54,8 @@ const ALLOWED_INTERACTS = new Set<string>([
   "brigade",
 ]);
 const PICK_RADIUS = 1.3;
+/** Подписи на E, которые в данных звучат непонятно */
+const LABELS: Record<string, string> = { cover_wardrobe: "Залезть в шкаф" };
 
 /** Взять огнетушитель / поставить перед собой (положение — всем через prop:move) */
 function carry(target: string, pos: Vec3, yaw: number) {
@@ -122,7 +124,11 @@ export function Player() {
         if (p) sendEvent({ type: "interact", target: p.target as InteractableId });
         // Дверь квартиры и свет — на клиенте (вид), сценарий на сервере получает interact как раньше
         const id = chunkAt(body.current.pos);
-        if (p?.target === "apartment_door") store.set((st) => ({ doors: { ...st.doors, [id]: !(st.doors[id] ?? false) } }));
+        if (p?.target === "apartment_door") {
+          const open = !(store.get().doors[id] ?? false);
+          store.set((st) => ({ doors: { ...st.doors, [id]: open } }));
+          getSocket()?.emit("door:set", { chunkId: id, open });
+        }
         if (p?.target === "light_switch") store.set((st) => ({ lights: { ...st.lights, [id]: !(st.lights[id] ?? true) } }));
       }
       if (e.code === "KeyC" && !e.repeat && !store.get().typing) store.set((st) => ({ thirdPerson: !st.thirdPerson }));
@@ -332,7 +338,7 @@ export function Player() {
           if (o.kind === "interactable") {
             if (!ALLOWED_INTERACTS.has(o.target)) continue;
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[2] - pos[2]);
-            if (d <= o.radius && Math.abs(o.pos[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: o.target, label: o.label, d };
+            if (d <= o.radius && Math.abs(o.pos[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: o.target, label: LABELS[o.target] ?? o.label, d };
           } else if (o.kind === "prop" && isExtinguisher(o.id) && !st.held) {
             const ps = st.props[o.id];
             if (ps?.holder) continue;

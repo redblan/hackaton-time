@@ -75,20 +75,79 @@ function withWindowHoles(o: StaticBox, origin: Vec3): StaticBox[] {
   return out;
 }
 
-function Sign({object}:{object:Extract<WorldObject,{kind:'sign'}>}) {
-  const texture=useMemo(()=>{
-    const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
-    const ctx=canvas.getContext('2d')!;ctx.fillStyle='#fff2cf';ctx.fillRect(0,0,1024,256);
-    ctx.fillStyle='#283a48';ctx.font='bold 32px sans-serif';
-    let line='', y=50;
-    for(const word of object.text.split(' ')) {
-      if(ctx.measureText(line+word).width>940){ctx.fillText(line,32,y);y+=42;line='';}
-      line+=word+' ';
+/** Цвета таблички по смыслу: газ — предупреждение, выход и сбор — зелёные, остальное — спокойная эмаль */
+function signStyle(id: string) {
+  if (id.includes("gas")) return { bg: "#f6d34a", border: "#b3261e", fg: "#7a120d" };
+  if (id.includes("exit") || id.includes("assembly") || id.includes("supplies")) return { bg: "#2f8f5b", border: "#1d5e3b", fg: "#ffffff" };
+  return { bg: "#f3efe4", border: "#34506e", fg: "#1f2a37" };
+}
+
+/** Строки таблички: по « · » и переносом по ~18 символов */
+function signLines(text: string): string[] {
+  const out: string[] = [];
+  for (const part of text.split(" · ")) {
+    let line = "";
+    for (const word of part.split(" ")) {
+      if (line && (line + " " + word).length > 18) {
+        out.push(line);
+        line = word;
+      } else line = line ? `${line} ${word}` : word;
     }
-    ctx.fillText(line,32,y);const texture=new CanvasTexture(canvas);texture.colorSpace=SRGBColorSpace;return texture;
-  },[object.text]);
-  useEffect(()=>()=>texture.dispose(),[texture]);
-  return <mesh position={object.pos} rotation-y={object.rotY??0}><planeGeometry args={[2.4,.6]}/><meshBasicMaterial map={texture} side={DoubleSide}/></mesh>;
+    if (line) out.push(line);
+  }
+  return out.slice(0, 4);
+}
+
+/**
+ * Табличка (этаж, почта, адрес, место сбора): размер по тексту, рамка, освещается как всё вокруг.
+ * В подъезде буквы ~7 см, во дворе — крупнее (big).
+ */
+function Sign({ object, big }: { object: Extract<WorldObject, { kind: "sign" }>; big: boolean }) {
+  const { texture, w, h } = useMemo(() => {
+    const lines = signLines(object.text);
+    const letter = big ? 0.16 : 0.07; // высота строки, м
+    const longest = Math.max(...lines.map((l) => l.length), 4);
+    const w = longest * letter * 0.58 + letter * 1.6;
+    const h = lines.length * letter * 1.3 + letter * 1.1;
+    const px = 400; // пикселей на метр (для двора — меньше, табличка и так крупная)
+    const scale = big ? px * 0.5 : px;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(w * scale);
+    canvas.height = Math.ceil(h * scale);
+    const ctx = canvas.getContext("2d")!;
+    const st = signStyle(object.id);
+    const r = canvas.height * 0.12;
+    const b = Math.max(3, canvas.height * 0.05);
+    ctx.fillStyle = st.border;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, canvas.width, canvas.height, r);
+    ctx.fill();
+    ctx.fillStyle = st.bg;
+    ctx.beginPath();
+    ctx.roundRect(b, b, canvas.width - 2 * b, canvas.height - 2 * b, r * 0.7);
+    ctx.fill();
+    ctx.fillStyle = st.fg;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const fs = letter * scale * 0.82;
+    lines.forEach((line, k) => {
+      ctx.font = `${k === 0 ? "bold " : ""}${fs}px sans-serif`;
+      ctx.fillText(line, canvas.width / 2, (letter * 0.55 + letter * 1.3 * (k + 0.5)) * scale);
+    });
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    texture.anisotropy = 4;
+    return { texture, w, h };
+  }, [object.text, object.id, big]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <group position={object.pos} rotation-y={object.rotY ?? 0}>
+      <mesh>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial map={texture} roughness={0.5} side={DoubleSide} />
+      </mesh>
+    </group>
+  );
 }
 
 const dimensions: Record<string, [number, number, number]> = {
@@ -203,7 +262,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
           case "prop":
             return isExtinguisher(o.id) ? <PropExtinguisher key={o.id} object={o} /> : null; // пока берём в руки только огнетушитель
           case "sign":
-            return <Sign key={o.id} object={o}/>;
+            return <Sign key={o.id} object={o} big={!floor}/>;
           case "fx":
             return <FxParticles key={o.id} object={o}/>;
           default:

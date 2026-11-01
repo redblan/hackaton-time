@@ -61,6 +61,8 @@ export interface ClientToServer {
    * и помнит последнее состояние. `holder` — кто несёт (null — лежит), `vel` — скорость после броска.
    */
   "prop:move": (p: PropState) => void;
+  /** Дверь квартиры открыли/закрыли (E): сервер помнит по чанку и рассылает всем в комнате — дверь общая */
+  "door:set": (p: { chunkId: ChunkId; open: boolean }) => void;
 }
 
 export interface ClientMetrics {
@@ -115,6 +117,8 @@ export interface ServerToClient {
   "world:patch": (p: WorldPatch) => void;
   /** Предмет перенесли/бросили (от другого игрока) */
   "prop:move": (p: PropState) => void;
+  /** Дверь квартиры у всех в комнате (и при входе — все открытые) */
+  "door:set": (p: { chunkId: ChunkId; open: boolean }) => void;
   /** Админка: перенести игрока */
   "player:teleport": (p: { pos: Vec3; rotY?: number }) => void;
 }

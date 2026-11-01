@@ -41,6 +41,8 @@ export interface Room {
   patches: Map<ChunkId, { add: Map<string, WorldObject>; remove: Set<string> }>;
   /** Последнее состояние переносимых предметов (prop:move) */
   props: Map<string, PropState>;
+  /** Двери квартир по чанкам: true — открыта (по умолчанию закрыта) */
+  doors: Map<ChunkId, boolean>;
   /** Последние реплики NPC комнаты — для админки */
   lines: { at: number; npcId: NpcId; to: string; text: string; source: string; ms?: number }[];
 }
@@ -60,6 +62,7 @@ export function newRoom(id: string, mode: Mode): Room {
     dirty: false,
     patches: new Map(),
     props: new Map(),
+    doors: new Map(),
     lines: [],
   };
 }

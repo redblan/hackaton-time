@@ -151,6 +151,7 @@ export class Game {
     s.on("npc:hangup", (p) => this.safe(() => this.onHangup(s, p?.npcId)));
     s.on("voice:say", (p) => this.safe(() => this.onVoice(s, p)));
     s.on("client:metrics", (p) => this.safe(() => this.onMetrics(s, p)));
+    s.on("door:set", (p) => this.safe(() => this.onDoor(s, p)));
     s.on("ping", (t) => {
       if (typeof t === "number") s.emit("pong", t);
     });
@@ -199,6 +200,16 @@ export class Game {
     }
   }
 
+  /** Дверь квартиры общая на комнату: кто открыл/закрыл — у всех так же (иначе напарник «проходит сквозь закрытую») */
+  private onDoor(s: Sock, p: unknown) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room || !p || typeof p !== "object") return;
+    const q = p as Record<string, unknown>;
+    if (typeof q.chunkId !== "string" || !/^e[12]f\d$/.test(q.chunkId) || typeof q.open !== "boolean") return;
+    room.doors.set(q.chunkId, q.open);
+    s.to(`r:${room.id}`).emit("door:set", { chunkId: q.chunkId, open: q.open });
+  }
+
   /** D-73: флаг от агента — только из AGENT_FLAGS, только включить, один раз */
   private agentFlag(playerId: PlayerId, flag: AgentFlag): boolean {
     const room = this.myRoom(playerId);
@@ -238,6 +249,7 @@ export class Game {
     this.emitRoomState(room);
     if (room.started) {
       s.emit("run:flags", { flags: [...room.flags] });
+      for (const [chunkId, open] of room.doors) s.emit("door:set", { chunkId, open });
       s.emit("players:update", { players: this.publicPlayers(room) });
       if (room.npcs.size) s.emit("npcs:update", { npcs: publicNpcs(room) });
       if (me.lastStage) s.emit("game:effect", me.lastStage);
