@@ -23,13 +23,13 @@ const VARIANTS = Object.keys(MODELS) as LegacyVariant[];
 
 /** Кто как выглядит: у каждого NPC своя фигура, а не только цвет. */
 const NPC_VARIANTS: Record<string, LegacyVariant> = {
-  papa: "rogue",
+  papa: "knight", // мужская фигура (rogue — женская)
   mihalych: "barbarian",
   vanya: "mage",
   valentina: "mage",
   gromov: "knight",
   dispatcher: "knight",
-  victim_bleeding: "rogue",
+  victim_bleeding: "barbarian", // «у мужчины кровотечение»
   victim_cpr: "barbarian",
   victim_unconscious: "knight",
   victim_scared: "mage",
