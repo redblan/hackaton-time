@@ -6,7 +6,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import { ACESFilmicToneMapping, BackSide, Color, Vector3, type DirectionalLight, type Mesh, type Object3D } from "three";
+import { Props } from "./props/Props";
 import { RenderStats } from "./RenderStats";
+import { WorldNews } from "./WorldNews";
 import { PALETTE } from "./style";
 
 const SUN_DIRECTION = new Vector3(-0.7, 0.26, -0.66).normalize();
@@ -153,6 +155,8 @@ export function Atmosphere() {
     <>
       <RenderStats />
       <AdaptiveResolution />
+      <Props />
+      <WorldNews />
       <color attach="background" args={[PALETTE.fog]} />
       <fog attach="fog" args={[PALETTE.fog, 60, 240]} />
       <hemisphereLight args={[PALETTE.hemiSky, PALETTE.hemiGround, 1.6]} />

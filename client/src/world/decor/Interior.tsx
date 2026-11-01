@@ -76,7 +76,7 @@ function hallProp(kind: HallProp) {
 }
 
 /** Вся «твёрдая» часть декора этажа одной геометрией (один draw call). */
-function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doorFrame: BufferGeometry) {
+function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doorFrame: BufferGeometry, secondExit: boolean) {
   const b = new Builder();
   const random = rng(theme.seed * 7);
   const hallSkirt = "#4f4a46";
@@ -143,7 +143,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   }
 
   // ---------- окна лестницы: внутренняя сторона фасадных окон (x 2 и 10, стекло 1.5×1.25 на y 1.8) ----------
-  for (const wx of [2, 10]) {
+  for (const wx of secondExit ? [2] : [2, 10]) {
     b.box(1.5, 1.25, 0.02, "#9fcbe0", { x: wx, y: 1.8, z: 0.11 });
     b.box(1.7, 0.1, 0.25, "#f6e1bd", { x: wx, y: 1.12, z: 0.2 });
     for (const sx of [-0.78, 0.78]) b.box(0.06, 1.37, 0.05, "#f9ebd5", { x: wx + sx, y: 1.8, z: 0.125 });
@@ -151,7 +151,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
     b.box(0.05, 1.3, 0.04, "#f9ebd5", { x: wx, y: 1.8, z: 0.13 });
     b.box(1.55, 0.05, 0.04, "#f9ebd5", { x: wx, y: 1.8, z: 0.13 });
   }
-  b.add(P.radiator(7), { x: 10, y: 0.05, z: 0.3 });
+  if (!secondExit) b.add(P.radiator(7), { x: 10, y: 0.05, z: 0.3 });
   if (floor === 1) b.add(P.radiator(7), { x: 2, y: 0.05, z: 0.3 });
 
   // люстры, створки лифта, шторы, дверца холодильника и крышка плиты двигаются — они в Animated.tsx (G10)
@@ -348,11 +348,11 @@ export function Interior({ chunk, flags = [] }: { chunk: ChunkData; flags?: read
   return <FloorInterior chunkId={chunk.id} entrance={parsed.entrance} floor={parsed.floor} origin={chunk.bounds.min} flags={flags} />;
 }
 
-export function buildFloorResources(entrance:number,floor:number) {
+export function buildFloorResources(entrance:number,floor:number,secondExit=false) {
   const theme=floorTheme(entrance,floor);
   const mainDoor=floorDoors(entrance,floor).find(d=>d.double)!;
   const parts=P.doorParts(theme,mainDoor);
-  const solid=buildFloorDecor(entrance,floor,theme,parts.frame);
+  const solid=buildFloorDecor(entrance,floor,theme,parts.frame,secondExit);
   const paper=buildWallpaper(),floors=buildApartmentFloor(),hall=buildHallFloor(floor),ceiling=buildCeiling();
   const labels=buildLabels(entrance,floor);
   const materials={
@@ -384,14 +384,16 @@ export function disposeFloorResources(r:FloorResources) {
 export const floorResourceCache=new ResourceCache<FloorResources>({entries:6,bytes:32*1024*1024},floorResourceBytes,disposeFloorResources);
 
 function FloorInterior({ chunkId, entrance, floor, origin, flags }: { chunkId: string; entrance: number; floor: number; origin: readonly number[]; flags: readonly string[] }) {
-  const key=`${entrance}:${floor}`;
+  // Второй выход (`spawn_exit`, N13): на его месте в первом подъезде нет окна и радиатора
+  const secondExit=entrance===1&&floor===1&&flags.includes('spawn_exit');
+  const key=`${entrance}:${floor}:${secondExit}`;
   const [resource,setResource]=useState<{key:string;value:FloorResources}|null>(null);
   // Acquire at commit, not during render: StrictMode/abandoned renders must not leak leases.
   useLayoutEffect(()=>{
-    const lease=floorResourceCache.acquire(key,()=>buildFloorResources(entrance,floor));
+    const lease=floorResourceCache.acquire(key,()=>buildFloorResources(entrance,floor,secondExit));
     setResource({key,value:lease.value});
     return lease.release;
-  },[key,entrance,floor]);
+  },[key,entrance,floor,secondExit]);
   if(!resource || resource.key!==key) return null;
   const {solid,paper,floors,hall,ceiling,labels,materials,mainDoor,parts}=resource.value;
   return (

@@ -17,12 +17,21 @@ const FIRE_COLOR = new Color("#ff9440");
 const LAMP_COLOR = new Color("#ffc98a");
 
 const fires = new Set<Vec3>();
+const extraLamps = new Set<Vec3>();
 
 /** Огонь подсвечивает всё вокруг, пока компонент на сцене. */
 export function useFireLight(pos: Vec3) {
   useEffect(() => {
     fires.add(pos);
     return () => void fires.delete(pos);
+  }, [pos]);
+}
+
+/** Фонарь, который загорается по ходу игры: светит, пока компонент на сцене. */
+export function useLampLight(pos: Vec3) {
+  useEffect(() => {
+    extraLamps.add(pos);
+    return () => void extraLamps.delete(pos);
   }, [pos]);
 }
 
@@ -34,7 +43,7 @@ export function LocalLights({ lamps }: { lamps: Vec3[] }) {
   useFrame(({ camera, clock }) => {
     const { x, y, z } = camera.position;
     const t = clock.elapsedTime;
-    const nearest = [...fires, ...lamps]
+    const nearest = [...fires, ...extraLamps, ...lamps]
       .map((pos) => ({ pos, far: distance(pos, x, y, z) }))
       .sort((a, b) => a.far - b.far);
     SLOTS.forEach((slot) => {

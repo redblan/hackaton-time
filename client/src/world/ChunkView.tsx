@@ -7,12 +7,13 @@ import { useThree } from "@react-three/fiber";
 import { Clone, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type Group, type InstancedMesh, type MeshStandardMaterial } from "three";
-import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
+import { isObjectActive, type Aabb, type ChunkData, type Vec3, type WorldObject } from "@game/shared";
 import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
 import { Crowd } from "./crowd/Crowd";
 import { FxParticles, InteractMarkers, type Interact } from "./Effects";
+import { useLampLight } from "./LocalLights";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { isYardAnimated, YardAnimated } from "./decor/YardAnimated";
 import { paintSurface } from "./style";
@@ -65,6 +66,12 @@ function ModelPlaceholder({object,objects}:{object:Extract<WorldObject,{kind:'mo
   </mesh> : null;
 }
 
+/** Свет фонаря, который включили по ходу игры (`power_on`, N13). */
+function LampGlow({pos}:{pos:Vec3}) {
+  useLampLight(pos);
+  return null;
+}
+
 function paintOnce(material: MeshStandardMaterial | null) {
   if (!material || material.userData.painted) return;
   material.userData.painted = true;
@@ -89,7 +96,7 @@ function useCompiledReveal() {
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const root = useCompiledReveal();
   const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
-  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)),[props.chunk,props.flags]);
+  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)&&!(props.flags.includes('fire_out')&&o.kind==='fx'&&(o.fx==='fire'||o.fx==='smoke'))),[props.chunk,props.flags]);
   const boxes=useMemo(()=>{
     const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
     return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
@@ -100,6 +107,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
       <StaticBoxes boxes={boxes}/>
       <Crowd objects={objects} origin={props.chunk.bounds.min} />
       <InteractMarkers objects={markers} />
+      {objects.map(o=>o.id==='requested-lamp-on'&&o.kind==='box'?<LampGlow key={o.id} pos={o.pos}/>:null)}
       {objects.map((o) => {
         switch (o.kind) {
           case "box":

@@ -22,6 +22,8 @@ export interface CrowdInput {
   dt: number;
 }
 
+export type Mood = "quake" | "dodge" | "talk" | null;
+
 export interface CrowdState {
   /** Время на маршруте, с (идёт, только пока ничего не отвлекает) */
   t: number;
@@ -38,6 +40,8 @@ export interface CrowdState {
   anim: "idle" | "walk" | "run";
   /** Присел при толчке */
   crouch: boolean;
+  /** Что сейчас происходит вокруг: по этому выбирается реплика */
+  mood: Mood;
   /** Мировая позиция для рендера */
   x: number;
   y: number;
@@ -78,6 +82,7 @@ export function initState(o: CrowdObject): CrowdState {
     hold: 0,
     anim: "idle",
     crouch: false,
+    mood: null,
     x: o.pos[0],
     y: o.pos[1],
     z: o.pos[2],
@@ -127,6 +132,24 @@ function speaker(x: number, y: number, z: number, actors: Actor[]) {
 }
 
 /** Один шаг поведения. Меняет `s` на месте (на кадр — без лишних объектов). */
+const LINES: Record<NonNullable<Mood>, string[]> = {
+  quake: ["Трясёт!", "Отойдите от дома!", "Держитесь!", "Осторожно!"],
+  dodge: ["Не толкайтесь!", "Осторожно!", "Куда так бежите?"],
+  talk: ["Что случилось?", "Вы что-то сказали?", "Нужна помощь?"],
+};
+/** Человек говорит SPEAK_S из каждых SPEAK_EVERY_S, у каждого своя фаза: толпа не кричит хором. */
+const SPEAK_EVERY_S = 7;
+const SPEAK_S = 2.5;
+
+/** Реплика над головой или null, если человек молчит. Только шаблоны, модель здесь не участвует. */
+export function crowdLine(seed: number, mood: Mood, time: number): string | null {
+  if (!mood) return null;
+  const clock = time + hash(seed, 5) * SPEAK_EVERY_S;
+  if (clock % SPEAK_EVERY_S > SPEAK_S) return null;
+  const lines = LINES[mood];
+  return lines[Math.floor(hash(seed, Math.floor(clock / SPEAK_EVERY_S)) * lines.length)] ?? null;
+}
+
 export function stepCrowd(o: CrowdObject, s: CrowdState, input: CrowdInput, time: number): CrowdState {
   const { dt, actors } = input;
   const baseSpeed = o.speed ?? SPEED[o.type];
@@ -141,6 +164,7 @@ export function stepCrowd(o: CrowdObject, s: CrowdState, input: CrowdInput, time
   let moveZ = 0;
   let face: number | null = null;
   let anim: CrowdState["anim"] = route.moving ? "walk" : "idle";
+  let dodged = false;
   s.crouch = false;
 
   const away = (dist: number, speed: number) => {
@@ -180,6 +204,7 @@ export function stepCrowd(o: CrowdObject, s: CrowdState, input: CrowdInput, time
       anim = "run";
     } else away(1, 1.6);
     if (o.type !== "cat") anim = "walk";
+    dodged = true;
   }
 
   // Смотрит на говорящего рядом (человек — корпусом, животные — головой и корпусом)
@@ -223,6 +248,7 @@ export function stepCrowd(o: CrowdObject, s: CrowdState, input: CrowdInput, time
   s.headYaw += (head - s.headYaw) * Math.min(1, dt * 5);
 
   s.anim = s.crouch ? "idle" : anim;
+  s.mood = input.quake ? "quake" : dodged ? "dodge" : talk && talk.d < LOOK_RADIUS ? "talk" : null;
   s.x = x;
   s.y = y + (o.type === "pigeon" ? s.fly * 2.4 : 0);
   s.z = z;

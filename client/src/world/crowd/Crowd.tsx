@@ -6,6 +6,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { useFrame, type RootState } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import type { Group } from "three";
 import type { Vec3, WorldObject } from "@game/shared";
 import { local } from "../../core/local";
@@ -13,7 +14,7 @@ import { sample } from "../../core/remote";
 import { store } from "../../core/store";
 import { Character, variantFor } from "../Character";
 import { animalColor, animalMaterial, animalModel, type AnimalType } from "./animals";
-import { initState, stepCrowd, type Actor, type CrowdObject, type CrowdInput } from "./behavior";
+import { crowdLine, initState, stepCrowd, type Actor, type CrowdObject, type CrowdInput } from "./behavior";
 
 const FAR = 25;
 const MAX_PEOPLE = 15;
@@ -84,11 +85,22 @@ const farFromCamera = (state: RootState, x: number, z: number) =>
   Math.hypot(state.camera.position.x - x, state.camera.position.z - z) > FAR;
 
 // ---- люди ----
+const BUBBLE = {
+  background: "#fffdf6",
+  color: "#283a48",
+  padding: "4px 10px",
+  borderRadius: 10,
+  font: "600 15px sans-serif",
+  whiteSpace: "nowrap",
+  pointerEvents: "none",
+} as const;
+
 function Person({ object }: { object: CrowdObject }) {
   const group = useRef<Group>(null);
   const s = useMemo(() => initState(object), [object]);
   const [look, setLook] = useState<{ anim: "idle" | "walk" | "run"; crouch: boolean }>({ anim: "idle", crouch: false });
   const color = object.color ?? PEOPLE_COLORS[object.seed % PEOPLE_COLORS.length]!;
+  const [line, setLine] = useState<string | null>(null);
 
   useFrame((state, delta) => {
     const g = group.current;
@@ -97,11 +109,18 @@ function Person({ object }: { object: CrowdObject }) {
     g.position.set(s.x, s.y, s.z);
     g.rotation.y = s.rotY;
     if (s.anim !== look.anim || s.crouch !== look.crouch) setLook({ anim: s.anim, crouch: s.crouch });
+    const said = crowdLine(object.seed, s.mood, state.clock.elapsedTime);
+    if (said !== line) setLine(said);
   });
 
   return (
     <group ref={group} position={object.pos}>
       <Character color={color} anim={look.anim} pose={look.crouch ? "sit" : "stand"} variant={variantFor(`crowd:${object.seed}`)} />
+      {line && (
+        <Html position={[0, 2.05, 0]} center distanceFactor={9} zIndexRange={[4, 0]} style={BUBBLE}>
+          {line}
+        </Html>
+      )}
     </group>
   );
 }
