@@ -15,7 +15,7 @@ import { createGromov } from "./gromov";
 import { RECENT_LIMIT } from "./memory";
 import { ollamaChat } from "./ollama";
 import { createLlmQueue, type QueueStats } from "./queue";
-import { buildMessages, CALLS_BY_NAME, cleanReply, EMOTIONAL, playerName, RADIO_HINTS, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
+import { buildMessages, CALLS_BY_NAME, cleanReply, correctAddressee, identityStream, EMOTIONAL, playerName, RADIO_HINTS, SKILL_NAMES, type Plan, type PlannedFact } from "./prompt";
 import { partnerNames } from "./team";
 import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
@@ -305,6 +305,7 @@ export function createAi(opts: CreateAiOptions): Ai {
 
     let text: string;
     let source: NpcResponse["source"];
+    const tokens = identityStream(req, onToken);
     try {
       if (req.npcId === "victim_cpr" || req.npcId === "victim_unconscious") throw new Error("без сознания — только описания из карточки");
       if (characters.get(req.npcId)?.templatesOnly) throw new Error("включены только шаблоны");
@@ -321,7 +322,7 @@ export function createAi(opts: CreateAiOptions): Ai {
           timeoutMs: remaining,
           totalMs: timeoutMs * 3,
           messages: buildMessages(req, p, memory),
-          onToken,
+          onToken: tokens.push,
           fetchImpl: opts.fetchImpl,
           temperature: characters.get(req.npcId)?.temperature,
           });
@@ -334,7 +335,7 @@ export function createAi(opts: CreateAiOptions): Ai {
           lastMs = Date.now() - started; totalMs += lastMs; measured++;
         }
       });
-      text = cleanReply(raw);
+      text = correctAddressee(req, cleanReply(raw));
       if (!text) throw new Error("ollama: пустой ответ");
       if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
       // Повтор: модель 3B не всегда говорит «я уже говорил» — добавляем сами (прогон M4)
@@ -344,6 +345,7 @@ export function createAi(opts: CreateAiOptions): Ai {
         const rest = text.replace(/^(позволю себе\s+)?(перефразирую|перефразировать|повторю)[^:.!]*[:.!]\s*/i, "");
         text = `Я уже говорил. ${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;
       }
+      tokens.flush();
       source = "llm";
     } catch {
       text = templateReply(req, p, memory, outcome).text;

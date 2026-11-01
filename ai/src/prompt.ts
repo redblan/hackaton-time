@@ -37,6 +37,38 @@ export function playerName(req: NpcRequest): string | undefined {
   return name || undefined;
 }
 
+/** Repair a known teammate used as the addressee; preserve third-person mentions. */
+export function correctAddressee(req: NpcRequest, text: string): string {
+  const name = playerName(req);
+  if (!name) return text;
+  for (const partner of partnerNames(req)) {
+    if (partner.toLocaleLowerCase() === name.toLocaleLowerCase()) continue;
+    // partnerNames strips punctuation; the remaining letters, numbers, spaces and hyphens are literal here.
+    const address = new RegExp(String.raw`(^\s*|[.!?…]\s*|\n\s*)((?:(?:привет|здравствуй(?:те)?|добрый день|слушай|послушай|эй|спасибо|понял|поняла)[,!]?\s+)?)${partner}(?=\s*[,!?.:…])`, "giu");
+    text = text.replace(address, (_all, start: string, greeting: string) => `${start}${greeting}${name}`);
+  }
+  return text;
+}
+
+/** Hold each sentence until its addressee can be checked, including split tokens. */
+export function identityStream(req: NpcRequest, emit?: (token: string) => void) {
+  let pending = "";
+  const guarded = !!playerName(req) && partnerNames(req).length > 0;
+  return {
+    push(token: string) {
+      if (!emit) return;
+      if (!guarded) { emit(token); return; }
+      pending += token;
+      let end: number;
+      while ((end = pending.search(/[.!?…\n]/u)) >= 0) {
+        emit(correctAddressee(req, pending.slice(0, end + 1)));
+        pending = pending.slice(end + 1);
+      }
+    },
+    flush() { if (pending) emit?.(correctAddressee(req, pending)); pending = ""; },
+  };
+}
+
 /** Кто обращается к игроку по имени: все, кроме папы (он говорит «ты») и диспетчера */
 export const CALLS_BY_NAME = (npcId: string) => npcId !== "papa" && npcId !== "dispatcher";
 
@@ -108,10 +140,10 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
     if (hint) lines.push(`Подсказка по тому, что игроку делать сейчас: ${hint}`);
   }
   const name = playerName(req);
-  if (name && CALLS_BY_NAME(card.id)) lines.push(`Игрока зовут ${name}. Иногда обращайся по имени.`);
+  if (name && CALLS_BY_NAME(card.id)) lines.push(`СЕЙЧАС ТЫ ОТВЕЧАЕШЬ ИГРОКУ ${name}. «Ты» — только этот игрок. Если обращаешься по имени, используй только ${name}; не придумывай другое имя.`);
   const team = partnerNames(req);
   if (team.length > 0) {
-    lines.push(`Игрок не один, с ним в команде: ${team.join(", ")}. Можешь упомянуть их по имени и напомнить держать связь. Где они сейчас, ты не знаешь — не выдумывай.`);
+    lines.push(`Игрок не один, с ним в команде: ${team.join(", ")}. Это ДРУГИЕ люди, не собеседник. Упоминай их только в третьем лице; не обращайся к собеседнику их именами. Можешь напомнить держать связь. Где они сейчас, ты не знаешь — не выдумывай.`);
   }
   if (card.id === "papa") lines.push("Игрок — твой ребёнок. По имени не обращайся, говори «ты».");
   if (req.context.stage) lines.push(`Этап: ${req.context.stage}.`);
@@ -157,7 +189,7 @@ export function buildMessages(req: NpcRequest, plan: Plan, memory: PlayerMemory)
   }
   const messages: ChatMessage[] = [{ role: "system", content: lines.join("\n") }];
   for (const r of memory.recent.filter((r) => r.npcId === card.id).slice(-6)) {
-    messages.push({ role: r.from === "player" ? "user" : "assistant", content: r.text });
+    messages.push({ role: r.from === "player" ? "user" : "assistant", content: r.from === "npc" ? correctAddressee(req, r.text) : r.text });
   }
   messages.push({
     role: "user",
