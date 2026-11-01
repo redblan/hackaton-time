@@ -6,7 +6,7 @@ import { RESIDENTS, residentParts, type Resident, type ResidentStyle } from './c
 
 // Vite includes a licensed local file in the final game only when it exists.
 // A public checkout with no vendor download still builds and uses CC0 characters.
-const packs = import.meta.glob('../../../world/assets/characters/creative/residents.glb', {
+const packs = typeof window === 'undefined' ? {} : import.meta.glob('../../../world/assets/characters/creative/residents.glb', {
   eager: true, query: '?url', import: 'default',
 });
 export const residentModelUrl = Object.values(packs)[0] as string | undefined;
