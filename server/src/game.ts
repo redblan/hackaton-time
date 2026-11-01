@@ -393,7 +393,9 @@ export class Game {
     room.flags.add(`home_f${config.startFloor}`);
     // Табличка с адресом на доме (y00) — адрес именно этого прохождения: его и ждёт диспетчер 112
     const plate = this.chunks.get("y00")?.objects.find((o) => o.id === "address" && o.kind === "sign");
-    if (plate?.kind === "sign" && config.address) this.patchWorld(room.id, { chunkId: "y00", add: [{ ...plate, text: config.address }], remove: [] });
+    // и чуть выше над входом (+0.4 м), чтобы не терялась
+    if (plate?.kind === "sign" && config.address)
+      this.patchWorld(room.id, { chunkId: "y00", add: [{ ...plate, text: config.address, pos: [plate.pos[0], plate.pos[1] + 0.4, plate.pos[2]] }], remove: [] });
     for (const p of room.players.values()) {
       const sp = this.chunks.findSpawn(p.role!, config.startFloor);
       p.pos = [sp.pos[0], sp.pos[1], sp.pos[2]];
