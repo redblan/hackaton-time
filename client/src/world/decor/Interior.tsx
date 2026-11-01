@@ -229,7 +229,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
 
   // ---------- подъезд, 1-й этаж: двустворчатая входная дверь в проёме x 4..8, створки распахнуты наружу ----------
   if (floor === 1) {
-    b.add(P.door(theme, { width: 3.9, open: -1.8, double: true }), { x: 6.0, y: 0, z: -0.1 + P.DOOR_INSET, ry: Math.PI });
+    b.add(P.entranceDoor(theme), { x: 6.0, y: 0, z: -0.1 + P.DOOR_INSET, ry: Math.PI });
   }
   return b.build();
 }

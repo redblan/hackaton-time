@@ -120,31 +120,6 @@
       "text": "ул. Садовая, 14"
     },
     {
-      "id": "building_plan",
-      "kind": "interactable",
-      "target": "building_plan",
-      "pos": [
-        13.7,
-        1.5,
-        -0.34999999999999964
-      ],
-      "radius": 1.5,
-      "label": "План: лестницы, переход на 4-м этаже, место сбора"
-    },
-    {
-      "id": "evacuation-plan",
-      "kind": "model",
-      "src": "signs/evacuation-e2.glb",
-      "pos": [
-        13.7,
-        0.8,
-        -0.17999999999999972
-      ],
-      "scale": 1,
-      "rotY": 3.141592653589793,
-      "collide": false
-    },
-    {
       "id": "lamp-post-0",
       "kind": "box",
       "pos": [

@@ -91,6 +91,11 @@ export function door(theme: FloorTheme, opts: DoorOptions = {}): BufferGeometry 
   return b.build();
 }
 
+/** Один открытый вход для силуэта дома и подробного чанка: подгрузка не меняет створки. */
+export function entranceDoor(theme: FloorTheme): BufferGeometry {
+  return door(theme, { width: 3.9, open: -1.8, double: true });
+}
+
 /** Где на полотне (у двустворчатой — на правом) окажется табличка с номером: локально к двери, до её поворота ry. */
 export function doorPlate(opts: DoorOptions = {}) {
   const leaves = doorLeaves(opts);

@@ -11,7 +11,8 @@ const MID_LANDING_BOTTOM = 1.2;
 /** Выше этого проходит игрок. Пока ступень выше, щели не видно: стена начинается за ней. */
 const HEAD_CLEARANCE = 1.75;
 
-export const STAIR_WALL_Z = 0.05;
+// Совпадает со стеной второго этажа: смещение внутрь создавало выступ для ног на y=3.
+export const STAIR_WALL_Z = 0;
 export const STAIR_WALL_DEPTH = 0.2;
 
 export interface StairWallPart {

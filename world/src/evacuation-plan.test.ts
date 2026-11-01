@@ -2,11 +2,14 @@ import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { generateWorld } from './generate';
 
-it('places a readable local plan beside each entrance without blocking evacuation', () => {
+it('keeps a readable plan at the first entrance and removes the second board and its interaction', () => {
   const chunks = generateWorld();
   const plans = chunks.flatMap(c => c.objects.filter(o => o.id === 'evacuation-plan'));
-  expect(plans).toHaveLength(2);
-  for (const col of [0, 1]) {
+  expect(plans).toHaveLength(1);
+  const second = chunks.find(c => c.id === 'y10')!;
+  expect(second.objects.some(o => o.id === 'evacuation-plan')).toBe(false);
+  expect(second.objects.some(o => o.kind === 'interactable' && o.target === 'building_plan')).toBe(false);
+  for (const col of [0]) {
     const chunk = chunks.find(c => c.id === `y${col}0`)!;
     const plan = chunk.objects.find(o => o.id === 'evacuation-plan');
     const interaction = chunk.objects.find(o => o.kind === 'interactable' && o.target === 'building_plan');

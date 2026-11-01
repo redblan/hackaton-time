@@ -13,6 +13,7 @@ import { Builder, labelAtlas, labelQuad, mergeQuads, rng, useBuilt } from "./bui
 import { brickMaterial } from "./patterns";
 import * as P from "./props";
 import { floorTheme } from "./themes";
+import { STAIR_WALL, STAIR_WALL_DEPTH, STAIR_WALL_TOP, STAIR_WALL_Z } from "./stairWall";
 
 const WALL = "#f3ddbd";
 const WALL_BACK = "#ecd3b0";
@@ -40,7 +41,7 @@ function windowFrame(b: Builder, w: number, h: number, p: { x: number; y: number
 }
 
 /** Стены одного этажа одного подъезда (локально: x 0..12, y 0..3). Гаснет, когда чанк загружен. */
-function buildShell(entrance: number, floor: number) {
+export function buildShell(entrance: number, floor: number) {
   const b = new Builder();
   const theme = floorTheme(entrance, floor);
   // перекрытие (потолок этажа ниже, пока этот чанк не загружен) — как slab/landing в данных
@@ -50,9 +51,12 @@ function buildShell(entrance: number, floor: number) {
   if (floor === 1) {
     b.box(4, 3, 0.2, WALL, { x: 2, y: 1.5, z: 0 });
     b.box(4, 3, 0.2, WALL, { x: 10, y: 1.5, z: 0 });
-    b.box(4, 0.5, 0.2, WALL, { x: 6, y: 2.75, z: 0 });
-    b.box(4, 2.5, 0.3, "#3a3330", { x: 6, y: 1.25, z: 0.05 }); // тамбур за дверью
-    b.add(P.door(theme, { width: 3.9, double: true }), { x: 6, y: 0, z: -0.1 + P.DOOR_INSET, ry: Math.PI });
+    for (const part of STAIR_WALL) {
+      const height = STAIR_WALL_TOP - part.bottom;
+      b.box(part.width, height, STAIR_WALL_DEPTH, WALL,
+        { x: part.x, y: part.bottom + height / 2, z: STAIR_WALL_Z });
+    }
+    b.add(P.entranceDoor(theme), { x: 6, y: 0, z: -0.1 + P.DOOR_INSET, ry: Math.PI });
     b.box(0.3, 0.12, 0.2, "#ffe3a0", { x: 6, y: 2.4, z: -0.2 }); // лампа над входом
   } else b.box(12, 3, 0.2, WALL, { x: 6, y: 1.5, z: 0 });
   if (floor === 1) for (const bx of [2, 10]) b.box(4, 0.16, 0.08, BAND, { x: bx, y: 0.15, z: -0.13 });
