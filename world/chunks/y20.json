@@ -384,6 +384,40 @@
       "color": "#4b606a",
       "collide": false,
       "rotY": 0
+    },
+    {
+      "id": "requested-lamp-off",
+      "kind": "box",
+      "pos": [
+        27,
+        4.3,
+        -6
+      ],
+      "size": [
+        0.6,
+        0.25,
+        0.6
+      ],
+      "color": "#35434a",
+      "collide": false,
+      "unless": "power_on"
+    },
+    {
+      "id": "requested-lamp-on",
+      "kind": "box",
+      "pos": [
+        27,
+        4.3,
+        -6
+      ],
+      "size": [
+        0.6,
+        0.25,
+        0.6
+      ],
+      "color": "#fff2bd",
+      "collide": false,
+      "when": "power_on"
     }
   ]
 }

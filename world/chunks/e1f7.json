@@ -1941,6 +1941,186 @@
       "color": "#e4d3bc",
       "collide": false,
       "when": "window_broken"
+    },
+    {
+      "id": "requested-cabinet-0",
+      "kind": "box",
+      "pos": [
+        4.8,
+        18.8,
+        9.86
+      ],
+      "size": [
+        0.8,
+        1.6,
+        0.08
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-cabinet-1",
+      "kind": "box",
+      "pos": [
+        4.43,
+        18.8,
+        9.7
+      ],
+      "size": [
+        0.06,
+        1.6,
+        0.4
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-cabinet-2",
+      "kind": "box",
+      "pos": [
+        5.17,
+        18.8,
+        9.7
+      ],
+      "size": [
+        0.06,
+        1.6,
+        0.4
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-cabinet-3",
+      "kind": "box",
+      "pos": [
+        4.8,
+        18.04,
+        9.7
+      ],
+      "size": [
+        0.8,
+        0.08,
+        0.4
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-cabinet-4",
+      "kind": "box",
+      "pos": [
+        4.8,
+        18.75,
+        9.7
+      ],
+      "size": [
+        0.8,
+        0.08,
+        0.4
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-cabinet-5",
+      "kind": "box",
+      "pos": [
+        4.8,
+        19.56,
+        9.7
+      ],
+      "size": [
+        0.8,
+        0.08,
+        0.4
+      ],
+      "color": "#d9e0d2",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-kit-0",
+      "kind": "box",
+      "pos": [
+        4.8,
+        19.04,
+        9.7
+      ],
+      "size": [
+        0.5,
+        0.4,
+        0.3
+      ],
+      "color": "#b83c36",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-kit-1",
+      "kind": "box",
+      "pos": [
+        4.8,
+        19.3,
+        9.7
+      ],
+      "size": [
+        0.24,
+        0.12,
+        0.08
+      ],
+      "color": "#ded9c7",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-kit-2",
+      "kind": "box",
+      "pos": [
+        4.8,
+        19.080000000000002,
+        9.549
+      ],
+      "size": [
+        0.09,
+        0.24,
+        0.025
+      ],
+      "color": "#e6f1df",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
+    },
+    {
+      "id": "requested-kit-3",
+      "kind": "box",
+      "pos": [
+        4.8,
+        19.080000000000002,
+        9.549
+      ],
+      "size": [
+        0.24,
+        0.09,
+        0.025
+      ],
+      "color": "#e6f1df",
+      "rotY": 0,
+      "collide": false,
+      "when": "spawn_first_aid"
     }
   ]
 }

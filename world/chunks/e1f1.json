@@ -79,7 +79,59 @@
         0.2
       ],
       "color": "#f3ddbd",
-      "collide": true
+      "collide": true,
+      "unless": "spawn_exit"
+    },
+    {
+      "id": "requested-exit-left",
+      "kind": "box",
+      "pos": [
+        8.55,
+        1.5,
+        0
+      ],
+      "size": [
+        1.1,
+        3,
+        0.2
+      ],
+      "color": "#f3ddbd",
+      "collide": true,
+      "when": "spawn_exit"
+    },
+    {
+      "id": "requested-exit-right",
+      "kind": "box",
+      "pos": [
+        11.45,
+        1.5,
+        0
+      ],
+      "size": [
+        1.1,
+        3,
+        0.2
+      ],
+      "color": "#f3ddbd",
+      "collide": true,
+      "when": "spawn_exit"
+    },
+    {
+      "id": "requested-exit-lintel",
+      "kind": "box",
+      "pos": [
+        10,
+        2.7,
+        0
+      ],
+      "size": [
+        1.8,
+        0.6,
+        0.2
+      ],
+      "color": "#f3ddbd",
+      "collide": true,
+      "when": "spawn_exit"
     },
     {
       "id": "stair-west",
@@ -1195,7 +1247,8 @@
       ],
       "color": "#8ebac8",
       "collide": false,
-      "rotY": 0
+      "rotY": 0,
+      "unless": "spawn_exit"
     },
     {
       "id": "facade-sill-10",
@@ -1212,7 +1265,8 @@
       ],
       "color": "#f6e1bd",
       "collide": false,
-      "rotY": 0
+      "rotY": 0,
+      "unless": "spawn_exit"
     },
     {
       "id": "facade-mullion-10",
@@ -1229,7 +1283,8 @@
       ],
       "color": "#f9ebd5",
       "collide": false,
-      "rotY": 0
+      "rotY": 0,
+      "unless": "spawn_exit"
     },
     {
       "id": "facade-transom-10",
@@ -1246,7 +1301,8 @@
       ],
       "color": "#f9ebd5",
       "collide": false,
-      "rotY": 0
+      "rotY": 0,
+      "unless": "spawn_exit"
     },
     {
       "id": "facade-floor-band",
@@ -2433,6 +2489,18 @@
       "color": "#e4d3bc",
       "collide": false,
       "when": "window_broken"
+    },
+    {
+      "id": "requested-exit-sign",
+      "kind": "sign",
+      "pos": [
+        10,
+        2.65,
+        -0.22
+      ],
+      "rotY": 3.141592653589793,
+      "text": "ДОПОЛНИТЕЛЬНЫЙ ВЫХОД",
+      "when": "spawn_exit"
     }
   ]
 }

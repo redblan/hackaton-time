@@ -9,7 +9,7 @@ import { getColliders } from "../../client/src/world/ChunkView";
 import { stepBody, type Body } from "../../client/src/core/physics";
 const dir = fileURLToPath(new URL("../chunks/", import.meta.url));
 const chunks: ChunkData[] = readdirSync(dir).map((f) => JSON.parse(readFileSync(`${dir}/${f}`, "utf8")));
-for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya", "neighbor_valentina", "wire", "collapse_f4", "fire_f5"], ["papa_left", "window_broken", "wardrobe_fallen", "balcony_debris", "collapse_f4", "fire_f5", "gas"]]) {
+for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya", "neighbor_valentina", "wire", "collapse_f4", "fire_f5"], ["papa_left", "window_broken", "wardrobe_fallen", "balcony_debris", "collapse_f4", "fire_f5", "gas", "spawn_first_aid", "spawn_ladder", "spawn_blankets", "power_on", "spawn_exit"]]) {
   const cl: Aabb[] = chunks.flatMap((c) => getColliders(c, FLAGS));
   const zones: { zone: string; min: Vec3; max: Vec3; chunk: string }[] = [];
   for (const c of chunks) for (const o of c.objects) if (o.kind === "zone" && isObjectActive(o, FLAGS)) zones.push({ zone: o.zone, min: o.min, max: o.max, chunk: c.id });
