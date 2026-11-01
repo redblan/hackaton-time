@@ -31,6 +31,8 @@ const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
 export function npcHere(o: WorldObject, chunkId: string, flags: readonly string[]): boolean {
   // Во дворе трое пострадавших с мини-играми (генератор); напуганный без мини-игры — не показываем
   if (o.kind === "npc" && o.npcId === "victim_scared") return false;
+  // Сосед с ногой — только в coop3 (генератор ставит флаг neighbor_leg); иначе лежал бы у качелей и помочь нельзя
+  if (o.kind === "npc" && o.npcId === "neighbor_leg" && !flags.includes("neighbor_leg")) return false;
   if (o.kind !== "npc" || o.npcId !== "papa" || !flags.some((f) => f.startsWith("home_f"))) return true;
   const floor = parseFloorId(chunkId)?.floor;
   return floor !== undefined && flags.includes(`home_f${floor}`);

@@ -336,6 +336,7 @@ export function Player() {
           if (!isActive(o, st.flags)) continue;
           if (o.kind === "interactable") {
             if (!ALLOWED_INTERACTS.has(o.target)) continue;
+            if (o.target === "neighbor_leg" && !st.flags.includes("neighbor_leg")) continue; // только coop3
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[2] - pos[2]);
             if (d <= o.radius && Math.abs(o.pos[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: o.target, label: LABELS[o.target] ?? o.label, d };
           } else if (o.kind === "prop" && isExtinguisher(o.id) && !st.held) {
