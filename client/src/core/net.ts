@@ -60,6 +60,14 @@ export function leaveRoom() {
   store.resetGame();
 }
 
+type VoiceChat = Parameters<ServerToClient["voice:chat"]>[0];
+const voiceChatListeners = new Set<(p: VoiceChat) => void>();
+/** D-71: голос напарника по рации (WAV 16 кГц). Подписка переживает переподключение сокета. Возвращает отписку */
+export function onVoiceChat(fn: (p: VoiceChat) => void) {
+  voiceChatListeners.add(fn);
+  return () => voiceChatListeners.delete(fn);
+}
+
 let metricsTimer: ReturnType<typeof setInterval> | null = null;
 let fpsFrames = 0;
 let fpsRaf = 0;
@@ -120,6 +128,7 @@ export function connect(auth: Auth) {
     }),
   );
   s.on("prop:move", (p) => store.set((st) => ({ props: { ...st.props, [p.id]: p } })));
+  s.on("voice:chat", (p) => voiceChatListeners.forEach((fn) => fn(p)));
   s.on("player:teleport", ({ pos, rotY }) => teleport(pos, rotY ?? local.rotY));
   s.on("disconnect", () => store.set({ connected: false }));
   s.on("connect_error", (e) => {

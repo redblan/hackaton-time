@@ -586,7 +586,13 @@ export class Game {
     const buf = Buffer.isBuffer(wav) ? wav : wav instanceof ArrayBuffer ? Buffer.from(wav) : null;
     if (!buf || buf.length < 1000) return reply({ error: "Пустая запись" });
     if (buf.length > MAX_VOICE_BYTES) return reply({ error: "Слишком длинно — до 15 секунд" });
-    if (!this.stt?.available()) return reply({ error: "Распознавание голоса на сервере не настроено" });
+    // D-71: рация голосом — напарники слышат запись сразу, как есть; распознавание (если есть) идёт следом текстом
+    if (to === "radio") {
+      const room = this.myRoom(s.data.playerId);
+      if (room) s.to(`r:${room.id}`).emit("voice:chat", { from: s.data.playerId, name: s.data.name, wav: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer });
+    }
+    // Рация без Whisper: голос уже ушёл напарникам — пустой текст, а не ошибка (иначе клиент решит, что голоса нет, и спрячет кнопку)
+    if (!this.stt?.available()) return to === "radio" ? reply({ text: "" }) : reply({ error: "Распознавание голоса на сервере не настроено" });
     let text: string;
     try {
       text = (await this.stt.transcribe(buf)).trim();

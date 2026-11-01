@@ -100,6 +100,12 @@ export interface ServerToClient {
   /** Озвучка реплики NPC (D-70): WAV Piper, только адресату, приходит после npc:done */
   "npc:audio": (p: { npcId: NpcId; wav: ArrayBuffer }) => void;
   "voice:text": (p: { to: NpcId | "radio"; text: string } | { to: NpcId | "radio"; error: string }) => void;
+  /**
+   * Голосовой чат между игроками (D-71): сервер пересылает запись `voice:say { to: "radio" }` всем напарникам
+   * в комнате (кроме автора) как есть — WAV 16 кГц, моно, 16 бит. Отправляется до распознавания, Whisper не нужен.
+   * Клиент (Матвей, client/src/voice/) проигрывает через `onVoiceChat()` из core/net.ts.
+   */
+  "voice:chat": (p: { from: PlayerId; name: string; wav: ArrayBuffer }) => void;
   "run:end": (p: { summary: RunSummary; debrief: string }) => void;
   /** Ответ на ping: тот же t */
   "pong": (t: number) => void;
