@@ -1,5 +1,6 @@
 /** Состояние клиента: маленький стор на useSyncExternalStore (без лишних зависимостей). */
 import { useSyncExternalStore } from "react";
+import type { Hide } from "./hide";
 import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId, PropState, AgentIntent } from "@game/shared";
 
 export interface Auth {
@@ -74,6 +75,8 @@ export interface State {
   lights: Record<string, boolean>;
   /** Предмет у меня в руках (id prop), сейчас — только огнетушитель */
   held: string | null;
+  /** Спрятался (стол, стена, шкаф) — core/hide.ts; since — начало анимации, out — вылезает */
+  hide: (Hide & { since: number; out?: boolean }) | null;
   /** Вид от третьего лица (C): видно своего персонажа и его анимацию */
   thirdPerson: boolean;
   /** Метрики (01.11): FPS считается здесь, ping — через ping/pong, gpu — из WebGL. Уходят на сервер раз в 2 с */
@@ -111,6 +114,7 @@ const initial: State = {
   doors: {},
   lights: {},
   held: null,
+  hide: null,
   thirdPerson: false,
   fps: 0,
   ping: 0,

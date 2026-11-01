@@ -11,7 +11,8 @@ import { Character, variantFor } from "../world/Character";
 import { getColliders, npcHere } from "../world/ChunkView";
 import { carryMaterial, extinguisherGeometry, isExtinguisher } from "../world/decor/Carry";
 import { chunkAt, isActive, wantedChunks, movementChunksReady, transitionChunks } from "./chunkMath";
-import { local } from "./local";
+import { HIDE_MS, HIDE_TARGETS, hidePose } from "./hide";
+import { local, teleport } from "./local";
 import { PHYS, stepBody, type Body } from "./physics";
 import { sample } from "./remote";
 import { getSocket, sendEvent } from "./net";
@@ -32,11 +33,18 @@ const SEND_MS = 66; // ~15 Гц
 const NPC_TALK_RADIUS = 4;
 /**
  * Что сейчас можно делать на E (решение Егора 01.11): двери, люди, выключатель и огнетушитель.
- * Остальные точки (укрытия, вещи, газ, план, вызов лифта) пока выключены — вернуть: добавить сюда.
+ * + укрытия (с анимацией, core/hide.ts), газ и вызов лифта. Вещи и план дома пока выключены — вернуть: добавить сюда.
  */
 const ALLOWED_INTERACTS = new Set<string>([
   "apartment_door",
   "neighbor_door",
+  "elevator_call",
+  "gas_valve",
+  "cover_table",
+  "cover_wall",
+  "cover_wardrobe",
+  "cover_window",
+  "cover_run_out",
   "balcony_door",
   "elevator_shaft",
   "light_switch",
@@ -93,6 +101,21 @@ export function Player() {
       keys.add(e.code);
       if (e.code === "KeyE" && !e.repeat) {
         const p = store.get().prompt;
+        const hidden = store.get().hide;
+        if (hidden) {
+          // вылезти: обратно на место, откуда залезли
+          if (!hidden.out) store.set({ hide: { ...hidden, out: true, since: performance.now() } });
+          return;
+        }
+        if (p && HIDE_TARGETS[p.target]) {
+          sendEvent({ type: "interact", target: p.target as InteractableId });
+          const pos = body.current.pos;
+          const chunk = store.get().chunks[chunkAt(pos)];
+          const spot = chunk?.objects.find((o) => o.kind === "interactable" && o.target === p.target);
+          const at = spot?.kind === "interactable" ? spot.pos : pos;
+          if (chunk) store.set({ hide: { ...hidePose(HIDE_TARGETS[p.target]!, chunk, store.get().flags, pos, at), since: performance.now() } });
+          return;
+        }
         if (p && (p.target.startsWith("pick:") || p.target === "drop")) {
           carry(p.target, body.current.pos, local.rotY);
           return;
@@ -144,6 +167,17 @@ export function Player() {
       camera.rotation.set(0, local.rotY, 0, "YXZ");
     }
     if (!local.ready) return;
+    if (st.hide) {
+      // спрятался: не ходим; тело — в укрытии (для напарников), по окончании «вылезания» — обратно
+      const h = st.hide;
+      const done = performance.now() - h.since >= HIDE_MS;
+      if (h.out && done) {
+        store.set({ hide: null });
+        teleport(h.from, local.rotY);
+      } else if (!h.out) local.pos = [h.body[0], h.body[1], h.body[2]];
+      stepState.current.moving = false;
+      return;
+    }
 
     const pos = local.pos;
     const worldHere = movementChunksReady(pos,st.chunks);
@@ -208,6 +242,23 @@ export function Player() {
 
     // --- камера + тряска ---
     camera.position.set(pos[0], pos[1] + EYE, pos[2]);
+    const hd = st.hide;
+    if (hd) {
+      // залезаем / вылезаем: камера плавно между «стою» и «в укрытии»
+      const k = Math.min(1, (performance.now() - hd.since) / HIDE_MS);
+      const e = k * k * (3 - 2 * k);
+      const stand = [hd.from[0], hd.from[1] + EYE, hd.from[2]];
+      const a = hd.out ? hd.eye : stand;
+      const b = hd.out ? stand : hd.eye;
+      camera.position.set(a[0]! + (b[0]! - a[0]!) * e, a[1]! + (b[1]! - a[1]!) * e, a[2]! + (b[2]! - a[2]!) * e);
+      if (hd.yaw !== null && !hd.out && k < 1) {
+        const cur = new Euler().setFromQuaternion(camera.quaternion, "YXZ");
+        let d = hd.yaw - cur.y;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        camera.rotation.set(cur.x, cur.y + d * Math.min(1, e * 1.2), 0, "YXZ");
+      }
+    }
     if (st.thirdPerson) {
       // от третьего лица: камера за спиной и чуть выше; подтягиваем, если упёрлась в стену
       const dir = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -221,7 +272,7 @@ export function Player() {
     }
     const me = avatar.current;
     if (me) {
-      me.visible = st.thirdPerson;
+      me.visible = st.thirdPerson && !st.hide;
       me.position.set(pos[0], pos[1], pos[2]);
       me.rotation.y = yaw;
       const next = moving ? (running ? "run" : "walk") : "idle";
@@ -252,7 +303,8 @@ export function Player() {
     // --- позиция на сервер ~15 Гц ---
     if (now - t.send > SEND_MS) {
       t.send = now;
-      getSocket()?.emit("player:move", { pos: [pos[0], pos[1], pos[2]], rotY: yaw, anim: moving ? (running ? "run" : "walk") : "idle" });
+      const anim = st.hide && !st.hide.out && st.hide.kind !== "wardrobe" ? "crouch" : moving ? (running ? "run" : "walk") : "idle";
+      getSocket()?.emit("player:move", { pos: [pos[0], pos[1], pos[2]], rotY: yaw, anim });
     }
 
     // Request missing support immediately, even while standing still at a seam.
@@ -302,6 +354,7 @@ export function Player() {
       t.zones = inZones;
 
       if (!best && st.held) best = { target: "drop", label: "Поставить огнетушитель", d: 0 };
+      if (st.hide) best = { target: "unhide", label: st.hide.kind === "wardrobe" ? "Вылезти из шкафа" : "Выбраться из укрытия", d: 0 };
       const prompt = best ? { target: best.target, label: best.label } : null;
       if (prompt?.target !== st.prompt?.target || prompt?.label !== st.prompt?.label) store.set({ prompt });
       const near = npc?.id ?? null;

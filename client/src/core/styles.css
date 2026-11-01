@@ -145,3 +145,25 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 .admin-src-llm { background: #166534; }
 .admin-src-template { background: #475569; }
 .admin-src-admin { background: #7c2d12; }
+
+/* Укрытие в шкафу: дверцы съезжаются к центру, остаётся щель */
+.wardrobe { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.wardrobe-door {
+  position: absolute; top: 0; bottom: 0; width: 50%;
+  background: linear-gradient(90deg, #1a120c, #2b1d13 60%, #1a120c);
+  box-shadow: inset 0 0 80px #000;
+  transition: transform 0.7s ease-in-out;
+}
+.wardrobe-left { left: 0; transform-origin: left; }
+.wardrobe-right { right: 0; transform-origin: right; }
+/* закрыто: щель ~4% ширины экрана посередине */
+.wardrobe-closed .wardrobe-left { transform: translateX(-4%); animation: wardrobe-close-l 0.7s ease-in-out; }
+.wardrobe-closed .wardrobe-right { transform: translateX(4%); animation: wardrobe-close-r 0.7s ease-in-out; }
+.wardrobe-open .wardrobe-left { transform: translateX(-100%); }
+.wardrobe-open .wardrobe-right { transform: translateX(100%); }
+@keyframes wardrobe-close-l { from { transform: translateX(-100%); } to { transform: translateX(-4%); } }
+@keyframes wardrobe-close-r { from { transform: translateX(100%); } to { transform: translateX(4%); } }
+.hide-hint {
+  position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 6;
+  background: rgba(15, 18, 24, 0.75); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 14px;
+}

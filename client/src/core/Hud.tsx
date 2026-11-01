@@ -45,6 +45,26 @@ function NpcLines() {
 /** Взаимодействия-разговоры: E отправляет их на сервер и сразу открывает ввод к NPC. */
 const TALK_INTERACTS = new Set(["elevator_shaft", "neighbor_door"]);
 
+/** Спрятался в шкафу: дверцы закрываются, видно только щель между ними (снаружи шкаф закрыт) */
+function HideView() {
+  const hide = useStore((s) => s.hide);
+  if (!hide) return null;
+  const inside = hide.kind === "wardrobe";
+  return (
+    <>
+      {inside && (
+        <div className={`wardrobe ${hide.out ? "wardrobe-open" : "wardrobe-closed"}`} aria-hidden>
+          <div className="wardrobe-door wardrobe-left" />
+          <div className="wardrobe-door wardrobe-right" />
+        </div>
+      )}
+      <div className="hide-hint">
+        {inside ? "Вы в шкафу" : hide.kind === "table" ? "Вы под столом — держитесь за ножку" : "Вы у стены — прикройте голову"} · <kbd>E</kbd> — выбраться
+      </div>
+    </>
+  );
+}
+
 function ChatBox() {
   const chat = useStore((s) => s.chat);
   const nearNpc = useStore((s) => s.nearNpc);
@@ -327,6 +347,7 @@ export function Hud() {
       {showClick && (
         <div className="hud-click">Кликните по сцене, чтобы управлять · F1 — как играть · Esc — отпустить мышь</div>
       )}
+      <HideView />
       <NpcLines />
       <ChatBox />
       <VoiceButton />
