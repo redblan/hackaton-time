@@ -7,7 +7,7 @@ import { Clone, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
-import { Character, npcColor } from "./Character";
+import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
 import { FxParticles, InteractMarker } from "./Effects";
@@ -93,7 +93,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             if (route) return <NpcWalker key={o.id} color={npcColor(o.npcId)} pos={o.pos} route={route} seed={o.id.length} />;
             return (
               <group key={o.id} position={o.pos} rotation-y={o.rotY ?? 0}>
-                <Character color={npcColor(o.npcId)} pose={STANDING_NPCS[o.npcId] ? "stand" : o.pose} />
+                <Character color={npcColor(o.npcId)} pose={STANDING_NPCS[o.npcId] ? "stand" : o.pose} variant={npcVariant(o.npcId)} />
               </group>
             );
           }
