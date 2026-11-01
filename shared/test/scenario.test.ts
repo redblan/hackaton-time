@@ -37,6 +37,12 @@ function play(config: RunConfig, steps: Step[]) {
   const effects: unknown[] = [];
   for (const step of steps) {
     at += 1000;
+    if ((step.result as MinigameResult | undefined)?.game === "go_bag") {
+      at += 6000; // рюкзак открывается после реплики папы
+      const opened = reduce(state, { at, type: "tick" });
+      state = opened.state;
+      effects.push(...opened.effects);
+    }
     const result = reduce(state, { at, playerId: P, ...step } as GameEvent);
     state = result.state;
     effects.push(...result.effects);

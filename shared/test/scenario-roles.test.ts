@@ -26,6 +26,12 @@ class Run {
     this.send({ type: "start" });
   }
   send(step: Step) {
+    if ((step.result as { game?: string } | undefined)?.game === "go_bag") {
+      this.at += 6000; // рюкзак открывается после реплики папы
+      const opened = reduce(this.state, { at: this.at, type: "tick" });
+      this.state = opened.state;
+      this.effects.push(...opened.effects);
+    }
     this.at += 1000;
     const result = reduce(this.state, { at: this.at, ...step } as GameEvent);
     this.state = result.state;
@@ -307,5 +313,36 @@ describe("ошибки мини-игр и адаптация (Y9)", () => {
     const fresh = hits((seed) => generateRun({ mode: "solo", profiles: [], seed }), has);
     const trained = hits((seed) => generateRun({ mode: "solo", profiles: [weak], seed }), has);
     expect(trained).toBeGreaterThan(fresh);
+  });
+});
+
+describe("рюкзак и помощь по дороге", () => {
+  const solo = () => {
+    const run = new Run({ ...CONFIG, mode: "solo" }, [{ id: INSIDE, role: "inside_top" }]);
+    run.tick(4);
+    run.send({ type: "interact", playerId: INSIDE, target: "cover_table" });
+    return run;
+  };
+  const opened = (run: Run, id: string) =>
+    run.effects.some((e) => e.type === "openMinigame" && e.game === id);
+
+  it("рюкзак открывается через 5 секунд после реплики папы, кран до этого не срабатывает", () => {
+    const run = solo();
+    expect(run.stage(INSIDE)).toBe("pack");
+    run.tick(3);
+    expect(opened(run, "go_bag")).toBe(false);
+    run.send({ type: "interact", playerId: INSIDE, target: "gas_valve" });
+    expect(run.stage(INSIDE)).toBe("pack");
+    run.tick(2);
+    expect(opened(run, "go_bag")).toBe(true);
+  });
+
+  it("пострадавшему можно помочь сразу во дворе, до звонка 112", () => {
+    const run = solo();
+    run.state = { ...run.state, stage: { ...run.state.stage, [INSIDE]: "yard_assess" } };
+    run.send({ type: "interact", playerId: INSIDE, target: "victim_bleeding" });
+    expect(opened(run, "tourniquet")).toBe(true);
+    run.send(minigame(INSIDE, "tourniquet", "bleeding"));
+    expect(run.state.victims.victim_bleeding!.state).toBe("stable");
   });
 });

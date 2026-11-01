@@ -4,6 +4,8 @@ import type { StageDef } from "./types";
 
 const WAKE_MS = 3_000;
 const COVER_LIMIT_MS = 10_000;
+/** Папа успевает договорить, потом открывается рюкзак */
+const PACK_DELAY_MS = 5_000;
 
 function finishPack(ctx: Ctx) {
   if (!hasFact(ctx.state, "gas_closed")) log(ctx, "gas", "missed", "Не перекрыл газ на кухне");
@@ -73,9 +75,16 @@ export const pack: StageDef = {
   hint: "Собери рюкзак и перекрой газ на кухне",
   enter(ctx) {
     say(ctx, "papa", "quake_over_pack");
-    openMinigame(ctx, "go_bag");
+    setTimer(ctx.state, `pack:${ctx.playerId}`, ctx.at);
   },
   on(ctx, event) {
+    const bagOpened = `bag_opened:${ctx.playerId}`;
+    if (!hasFact(ctx.state, bagOpened)) {
+      if (event.type !== "tick" || event.at - getTimer(ctx.state, `pack:${ctx.playerId}`)! < PACK_DELAY_MS) return;
+      addFact(ctx.state, bagOpened);
+      openMinigame(ctx, "go_bag");
+      return;
+    }
     if (event.type === "minigameResult" && event.result.game === "go_bag") {
       const taken = (event.result.data?.items ?? []) as ItemId[];
       const items = taken.filter((item) => ITEMS.includes(item));

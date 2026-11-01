@@ -159,7 +159,7 @@ describe("перезаход в мини-игру (D-53)", () => {
     // Настоящий сценарий: через 3 с толчок, укрылся — открывается go_bag
     await wait(3300);
     a.c.emit("game:event", { type: "interact", target: "cover_table", at: 0, playerId: "" });
-    await until(() => opened.includes("go_bag"));
+    await until(() => opened.includes("go_bag"), 8000); // рюкзак открывается после реплики папы
     a.c.disconnect();
 
     const b = client(srv.url, r.token);

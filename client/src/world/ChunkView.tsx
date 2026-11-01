@@ -16,6 +16,7 @@ import { FxParticles } from "./Effects";
 import { useLampLight } from "./LocalLights";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { PropExtinguisher, isExtinguisher } from "./decor/Carry";
+import { STAIR_WALL, STAIR_WALL_DEPTH, STAIR_WALL_TOP, STAIR_WALL_Z } from "./decor/stairWall";
 import { isYardAnimated, YardAnimated } from "./decor/YardAnimated";
 import { paintSurface } from "./style";
 import { uploadStaticBoxes, type StaticBox } from './staticBoxes';
@@ -214,6 +215,15 @@ export function getColliders(chunk: ChunkData, flags: string[]): Aabb[] {
       min: [o.pos[0] - hx, o.pos[1] - hy, o.pos[2] - hz],
       max: [o.pos[0] + hx, o.pos[1] + hy, o.pos[2] + hz],
     });
+  }
+  if (parseFloorId(chunk.id)?.floor === 1) {
+    const [x, y, z] = chunk.bounds.min;
+    for (const part of STAIR_WALL) {
+      out.push({
+        min: [x + part.x - part.width / 2, y + part.bottom, z + STAIR_WALL_Z - STAIR_WALL_DEPTH / 2],
+        max: [x + part.x + part.width / 2, y + STAIR_WALL_TOP, z + STAIR_WALL_Z + STAIR_WALL_DEPTH / 2],
+      });
+    }
   }
   return out;
 }

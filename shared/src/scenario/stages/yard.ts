@@ -17,7 +17,7 @@ import {
   type Ctx,
 } from "../context";
 import { HANDOVER_NOTES, SLOT_NOTES } from "../notes";
-import type { VictimKind } from "../types";
+import type { GameEvent, VictimKind } from "../types";
 import { trackEscort } from "./building";
 import type { StageDef } from "./types";
 
@@ -63,6 +63,36 @@ function stabilize(ctx: Ctx, id: string) {
   leaveIfDone(ctx);
 }
 
+/** Помощь пострадавшим: подошёл к человеку во дворе и помог, не дожидаясь этапа первой помощи. */
+function helpVictims(ctx: Ctx, event: GameEvent) {
+  if (event.type === "interact") {
+    const victim = ctx.state.victims[event.target];
+    if (!victim || victim.state === "stable" || hasFact(ctx.state, minigameFact(ctx.playerId))) return;
+    const game = VICTIM_GAMES[victim.kind];
+    if (game && victim.state === "in_progress") return;
+    removeFact(ctx.state, safeAreaFact(ctx.playerId));
+    victim.state = "in_progress";
+    say(ctx, event.target as NpcId, "victim_help");
+    if (game) openMinigame(ctx, game);
+  }
+  if (event.type === "minigameResult") {
+    const entry = Object.entries(ctx.state.victims).find(
+      ([, v]) => VICTIM_GAMES[v.kind] === event.result.game,
+    );
+    if (event.result.game === "tourniquet") addFact(ctx.state, "tourniquet_applied");
+    if (entry) stabilize(ctx, entry[0]);
+  }
+  if (event.type === "dialogOutcome" && event.npcId === "victim_scared") {
+    if (event.outcome === "calmed") {
+      log(ctx, "psych_support", "ok", "Успокоил напуганного пострадавшего");
+      stabilize(ctx, "victim_scared");
+    }
+    if (event.outcome === "panicked") {
+      log(ctx, "psych_support", "mistake", "Пострадавший запаниковал от разговора", "scared_panicked");
+    }
+  }
+}
+
 export const yardAssess: StageDef = {
   hint: (state) =>
     hasFact(state, "valentina_agreed")
@@ -74,6 +104,7 @@ export const yardAssess: StageDef = {
   },
   on(ctx, event) {
     trackEscort(ctx, event);
+    helpVictims(ctx, event);
     if (event.type !== "enterZone") return;
     if (event.zone === "z_wire_danger") {
       if (log(ctx, "yard_hazard", "mistake", "Подошёл к опасному месту во дворе", "yard_hazard")) {
@@ -128,6 +159,7 @@ export const call112: StageDef = {
     });
   },
   on(ctx, event) {
+    helpVictims(ctx, event);
     if (event.type === "tick" && event.at - getTimer(ctx.state, "call")! >= CALL_LIMIT_MS) endCall(ctx);
     if (event.type !== "dialogOutcome" || event.npcId !== "dispatcher") return;
     if (event.outcome === "call_ended") {
@@ -167,32 +199,7 @@ export const firstAid: StageDef = {
   enter: leaveIfDone,
   on(ctx, event) {
     if (event.type === "tick") leaveIfDone(ctx);
-    if (event.type === "interact") {
-      const victim = ctx.state.victims[event.target];
-      if (!victim || victim.state === "stable" || hasFact(ctx.state, minigameFact(ctx.playerId))) return;
-      const game = VICTIM_GAMES[victim.kind];
-      if (game && victim.state === "in_progress") return;
-      removeFact(ctx.state, safeAreaFact(ctx.playerId));
-      victim.state = "in_progress";
-      say(ctx, event.target as NpcId, "victim_help");
-      if (game) openMinigame(ctx, game);
-    }
-    if (event.type === "minigameResult") {
-      const entry = Object.entries(ctx.state.victims).find(
-        ([, v]) => VICTIM_GAMES[v.kind] === event.result.game,
-      );
-      if (event.result.game === "tourniquet") addFact(ctx.state, "tourniquet_applied");
-      if (entry) stabilize(ctx, entry[0]);
-    }
-    if (event.type === "dialogOutcome" && event.npcId === "victim_scared") {
-      if (event.outcome === "calmed") {
-        log(ctx, "psych_support", "ok", "Успокоил напуганного пострадавшего");
-        stabilize(ctx, "victim_scared");
-      }
-      if (event.outcome === "panicked") {
-        log(ctx, "psych_support", "mistake", "Пострадавший запаниковал от разговора", "scared_panicked");
-      }
-    }
+    helpVictims(ctx, event);
   },
 };
 

@@ -8,6 +8,7 @@
  *   проём квартиры x 4..6 на z = 5, лифт (10, 4), перегородка комнат x = 6, окна на z = 11.8.
  */
 import { useLayoutEffect, useRef, useState } from "react";
+import { STAIR_WALL, STAIR_WALL_DEPTH, STAIR_WALL_TOP, STAIR_WALL_Z } from "./stairWall";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, DoubleSide, MeshStandardMaterial, type Group } from "three";
 import type { ChunkData } from "@game/shared";
@@ -115,6 +116,10 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
     band(0.2, 0.1, 3.9, 0.1);
     band(8.1, 0.1, 11.8, 0.1);
     band(0.2, 2.9, 0.2, 0.1);
+    for (const part of STAIR_WALL) {
+      const height = STAIR_WALL_TOP - part.bottom;
+      b.box(part.width, height, STAIR_WALL_DEPTH, "#f3ddbd", { x: part.x, y: part.bottom + height / 2, z: STAIR_WALL_Z });
+    }
   } else band(0.2, 0.1, 11.8, 0.1);
   band(11.8, 0.1, 11.8, 2.9);
   // коридор: стена с дверями (вырезы под наличники) и торцы

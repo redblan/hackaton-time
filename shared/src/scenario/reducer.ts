@@ -68,6 +68,8 @@ const STAGE_DEFS: Record<StageId, StageDef> = {
 /** Этап выпадает из прохождения без штрафа, если для него нет элементов. */
 function isSkipped(state: RunState, stage: StageId): boolean {
   if (stage === "smoke") return !hasFlag(state, "fire");
+  // Всем уже помогли по дороге: сортировать некого
+  if (stage === "triage") return Object.values(state.victims).every((v) => v.state === "stable");
   if (stage === "collapse") return !hasFlag(state, "collapse");
   if (stage === "neighbor") return !hasFlag(state, "neighbor_valentina");
   if (stage === "aftershock") return !hasFlag(state, "aftershock") || hasFact(state, "aftershock_done");
