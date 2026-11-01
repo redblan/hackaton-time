@@ -35,6 +35,7 @@ function NpcLines() {
           <b>{l.fromPlayer ? `${me} → ${NPC_NAMES[l.npcId]}` : NPC_NAMES[l.npcId]}:</b> {l.text}
           {!l.done && <span className="caret">▍</span>}
           {l.source === "template" && <span className="tag">шаблон</span>}
+          {l.source === "admin" && <span className="tag">режиссёр</span>}
         </div>
       ))}
     </div>

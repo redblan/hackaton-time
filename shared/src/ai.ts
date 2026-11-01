@@ -6,6 +6,7 @@
  * Если модель недоступна или отвечает дольше таймаута — ответ из шаблонов.
  */
 import type { NpcEvent, NpcId, PlayerId, SkillId, StageId } from "./ids";
+import type { WorldPatch } from "./world";
 
 export interface NpcRequest {
   npcId: NpcId;
@@ -72,6 +73,46 @@ export interface AiModule {
   sayStream?(req: NpcRequest, onToken: (t: string) => void, onOutcome?: (outcome: string) => void): Promise<NpcResponse>;
   /** Сброс состояния диалога в начале нового прохождения (например, слоты диспетчера) */
   resetRun?(playerId: PlayerId): void;
+  /** Админка (01.11, M22): карточки персонажей — что можно менять на лету */
+  getCharacters?(): CharacterCard[];
+  /** Применяется к следующей реплике. Вернуть обновлённую карточку */
+  setCharacter?(npcId: NpcId, patch: Partial<Omit<CharacterCard, "npcId" | "name">>): CharacterCard | null;
+  /** Метрики ИИ для админки */
+  getStats?(): AiStats;
+  /**
+   * Агент меняет мир (01.11, M21): ИИ зовёт `patch` в ответ на намерение игрока («принеси аптечку»),
+   * сервер применяет к комнате и рассылает `world:patch`. Сервер передаёт эту функцию через `setWorldHook`.
+   */
+  setWorldHook?(hook: (playerId: PlayerId, patch: WorldPatch) => void): void;
+}
+
+/** Поведение агента, которое можно редактировать из админки */
+export interface CharacterCard {
+  npcId: NpcId;
+  name: string;
+  /** Короткое описание характера (идёт в промпт) */
+  traits: string;
+  /** Настроение: спокоен / встревожен / паника / раздражён — свободная строка, идёт в промпт */
+  mood: string;
+  temperature: number;
+  /** Отвечать только заготовками, модель не звать */
+  templatesOnly: boolean;
+  /** Можно ли выдумывать за пределами базы фактов (по умолчанию нет) */
+  factsOnly: boolean;
+}
+
+export interface AiStats {
+  model: string;
+  available: boolean;
+  /** Запросов в очереди и в работе */
+  queued: number;
+  inFlight: number;
+  /** Последняя и средняя задержка модели, мс */
+  lastMs: number;
+  avgMs: number;
+  /** Сколько ответов дала модель и сколько — шаблоны */
+  llm: number;
+  template: number;
 }
 
 export interface AiOptions {

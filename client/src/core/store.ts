@@ -1,6 +1,6 @@
 /** Состояние клиента: маленький стор на useSyncExternalStore (без лишних зависимостей). */
 import { useSyncExternalStore } from "react";
-import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId } from "@game/shared";
+import type { ChunkData, ChunkId, ItemId, MinigameId, Mode, NpcId, NpcPublic, PlayerPublic, RunSummary, StageId, PropState } from "@game/shared";
 
 export interface Auth {
   token: string;
@@ -18,7 +18,7 @@ export interface NpcLine {
   npcId: NpcId;
   text: string;
   done: boolean;
-  source?: "llm" | "template";
+  source?: "llm" | "template" | "admin";
   /** Реплика игрока (то, что он написал NPC) */
   fromPlayer?: boolean;
 }
@@ -70,6 +70,12 @@ export interface State {
   doors: Record<string, boolean>;
   /** Вид от третьего лица (C): видно своего персонажа и его анимацию */
   thirdPerson: boolean;
+  /** Метрики (01.11): FPS считается здесь, ping — через ping/pong, gpu — из WebGL. Уходят на сервер раз в 2 с */
+  fps: number;
+  ping: number;
+  gpu: string;
+  /** Переносимые предметы, которые несут/бросили другие (prop:move). Свои — в physics у Юры */
+  props: Record<string, PropState>;
 }
 
 const initial: State = {
@@ -98,6 +104,10 @@ const initial: State = {
   sensitivity: readSensitivity(),
   doors: {},
   thirdPerson: false,
+  fps: 0,
+  ping: 0,
+  gpu: "",
+  props: {},
 };
 
 function readSensitivity() {

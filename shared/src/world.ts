@@ -53,6 +53,12 @@ export type WorldObject =
   /** Эффект: дым, искры, пыль */
   | (Base & { kind: "fx"; fx: "smoke" | "sparks" | "dust" | "fire"; pos: Vec3; size?: number })
   /**
+   * Переносимый предмет (01.11): взять (E), нести, положить, бросить. Коллизия — коробка `size`.
+   * Физика на клиенте (гравитация, отскок `bounce` 0..1, масса влияет на дальность броска), положение по сети — `prop:move`.
+   * Вид: `src` (glTF из world/assets) или коробка цвета `color`.
+   */
+  | (Base & { kind: "prop"; pos: Vec3; size: Vec3; label: string; src?: string; color?: string; mass?: number; bounce?: number; rotY?: number })
+  /**
    * Простой NPC толпы, не агент (sunday.md): ходит и реагирует на игроков только на клиенте, без сервера.
    * `route` — точки в мировых координатах; маршрут замкнутый: pos → route[0] → … → pos. Без route — стоит на месте.
    * `seed` — детерминированные отличия (фигура, фаза шага, паузы). `color` — одежда/шерсть, `speed` — м/с (иначе по типу).
@@ -61,6 +67,19 @@ export type WorldObject =
   | (Base & { kind: "crowd"; type: CrowdType; pos: Vec3; rotY?: number; route?: Vec3[]; seed: number; color?: string; speed?: number });
 
 export type CrowdType = "person" | "cat" | "dog" | "pigeon";
+
+/** Живое изменение чанка в комнате (01.11): агенты и админка добавляют/убирают объекты. Применяется к чанку на сервере и у клиентов. */
+export interface WorldPatch {
+  chunkId: ChunkId;
+  add: WorldObject[];
+  /** id объектов, которые убрать (в том числе из исходного чанка) */
+  remove: string[];
+}
+
+export function applyPatch(chunk: ChunkData, patch: WorldPatch): ChunkData {
+  const remove = new Set([...patch.remove, ...patch.add.map((o) => o.id)]);
+  return { ...chunk, objects: [...chunk.objects.filter((o) => !remove.has(o.id)), ...patch.add] };
+}
 
 export interface Aabb {
   min: Vec3;

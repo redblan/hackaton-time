@@ -113,3 +113,35 @@ kbd { display: inline-block; min-width: 26px; text-align: center; padding: 2px 6
 .sandbox-3d { padding: 0; }
 .json { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 10px; font-size: 12px; overflow: auto; max-height: 320px; margin: 0; }
 @media (max-width: 720px) { .sandbox-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } }
+
+/* ---------- админка (01.11) ---------- */
+.admin { min-height: 100%; padding: 16px 20px 40px; background: #0f172a; color: #e2e8f0; font-size: 14px; }
+.admin h1 { font-size: 20px; margin: 0; }
+.admin h2 { font-size: 16px; margin: 0 0 10px; }
+.admin-head { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; margin-bottom: 14px; }
+.admin-head a { color: #93c5fd; margin-left: auto; }
+.admin-card { background: #1e293b; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; display: grid; gap: 10px; }
+.admin-stats { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.admin-stats div { display: grid; gap: 2px; }
+.admin-stats span { color: #cbd5e1; font-size: 13px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th, .admin-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #334155; vertical-align: middle; }
+.admin-table th { color: #94a3b8; font-weight: 600; font-size: 12px; }
+.admin-offline { opacity: .5; }
+.admin-metric { font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin-ok { color: #4ade80; }
+.admin-warn { color: #facc15; }
+.admin-bad { color: #f87171; }
+.admin .btn.small { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+.admin input, .admin select, .admin textarea { padding: 5px 8px; border-radius: 8px; font-size: 13px; background: #0f172a; color: #e2e8f0; border-color: #334155; }
+.admin-num { width: 64px; }
+.admin-wide { min-width: 260px; flex: 1; }
+.admin-chip { font: inherit; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid #475569; background: #334155; color: #e2e8f0; cursor: pointer; }
+.admin-chip:hover { background: #475569; }
+.admin-chip-add { background: transparent; border-style: dashed; color: #94a3b8; }
+.admin-chip-removed { background: transparent; color: #f87171; cursor: default; }
+.admin-patch { display: grid; gap: 8px; padding-top: 6px; border-top: 1px dashed #334155; }
+.admin-lines { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.admin-src-llm { background: #166534; }
+.admin-src-template { background: #475569; }
+.admin-src-admin { background: #7c2d12; }

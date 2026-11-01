@@ -6,8 +6,16 @@ import { useStore } from "./store";
 
 const Game = lazy(() => import("./Game").then((m) => ({ default: m.Game })));
 const Sandbox = lazy(() => import("./Sandbox").then((m) => ({ default: m.Sandbox })));
+const Admin = lazy(() => import("../admin/Admin").then((m) => ({ default: m.Admin })));
 
 export function App() {
+  if (window.location.pathname.startsWith("/admin")) {
+    return (
+      <Suspense fallback={<div className="screen">Загрузка…</div>}>
+        <Admin />
+      </Suspense>
+    );
+  }
   if (window.location.pathname.startsWith("/sandbox")) {
     return (
       <Suspense fallback={<div className="screen">Загрузка…</div>}>

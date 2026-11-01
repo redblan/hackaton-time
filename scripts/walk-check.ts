@@ -8,7 +8,9 @@ import { isObjectActive, type Aabb, type ChunkData, type Vec3 } from "@game/shar
 import { getColliders } from "../client/src/world/ChunkView";
 import { stepBody, type Body } from "../client/src/core/physics";
 const dir = fileURLToPath(new URL("../world/chunks", import.meta.url));
-const chunks: ChunkData[] = readdirSync(dir).map((f) => JSON.parse(readFileSync(`${dir}/${f}`, "utf8")));
+const chunks: ChunkData[] = readdirSync(dir)
+  .filter((f) => /^(e\d+f\d+|y\d\d)\.json$/.test(f)) // palette.json и прочее — не чанки
+  .map((f) => JSON.parse(readFileSync(`${dir}/${f}`, "utf8")));
 for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya", "neighbor_valentina", "wire", "collapse_f4", "fire_f5"]]) {
   const cl: Aabb[] = chunks.flatMap((c) => getColliders(c, FLAGS));
   const zones: { zone: string; min: Vec3; max: Vec3; chunk: string }[] = [];

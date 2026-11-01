@@ -6,7 +6,7 @@
  * POST /api/logout (Authorization: Bearer <token>). Сессия живёт 7 дней.
  * Сокет подключается с auth: { token }; без токена сервер рвёт соединение. Всё снаружи — по HTTPS.
  */
-import type { ChunkData, ChunkId, Vec3 } from "./world";
+import type { ChunkData, ChunkId, Vec3, WorldPatch } from "./world";
 import type { Effect, GameEvent, RunSummary } from "./scenario/types";
 import type { Mode, NpcId, PlayerId, Role } from "./ids";
 
@@ -51,6 +51,32 @@ export interface ClientToServer {
   "voice:say": (p: { to: NpcId | "radio"; wav: ArrayBuffer }) => void;
   /** Чат между игроками (рация) */
   "chat:send": (p: { text: string }) => void;
+  /** Метрики клиента раз в 2 с (01.11, админка): fps, ping (мс, клиент меряет через ping/pong), чанков, dpr, видеокарта */
+  "client:metrics": (p: ClientMetrics) => void;
+  /** Замер задержки: клиент шлёт свой performance.now(), сервер возвращает его же в pong */
+  "ping": (t: number) => void;
+  /**
+   * Переносимый предмет (01.11): кто держит/бросил — тот и шлёт; сервер пересылает остальным в комнате
+   * и помнит последнее состояние. `holder` — кто несёт (null — лежит), `vel` — скорость после броска.
+   */
+  "prop:move": (p: PropState) => void;
+}
+
+export interface ClientMetrics {
+  fps: number;
+  ping: number;
+  chunks: number;
+  dpr: number;
+  gpu: string;
+}
+
+export interface PropState {
+  id: string;
+  chunkId: ChunkId;
+  pos: Vec3;
+  rotY: number;
+  vel?: Vec3;
+  holder: PlayerId | null;
 }
 
 export interface ServerToClient {
@@ -68,11 +94,19 @@ export interface ServerToClient {
   "game:effect": (e: Effect) => void;
   /** Реплика NPC, стримом: сначала токены, потом done */
   "npc:token": (p: { npcId: NpcId; token: string }) => void;
-  "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" }) => void;
+  "npc:done": (p: { npcId: NpcId; text: string; source: "llm" | "template" | "admin" }) => void;
   "chat:msg": (p: { from: string; text: string; at: number }) => void;
   /** Что распознано из голоса (или почему не получилось) */
   /** Озвучка реплики NPC (D-70): WAV Piper, только адресату, приходит после npc:done */
   "npc:audio": (p: { npcId: NpcId; wav: ArrayBuffer }) => void;
   "voice:text": (p: { to: NpcId | "radio"; text: string } | { to: NpcId | "radio"; error: string }) => void;
   "run:end": (p: { summary: RunSummary; debrief: string }) => void;
+  /** Ответ на ping: тот же t */
+  "pong": (t: number) => void;
+  /** Живое изменение чанка (агенты Матвея, админка). Клиент применяет к загруженному чанку; будущие chunk:data уже с патчем */
+  "world:patch": (p: WorldPatch) => void;
+  /** Предмет перенесли/бросили (от другого игрока) */
+  "prop:move": (p: PropState) => void;
+  /** Админка: перенести игрока */
+  "player:teleport": (p: { pos: Vec3; rotY?: number }) => void;
 }

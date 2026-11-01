@@ -1,5 +1,5 @@
 /** Чистая логика комнат (без сокетов) — чтобы её можно было тестировать. */
-import type { Effect, Mode, NpcId, NpcPublic, PlayerId, PlayerPublic, Role, RunState, StageId } from "@game/shared";
+import type { ChunkId, Effect, Mode, NpcId, NpcPublic, PlayerId, PlayerPublic, PropState, Role, RunState, StageId, WorldObject } from "@game/shared";
 import type { Escort } from "./escort";
 
 export const ROLES_BY_MODE: Record<Mode, Role[]> = {
@@ -37,6 +37,12 @@ export interface Room {
   npcs: Map<NpcId, Escort>;
   /** Есть несохранённые изменения — снимок уйдёт в БД */
   dirty: boolean;
+  /** Живые изменения чанков (01.11): агенты и админка. Накладываются на chunk:data и рассылаются world:patch */
+  patches: Map<ChunkId, { add: Map<string, WorldObject>; remove: Set<string> }>;
+  /** Последнее состояние переносимых предметов (prop:move) */
+  props: Map<string, PropState>;
+  /** Последние реплики NPC комнаты — для админки */
+  lines: { at: number; npcId: NpcId; to: string; text: string; source: string; ms?: number }[];
 }
 
 export function newRoom(id: string, mode: Mode): Room {
@@ -52,6 +58,9 @@ export function newRoom(id: string, mode: Mode): Room {
     clock: { elapsedMs: 0, runningSince: null },
     npcs: new Map(),
     dirty: false,
+    patches: new Map(),
+    props: new Map(),
+    lines: [],
   };
 }
 

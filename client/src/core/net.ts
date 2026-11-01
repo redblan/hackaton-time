@@ -1,6 +1,6 @@
 /** Сеть: вход по HTTP, дальше Socket.IO с токеном. Все события сервера складываются в стор. */
 import { io, type Socket } from "socket.io-client";
-import type { ClientToServer, ServerToClient } from "@game/shared";
+import { applyPatch, type ClientToServer, type ServerToClient } from "@game/shared";
 import { local, teleport } from "./local";
 import { playQuake } from "./sound";
 import { forget, pushSnapshot } from "./remote";
@@ -60,6 +60,31 @@ export function leaveRoom() {
   store.resetGame();
 }
 
+let metricsTimer: ReturnType<typeof setInterval> | null = null;
+let fpsFrames = 0;
+let fpsRaf = 0;
+function startMetrics(s: GameSocket) {
+  if (metricsTimer) clearInterval(metricsTimer);
+  cancelAnimationFrame(fpsRaf);
+  const loop = () => {
+    fpsFrames++;
+    fpsRaf = requestAnimationFrame(loop);
+  };
+  fpsRaf = requestAnimationFrame(loop);
+  let last = performance.now();
+  metricsTimer = setInterval(() => {
+    const now = performance.now();
+    const fps = Math.round((fpsFrames * 1000) / Math.max(1, now - last));
+    fpsFrames = 0;
+    last = now;
+    store.set({ fps });
+    if (!s.connected) return;
+    s.emit("ping", now);
+    const st = store.get();
+    s.emit("client:metrics", { fps, ping: st.ping, chunks: Object.keys(st.chunks).length, dpr: window.devicePixelRatio, gpu: st.gpu });
+  }, 2000);
+}
+
 export function logout() {
   const token = store.get().auth?.token;
   if (token) void fetch("/api/logout", { method: "POST", headers: { authorization: `Bearer ${token}` } }).catch(() => {});
@@ -85,6 +110,17 @@ export function connect(auth: Auth) {
     local.resyncChunks = true;
     store.set({ connected: true, netError: null });
   });
+  // Метрики для админки (01.11): ping/pong и раз в 2 с — fps, ping, чанки, dpr, видеокарта
+  s.on("pong", (t) => store.set({ ping: Math.round(performance.now() - t) }));
+  startMetrics(s);
+  s.on("world:patch", (patch) =>
+    store.set((st) => {
+      const cur = st.chunks[patch.chunkId];
+      return cur ? { chunks: { ...st.chunks, [patch.chunkId]: applyPatch(cur, patch) } } : {};
+    }),
+  );
+  s.on("prop:move", (p) => store.set((st) => ({ props: { ...st.props, [p.id]: p } })));
+  s.on("player:teleport", ({ pos, rotY }) => teleport(pos, rotY ?? local.rotY));
   s.on("disconnect", () => store.set({ connected: false }));
   s.on("connect_error", (e) => {
     if (e.message === "unauthorized") logout();

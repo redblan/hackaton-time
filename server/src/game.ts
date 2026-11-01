@@ -10,19 +10,25 @@ import {
   NPC_IDS,
   ROLES,
   ZONES,
+  applyPatch,
   generateRun,
   initRun,
   reduce,
   type AiModule,
+  type ChunkData,
   type ChunkId,
+  type ClientMetrics,
   type ClientToServer,
   type Effect,
   type GameEvent,
+  type NpcId,
   type NpcRequest,
   type PlayerId,
   type PlayerPublic,
+  type PropState,
   type ServerToClient,
   type Vec3,
+  type WorldPatch,
 } from "@game/shared";
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
@@ -47,6 +53,8 @@ export interface SocketData {
   playerId: PlayerId;
   name: string;
   chunks: Set<ChunkId>;
+  /** Последние метрики клиента (01.11, админка) */
+  metrics?: ClientMetrics & { at: number };
 }
 type IO = Server<ClientToServer, ServerToClient, Record<string, never>, SocketData>;
 type Sock = Socket<ClientToServer, ServerToClient, Record<string, never>, SocketData>;
@@ -86,6 +94,8 @@ export class Game {
       setInterval(() => void this.saveRooms(), SAVE_ROOMS_MS),
     );
     io.on("connection", (s) => this.onConnection(s));
+    // Агенты Матвея меняют мир: ИИ отдаёт патч, мы применяем к комнате игрока
+    ai.setWorldHook?.((playerId, patch) => this.safe(() => this.patchWorld(this.roomOf.get(playerId) ?? "", patch)));
   }
 
   /** Поднять незаконченные комнаты из БД (после перезапуска сервера). Игроки вернутся сами при перезаходе. */
@@ -135,7 +145,44 @@ export class Game {
     s.on("chat:send", (p) => this.safe(() => this.onChat(s, p?.text)));
     s.on("npc:hangup", (p) => this.safe(() => this.onHangup(s, p?.npcId)));
     s.on("voice:say", (p) => this.safe(() => this.onVoice(s, p)));
+    s.on("client:metrics", (p) => this.safe(() => this.onMetrics(s, p)));
+    s.on("ping", (t) => {
+      if (typeof t === "number") s.emit("pong", t);
+    });
+    s.on("prop:move", (p) => this.safe(() => this.onPropMove(s, p)));
     s.on("disconnect", () => this.safe(() => this.onDisconnect(s)));
+  }
+
+  private onMetrics(s: Sock, p: unknown) {
+    if (!p || typeof p !== "object") return;
+    const m = p as Record<string, unknown>;
+    const num = (v: unknown, max: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : 0);
+    s.data.metrics = {
+      fps: Math.round(num(m.fps, 1000)),
+      ping: Math.round(num(m.ping, 100_000)),
+      chunks: Math.round(num(m.chunks, 100)),
+      dpr: num(m.dpr, 8),
+      gpu: typeof m.gpu === "string" ? m.gpu.slice(0, 120) : "",
+      at: Date.now(),
+    };
+  }
+
+  /** Переносимые предметы: кто несёт/бросил — тот и прав; остальным пересылаем, последнее состояние помним для перезахода */
+  private onPropMove(s: Sock, p: unknown) {
+    const room = this.myRoom(s.data.playerId);
+    if (!room || !p || typeof p !== "object") return;
+    const q = p as Record<string, unknown>;
+    if (typeof q.id !== "string" || typeof q.chunkId !== "string" || !isVec3(q.pos) || typeof q.rotY !== "number") return;
+    const state: PropState = {
+      id: q.id.slice(0, 64),
+      chunkId: q.chunkId,
+      pos: q.pos,
+      rotY: q.rotY,
+      holder: q.holder === s.data.playerId ? s.data.playerId : null,
+      ...(isVec3(q.vel) ? { vel: q.vel } : {}),
+    };
+    room.props.set(state.id, state);
+    s.to(`r:${room.id}`).emit("prop:move", state);
   }
 
   private rejoin(s: Sock, room: Room) {
@@ -324,7 +371,39 @@ export class Game {
     const plan = planChunks(s.data.chunks, ids, (id) => this.chunks.get(id) !== undefined);
     s.data.chunks = plan.next;
     if (plan.drop.length) s.emit("chunk:drop", { ids: plan.drop });
-    for (const id of plan.send) s.emit("chunk:data", { chunk: this.chunks.get(id)! });
+    const room = this.myRoom(s.data.playerId);
+    for (const id of plan.send) {
+      s.emit("chunk:data", { chunk: this.patched(room, this.chunks.get(id)!) });
+      if (room) for (const prop of room.props.values()) if (prop.chunkId === id) s.emit("prop:move", prop);
+    }
+  }
+
+  /** Чанк с наложенными патчами комнаты (агенты, админка) */
+  private patched(room: Room | undefined, chunk: ChunkData): ChunkData {
+    const p = room?.patches.get(chunk.id);
+    if (!p) return chunk;
+    return applyPatch(chunk, { chunkId: chunk.id, add: [...p.add.values()], remove: [...p.remove] });
+  }
+
+  /** Живое изменение мира комнаты: от агентов (setWorldHook) и из админки */
+  patchWorld(roomId: string, patch: WorldPatch): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room || !this.chunks.get(patch.chunkId)) return false;
+    const add = Array.isArray(patch.add) ? patch.add.filter((o) => o && typeof o === "object" && typeof o.id === "string") : [];
+    const remove = Array.isArray(patch.remove) ? patch.remove.filter((id): id is string => typeof id === "string") : [];
+    const cur = room.patches.get(patch.chunkId) ?? { add: new Map(), remove: new Set() };
+    for (const id of remove) {
+      cur.add.delete(id);
+      cur.remove.add(id);
+    }
+    for (const o of add) {
+      cur.remove.delete(o.id);
+      cur.add.set(o.id, o);
+    }
+    room.patches.set(patch.chunkId, cur);
+    this.io.to(`r:${room.id}`).emit("world:patch", { chunkId: patch.chunkId, add, remove });
+    console.log(`[world] комната ${room.id}: патч ${patch.chunkId} +${add.length} −${remove.length}`);
+    return true;
   }
 
   // ---------- сценарий ----------
@@ -460,6 +539,7 @@ export class Game {
 
   private async npcSay(room: Room, playerId: PlayerId, req: NpcRequest) {
     const to = this.io.to(`p:${playerId}`);
+    const started = Date.now();
     try {
       // D-68: итог диалога — в сценарий сразу, как ИИ его посчитал, не дожидаясь конца текста
       let sent: string | undefined;
@@ -472,6 +552,7 @@ export class Game {
         ? await this.ai.sayStream(req, (token) => to.emit("npc:token", { npcId: req.npcId, token }), sendOutcome)
         : await this.ai.say(req);
       to.emit("npc:done", { npcId: req.npcId, text: res.text, source: res.source });
+      this.remember(room, req.npcId, playerId, res.text, res.source, Date.now() - started);
       if (res.outcome) sendOutcome(res.outcome);
       if (res.text && this.tts?.available()) void this.speak(to, req.npcId, res.text);
     } catch (e) {
@@ -607,6 +688,111 @@ export class Game {
     } catch (e) {
       console.error("[db] прогресс не сохранён:", (e as Error).message);
     }
+  }
+
+  private remember(room: Room, npcId: NpcId, to: string, text: string, source: string, ms?: number) {
+    room.lines.push({ at: Date.now(), npcId, to: room.players.get(to)?.name ?? to, text: text.slice(0, 300), source, ...(ms !== undefined ? { ms } : {}) });
+    if (room.lines.length > 60) room.lines.splice(0, room.lines.length - 60);
+  }
+
+  // ---------- админка (01.11) ----------
+
+  /** Снимок всего для админки: комнаты, игроки с метриками, последние реплики */
+  adminState() {
+    const sockets = new Map<PlayerId, Sock[]>();
+    for (const s of this.io.sockets.sockets.values()) sockets.set(s.data.playerId, [...(sockets.get(s.data.playerId) ?? []), s]);
+    const rooms = [...this.rooms.values()].map((room) => ({
+      id: room.id,
+      mode: room.mode,
+      started: room.started,
+      finished: room.finished,
+      flags: [...room.flags],
+      clockMs: gameNow(room, Date.now()),
+      patches: [...room.patches.entries()].map(([chunkId, p]) => ({ chunkId, add: [...p.add.values()], remove: [...p.remove] })),
+      props: [...room.props.values()],
+      lines: room.lines.slice(-30),
+      players: [...room.players.values()].map((p) => {
+        const sock = sockets.get(p.id)?.[0];
+        return {
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          online: p.online,
+          pos: p.pos,
+          chunk: this.chunks.chunkAt(p.pos),
+          stage: room.run?.stage[p.id] ?? null,
+          anim: p.anim,
+          chunks: sock ? [...sock.data.chunks] : [],
+          metrics: sock?.data.metrics ?? null,
+        };
+      }),
+    }));
+    const lobby = [...this.io.sockets.sockets.values()]
+      .filter((s) => !this.roomOf.has(s.data.playerId))
+      .map((s) => ({ id: s.data.playerId, name: s.data.name, metrics: s.data.metrics ?? null }));
+    return { rooms, lobby, sockets: this.io.sockets.sockets.size };
+  }
+
+  setFlag(roomId: string, flag: string, on: boolean): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room || !/^[a-z0-9_]{1,40}$/.test(flag)) return false;
+    if (on) room.flags.add(flag);
+    else room.flags.delete(flag);
+    room.dirty = true;
+    this.io.to(`r:${room.id}`).emit("run:flags", { flags: [...room.flags] });
+    return true;
+  }
+
+  quake(roomId: string, strength = 0.8, durationMs = 4000): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+    this.io.to(`r:${room.id}`).emit("game:effect", { type: "quake", strength: Math.max(0.1, Math.min(1, strength)), durationMs: Math.max(500, Math.min(20_000, durationMs)) });
+    return true;
+  }
+
+  teleport(playerId: PlayerId, pos: Vec3, rotY = 0): boolean {
+    const room = this.myRoom(playerId);
+    const me = room?.players.get(playerId);
+    if (!me || !isVec3(pos)) return false;
+    me.pos = pos;
+    this.io.to(`p:${playerId}`).emit("player:teleport", { pos, rotY });
+    return true;
+  }
+
+  kick(playerId: PlayerId): boolean {
+    const socks = this.socketsOf(playerId);
+    if (!socks.length && !this.roomOf.has(playerId)) return false;
+    this.leave(playerId);
+    for (const s of socks) s.disconnect(true);
+    return true;
+  }
+
+  /** Сказать от имени NPC всем в комнате (или одному игроку) */
+  sayAs(roomId: string, npcId: NpcId, text: string, playerId?: PlayerId): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room || !includes(NPC_IDS, npcId)) return false;
+    const t = text.trim().slice(0, 500);
+    if (!t) return false;
+    const to = playerId ? this.io.to(`p:${playerId}`) : this.io.to(`r:${room.id}`);
+    to.emit("npc:done", { npcId, text: t, source: "admin" });
+    this.remember(room, npcId, playerId ?? "всем", t, "admin");
+    if (this.tts?.available()) void this.speak(to, npcId, t);
+    return true;
+  }
+
+  /** Сброс патчей комнаты (вернуть мир как был) */
+  clearPatches(roomId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+    const patches = [...room.patches.entries()];
+    room.patches.clear();
+    // вернуть исходные объекты: добавить то, что убирали, убрать то, что добавляли
+    for (const [chunkId, p] of patches) {
+      const base = this.chunks.get(chunkId);
+      const restore = base ? base.objects.filter((o) => p.remove.has(o.id)) : [];
+      this.io.to(`r:${room.id}`).emit("world:patch", { chunkId, add: restore, remove: [...p.add.keys()] });
+    }
+    return true;
   }
 
   // ---------- утилиты ----------

@@ -46,6 +46,7 @@ export function DebugOverlay() {
   const lines = useStore((s) => s.npcLines);
   const room = useStore((s) => s.room);
   const fps = useFps(open);
+  const ping = useStore((s) => s.ping);
   const [me, setMe] = useState<DebugMe | null>(null);
   const [, tick] = useState(0);
 
@@ -74,7 +75,7 @@ export function DebugOverlay() {
 
   return (
     <div className="debug">
-      <b>Под капотом</b> · FPS {fps}
+      <b>Под капотом</b> · FPS {fps} · ping {ping} мс
       <div>
         Мир: загружено {ids.length}/{TOTAL_CHUNKS} ({Math.round((ids.length / TOTAL_CHUNKS) * 100)}%, лимит {MAX_CHUNKS}) — [{ids.join(", ")}]
       </div>

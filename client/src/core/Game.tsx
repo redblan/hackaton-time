@@ -10,7 +10,7 @@ import { Hud } from "./Hud";
 import { MinigameOverlay } from "./MinigameHost";
 import { Player } from "./Player";
 import { RemotePlayers } from "./RemotePlayers";
-import { useStore } from "./store";
+import { store, useStore } from "./store";
 
 function World() {
   const chunks = useStore((s) => s.chunks);
@@ -39,7 +39,18 @@ function World() {
 export function Game() {
   return (
     <div className="game">
-      <Canvas id="scene" shadows camera={{ fov: 75, near: 0.05, far: 600 }} dpr={[1, 2]}>
+      <Canvas
+        id="scene"
+        shadows
+        camera={{ fov: 75, near: 0.05, far: 600 }}
+        dpr={[1, 2]}
+        onCreated={({ gl }) => {
+          // Название видеокарты — в метрики админки
+          const ctx = gl.getContext() as WebGLRenderingContext;
+          const info = ctx.getExtension("WEBGL_debug_renderer_info");
+          store.set({ gpu: info ? String(ctx.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "" });
+        }}
+      >
         <Atmosphere />
         <Landscape />
         <QuakeDust />

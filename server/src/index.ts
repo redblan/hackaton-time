@@ -12,6 +12,7 @@ import { login, LoginLimiter, register, resolveToken, revokeToken, type AuthResu
 import { ChunkStore } from "./chunks";
 import { config } from "./config";
 import { openStore } from "./db";
+import { adminRouter } from "./admin";
 import { Game, type SocketData } from "./game";
 import { dbMemoryStore } from "./memory";
 
@@ -156,6 +157,8 @@ console.log(stt.available() ? "[voice] распознавание голоса �
 const tts = createTts();
 console.log(tts.available() ? "[tts] озвучка NPC готова (Piper)" : "[tts] озвучка выключена: нет PIPER_BIN / PIPER_VOICES в .env");
 const game = new Game(io, store, ai, chunks, stt, tts);
+// Админка (01.11): /admin в клиенте, API по паролю ADMIN_PASSWORD
+app.use("/api/admin", adminRouter(game, ai, chunks, Date.now()));
 await game.restore();
 
 let stopping = false;

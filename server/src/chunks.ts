@@ -30,6 +30,8 @@ export class ChunkStore {
         if (!f.endsWith(".json")) continue;
         try {
           const c = JSON.parse(readFileSync(join(this.dir, f), "utf8")) as ChunkData;
+          // В папке могут лежать не только чанки (palette.json Никиты, N14) — чанк узнаём по id и objects
+          if (typeof c.id !== "string" || !Array.isArray(c.objects)) continue;
           next.set(c.id, c);
         } catch (e) {
           console.warn(`[world] не читается ${f}: ${(e as Error).message}`);
@@ -38,6 +40,15 @@ export class ChunkStore {
     }
     this.chunks = next;
     console.log(`[world] чанков загружено: ${next.size}`);
+  }
+
+  /** Чанк, в границах которого точка (для админки) */
+  chunkAt(pos: Vec3): ChunkId | null {
+    for (const c of this.chunks.values()) {
+      const { min, max } = c.bounds;
+      if (pos[0] >= min[0] && pos[0] < max[0] && pos[1] >= min[1] - 0.5 && pos[1] < max[1] && pos[2] >= min[2] && pos[2] < max[2]) return c.id;
+    }
+    return null;
   }
 
   /** Где стоит NPC в мире (с учётом флагов `when`) */
