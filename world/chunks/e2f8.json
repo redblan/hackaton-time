@@ -1051,85 +1051,37 @@
       "label": "Телефон"
     },
     {
-      "id": "prop-first_aid_kit",
-      "kind": "box",
-      "pos": [
-        21,
-        22,
-        7
-      ],
-      "size": [
-        0.25,
-        0.2,
-        0.25
-      ],
-      "color": "#efc56c",
-      "collide": true
-    },
-    {
       "id": "item_first_aid_kit",
       "kind": "interactable",
       "target": "item_first_aid_kit",
       "pos": [
         21,
-        22,
-        7
+        21.3,
+        6.9
       ],
       "radius": 1.5,
       "label": "Аптечка"
-    },
-    {
-      "id": "prop-water",
-      "kind": "box",
-      "pos": [
-        19,
-        22,
-        8
-      ],
-      "size": [
-        0.25,
-        0.2,
-        0.25
-      ],
-      "color": "#efc56c",
-      "collide": true
     },
     {
       "id": "item_water",
       "kind": "interactable",
       "target": "item_water",
       "pos": [
-        19,
-        22,
-        8
+        19.8,
+        21.23,
+        5.9
       ],
       "radius": 1.5,
       "label": "Вода"
-    },
-    {
-      "id": "prop-flashlight",
-      "kind": "box",
-      "pos": [
-        20,
-        22,
-        8
-      ],
-      "size": [
-        0.25,
-        0.2,
-        0.25
-      ],
-      "color": "#efc56c",
-      "collide": true
     },
     {
       "id": "item_flashlight",
       "kind": "interactable",
       "target": "item_flashlight",
       "pos": [
-        20,
-        22,
-        8
+        20.4,
+        21.11,
+        5.9
       ],
       "radius": 1.5,
       "label": "Фонарик"
@@ -1247,29 +1199,13 @@
       "label": "Приставка"
     },
     {
-      "id": "prop-mugs",
-      "kind": "box",
-      "pos": [
-        19,
-        22,
-        10
-      ],
-      "size": [
-        0.25,
-        0.2,
-        0.25
-      ],
-      "color": "#8b96ac",
-      "collide": true
-    },
-    {
       "id": "item_mugs",
       "kind": "interactable",
       "target": "item_mugs",
       "pos": [
-        19,
-        22,
-        10
+        19.3,
+        21.115,
+        5.9
       ],
       "radius": 1.5,
       "label": "Кружки"
@@ -1895,6 +1831,150 @@
       "color": "#e4d3bc",
       "collide": false,
       "when": "window_broken"
+    },
+    {
+      "id": "e2f8-prop-first_aid_kit",
+      "kind": "prop",
+      "pos": [
+        21,
+        21.3,
+        6.9
+      ],
+      "size": [
+        0.5,
+        0.56,
+        0.33
+      ],
+      "label": "Аптечка",
+      "color": "#b83c36",
+      "mass": 1.2,
+      "bounce": 0.05
+    },
+    {
+      "id": "e2f8-prop-flashlight",
+      "kind": "prop",
+      "pos": [
+        20.4,
+        21.11,
+        5.9
+      ],
+      "size": [
+        0.18,
+        0.18,
+        0.42
+      ],
+      "label": "Фонарь",
+      "color": "#e2b64a",
+      "mass": 0.3,
+      "bounce": 0.12
+    },
+    {
+      "id": "e2f8-prop-water",
+      "kind": "prop",
+      "pos": [
+        19.8,
+        21.23,
+        5.9
+      ],
+      "size": [
+        0.16,
+        0.42,
+        0.16
+      ],
+      "label": "Бутылка воды",
+      "color": "#74b8ca",
+      "mass": 0.6,
+      "bounce": 0.08
+    },
+    {
+      "id": "e2f8-prop-mug",
+      "kind": "prop",
+      "pos": [
+        19.3,
+        21.115,
+        5.9
+      ],
+      "size": [
+        0.22,
+        0.19,
+        0.16
+      ],
+      "label": "Кружка",
+      "color": "#e7dfc4",
+      "mass": 0.2,
+      "bounce": 0.02
+    },
+    {
+      "id": "e2f8-prop-hall-box",
+      "kind": "prop",
+      "pos": [
+        12.7,
+        21.23,
+        3.35
+      ],
+      "size": [
+        0.55,
+        0.46,
+        0.5
+      ],
+      "label": "Картонная коробка",
+      "color": "#ba8e5c",
+      "mass": 1.5,
+      "bounce": 0.04
+    },
+    {
+      "id": "e2f8-prop-stair-box",
+      "kind": "prop",
+      "pos": [
+        23.2,
+        21.23,
+        0.6
+      ],
+      "size": [
+        0.55,
+        0.46,
+        0.5
+      ],
+      "label": "Картонная коробка",
+      "color": "#ba8e5c",
+      "mass": 1.5,
+      "bounce": 0.04
+    },
+    {
+      "id": "e2f8-prop-extinguisher",
+      "kind": "prop",
+      "pos": [
+        14.8,
+        21.375,
+        3.5
+      ],
+      "size": [
+        0.26,
+        0.75,
+        0.26
+      ],
+      "label": "Огнетушитель",
+      "color": "#bf4035",
+      "mass": 4.5,
+      "bounce": 0.03
+    },
+    {
+      "id": "e2f8-prop-chair",
+      "kind": "prop",
+      "pos": [
+        16.4,
+        21.45,
+        10.5
+      ],
+      "size": [
+        0.48,
+        0.9,
+        0.5
+      ],
+      "label": "Стул",
+      "color": "#98704f",
+      "mass": 3,
+      "bounce": 0.05
     }
   ]
 }

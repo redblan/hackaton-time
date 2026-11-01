@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync, statSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { generateWorld } from './generate';
 import { validateWorld } from './validate';
+import { PALETTE } from './palette';
 
 const chunks=generateWorld();
 validateWorld(chunks);
@@ -9,7 +10,7 @@ const out=new URL('../chunks/',import.meta.url);
 mkdirSync(fileURLToPath(out),{recursive:true});
 for(const chunk of chunks) {
   const json=JSON.stringify(chunk,null,2)+'\n';
-  const models=new Set(chunk.objects.filter(o=>o.kind==='model').map(o=>o.src));
+  const models=new Set(chunk.objects.flatMap(o=>(o.kind==='model'||o.kind==='prop')&&o.src?[o.src]:[]));
   let bytes=Buffer.byteLength(json);
   for(const src of models) {
     const url=new URL(`../assets/${src}`,import.meta.url);
@@ -24,3 +25,5 @@ for(const chunk of chunks) {
   console.log(`${chunk.id}: ${(bytes/1024).toFixed(1)} KiB including unique models`);
 }
 console.log(`[world] чанков: ${chunks.length}`);
+writeFileSync(new URL('palette.json',out),JSON.stringify(PALETTE,null,2)+'\n');
+console.log(`[world] палитра: ${PALETTE.length} наборов`);

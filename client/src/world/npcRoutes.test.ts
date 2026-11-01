@@ -10,7 +10,7 @@ const BODY_RADIUS = 0.2;
 const TALK_RADIUS = 4;
 
 const chunks = readdirSync(CHUNKS_DIR)
-  .filter((file) => file.endsWith(".json"))
+  .filter((file) => /^(?:e[12]f[1-9]|y[0-2][0-3])\.json$/.test(file)) // palette.json — не чанк
   .map((file) => JSON.parse(readFileSync(join(CHUNKS_DIR, file), "utf8")) as ChunkData);
 
 type Npc = Extract<WorldObject, { kind: "npc" }>;

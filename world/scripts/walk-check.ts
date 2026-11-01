@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 /**
- * npm run walk — проверка мира физикой игрока: пешком (без падений > 0.5 м) от спауна 9-го этажа
+ * node --import tsx world/scripts/walk-check.ts — проверка физикой игрока с твёрдыми prop:
+ * пешком (без падений > 0.5 м) от спауна 9-го этажа
  * до выхода из подъезда и детской площадки, с обвалом 4→3 и без. Гонять после правок world/.
  */
 import { readFileSync, readdirSync } from "node:fs";
@@ -10,7 +11,9 @@ import { stepBody, type Body } from "../../client/src/core/physics";
 const dir = fileURLToPath(new URL("../chunks/", import.meta.url));
 const chunks: ChunkData[] = readdirSync(dir).filter(f => /^(?:e[12]f[1-9]|y[0-2][0-3])\.json$/.test(f)).map((f) => JSON.parse(readFileSync(`${dir}/${f}`, "utf8")));
 for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya", "neighbor_valentina", "wire", "collapse_f4", "fire_f5"], ["papa_left", "window_broken", "wardrobe_fallen", "balcony_debris", "collapse_f4", "fire_f5", "gas", "spawn_first_aid", "spawn_ladder", "spawn_blankets", "power_on", "spawn_exit"]]) {
-  const cl: Aabb[] = chunks.flatMap((c) => getColliders(c, FLAGS));
+  // Conservative placement check: even props treated as solid, unmoved boxes cannot block evacuation.
+  const cl: Aabb[] = chunks.flatMap((c) => getColliders({ ...c, objects: c.objects.map(o => o.kind === 'prop'
+    ? { ...o, kind: 'box' as const, color: o.color ?? '#cccccc', collide: true } : o) }, FLAGS));
   const zones: { zone: string; min: Vec3; max: Vec3; chunk: string }[] = [];
   for (const c of chunks) for (const o of c.objects) if (o.kind === "zone" && isObjectActive(o, FLAGS)) zones.push({ zone: o.zone, min: o.min, max: o.max, chunk: c.id });
   const settle = (b: Body) => { for (let i = 0; i < 60 && !(b.grounded && i > 2); i++) stepBody(b, 0, 0, cl, 0.04, { gravity: true, jump: false }); };
@@ -32,13 +35,13 @@ for (const FLAGS of [["lift_vanya", "neighbor_valentina", "wire"], ["lift_vanya"
       seen.add(k); q.push(b.pos);
     }
   }
-  if(drops > 0 || ![...reached].some(z=>z.startsWith("z_exit_door@")) || ![...reached].some(z=>z.startsWith("z_safe_area@"))) throw new Error("Walk check failed");
   console.log(`\n=== флаги: ${FLAGS.join(",")} — достижимо пешком ${seen.size} точек, мест с падением > 0.5 м: ${drops}`);
   console.log("падения (x,этаж,z):", [...dropAt.entries()].slice(0, 12).map(([k, n]) => `${k}×${n}`).join(" "));
   for (const w of ["z_stairs", "z_balcony", "z_collapse", "z_exit_door", "z_yard", "z_safe_area"]) {
     const r = [...reached].filter((k) => k.startsWith(w + "@")).map((k) => k.split("@")[1]).sort();
     console.log(`  ${w}: ${r.join(" ") || "НЕ ДОСТИЖИМА"}`);
   }
+  if(drops > 0 || ![...reached].some(z=>z.startsWith("z_exit_door@")) || ![...reached].some(z=>z.startsWith("z_safe_area@"))) throw new Error("Walk check failed");
 }
 
 

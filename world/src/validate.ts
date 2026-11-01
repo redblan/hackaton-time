@@ -24,6 +24,12 @@ export function validateWorld(chunks: ChunkData[]): void {
       const vectors='pos' in o?[o.pos]:[o.min,o.max];
       if(vectors.some(v=>v.length!==3||v.some(n=>!Number.isFinite(n)))) fail('Invalid coordinates');
       if(o.kind==='box'&&o.size.some(n=>!Number.isFinite(n)||n<=0)) fail('Invalid size');
+      if(o.kind==='prop') {
+        if(o.size.length!==3||o.size.some(n=>!Number.isFinite(n)||n<=0)) fail('Invalid prop size');
+        if(typeof o.label!=='string'||!o.label.trim()) fail('Missing prop label');
+        if(o.mass!==undefined&&(!Number.isFinite(o.mass)||o.mass<=0)) fail('Invalid prop mass');
+        if(o.bounce!==undefined&&(!Number.isFinite(o.bounce)||o.bounce<0||o.bounce>1)) fail('Invalid prop bounce');
+      }
       if(o.kind==='zone'&&o.min.some((n,i)=>n>=o.max[i])) fail('Invalid zone bounds');
       if(o.kind==='crowd') {
         if(!['person','cat','dog','pigeon'].includes(o.type)) fail('Unknown crowd type');

@@ -3,6 +3,7 @@ import {addExterior} from './exterior';
 import {addInterior} from './interior';
 import {addRequestedObjects} from './requested';
 import {addCrowd} from './crowdPlacements';
+import {addProps} from './propPlacements';
 
 const itemLabels: Record<ItemId, string> = {
   documents: 'Документы', phone: 'Телефон', first_aid_kit: 'Аптечка',
@@ -209,5 +210,5 @@ export function yardChunk(col:number,row:number,address='ул. Садовая, 1
 }
 
 export function generateWorld(address='ул. Садовая, 14'):ChunkData[] {
-  return [...Array.from({length:18},(_,i)=>floorChunk(Math.floor(i/9)+1,i%9+1)),...Array.from({length:12},(_,i)=>yardChunk(Math.floor(i/4),i%4,address))].map(addExterior).map(addInterior).map(addRequestedObjects).map(addCrowd);
+  return [...Array.from({length:18},(_,i)=>floorChunk(Math.floor(i/9)+1,i%9+1)),...Array.from({length:12},(_,i)=>yardChunk(Math.floor(i/4),i%4,address))].map(addExterior).map(addInterior).map(addRequestedObjects).map(addProps).map(addCrowd);
 }

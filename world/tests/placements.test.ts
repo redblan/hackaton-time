@@ -47,11 +47,12 @@ it('prepares the required crowd counts with deterministic seeds and routes clear
   }
 });
 
-it('prepares eight portable props per floor, including an extinguisher, with unique ids and valid physics data', () => {
+it('generates eight portable props per floor, removes static duplicates and preserves item interaction positions', () => {
   const chunks = generateWorld();
   for (const c of chunks) {
     const props = propPlacements(c);
     expect(props).toHaveLength(c.id.startsWith('e') ? 8 : 0);
+    expect(c.objects.filter(o => o.kind === 'prop')).toHaveLength(props.length);
     for (const p of props) {
       const boxes = getColliders({ ...c, objects: c.objects.filter(o => o.id !== p.replaces) }, []);
       const preset = PALETTE.find(entry => entry.id === p.preset)!;
@@ -59,7 +60,12 @@ it('prepares eight portable props per floor, including an extinguisher, with uni
       expect(p.mass).toBeGreaterThan(0);
       expect(p.bounce).toBeGreaterThanOrEqual(0);
       expect(p.bounce).toBeLessThan(1);
-      if (p.replaces) expect(c.objects.some(o => o.id === p.replaces && o.kind === 'box')).toBe(true);
+      if (p.replaces) {
+        expect(c.objects.some(o => o.id === p.replaces)).toBe(false);
+        expect(c.objects.find(o => o.id === p.replaces!.replace('prop-', 'item_'))).toMatchObject({ pos: p.pos });
+      }
+      expect(c.objects.find(o => o.id === p.id)).toMatchObject({ kind: 'prop', pos: p.pos, size: preset.size,
+        label: preset.label, mass: p.mass, bounce: p.bounce, color: preset.color });
       expect(boxes.some(box => intersects(p.pos, preset.size, box)), `${p.id}: intersects structure`).toBe(false);
     }
   }
