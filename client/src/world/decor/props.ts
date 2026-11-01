@@ -134,8 +134,8 @@ export function elevator(opts: { depth?: number; gap?: number; doors?: boolean }
   b.box(0.14, 0.3, 0.04, METAL, { x: w / 2 + 0.3, y: 1.15, z: 0.02 });
   b.cylinder(0.025, 0.025, 0.02, "#ffd36a", { x: w / 2 + 0.3, y: 1.22, z: 0.05, rx: Math.PI / 2 }, 8);
   b.cylinder(0.025, 0.025, 0.02, "#ffd36a", { x: w / 2 + 0.3, y: 1.08, z: 0.05, rx: Math.PI / 2 }, 8);
-  // корпус шахты вокруг кабины, чуть темнее стены
-  b.box(w + 0.24, h + 0.1, depth + 0.1, "#c9c3b7", { y: (h + 0.1) / 2, z: -depth / 2 - 0.1 });
+  // корпус шахты: только сверху и сзади кабины — спереди он закрывал бы кабину, когда двери открыты
+  b.box(w + 0.24, 0.6, depth + 0.1, "#c9c3b7", { y: h + 0.4, z: -depth / 2 - 0.1 });
   return b.build();
 }
 

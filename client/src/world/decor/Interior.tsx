@@ -144,7 +144,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
 
   // ---------- окна лестницы: внутренняя сторона фасадных окон (x 2 и 10, стекло 1.5×1.25 на y 1.8) ----------
   for (const wx of secondExit ? [2] : [2, 10]) {
-    b.box(1.5, 1.25, 0.02, "#9fcbe0", { x: wx, y: 1.8, z: 0.11 });
+    // стекло — прозрачное, в Animated.tsx (WindowGlass)
     b.box(1.7, 0.1, 0.25, "#f6e1bd", { x: wx, y: 1.12, z: 0.2 });
     for (const sx of [-0.78, 0.78]) b.box(0.06, 1.37, 0.05, "#f9ebd5", { x: wx + sx, y: 1.8, z: 0.125 });
     b.box(1.62, 0.06, 0.05, "#f9ebd5", { x: wx, y: 2.455, z: 0.125 });
@@ -177,7 +177,7 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
 
   // ---------- вещи в коридоре по теме этажа: у парапета, лицом в коридор ----------
   theme.hallProps.forEach((kind, i) => {
-    if (kind === "extinguisher") return b.add(P.extinguisher(), { x: entrance === 1 ? 11.55 : 0.45, y: 0, z: 3.6, ry: entrance === 1 ? -Math.PI / 2 : Math.PI / 2 });
+    if (kind === "extinguisher") return; // огнетушитель теперь из данных (prop), его можно взять — decor/Carry
     if (kind === "ladder") return b.add(P.ladder(), { x: 3.3, y: 0, z: 4.72, ry: Math.PI });
     const x = 2.0 + i * 1.0 + random() * 0.2;
     b.add(hallProp(kind), { x, y: 0, z: 3.42, ry: (random() - 0.5) * 0.3 });
@@ -213,7 +213,6 @@ function buildFloorDecor(entrance: number, floor: number, theme: FloorTheme, doo
   // ---------- окна квартиры: комната x 2.5 (всё наше) и кухня x 8 (стекло — из данных, бьётся по флагу) ----------
   for (const wx of [2.5, 8]) {
     const zf = 11.8 - OFF;
-    if (wx === 2.5) b.box(2.0, 1.5, 0.02, "#a8dce4", { x: wx, y: 1.7, z: 11.8 - 0.03 });
     for (const sx of [-1.03, 1.03]) b.box(0.06, 1.62, 0.05, "#f9ebd5", { x: wx + sx, y: 1.7, z: zf - 0.01 });
     b.box(2.12, 0.06, 0.05, "#f9ebd5", { x: wx, y: 2.48, z: zf - 0.01 });
     b.box(0.05, 1.5, 0.04, "#f9ebd5", { x: wx, y: 1.7, z: zf - 0.015 });
@@ -316,7 +315,7 @@ function buildLabels(entrance: number, floor: number) {
 
 /** Створки двери квартиры: E на «Дверь квартиры» закрывает/открывает (store.doors по чанку), поворот с анимацией. */
 function AnimatedDoor({ chunkId, parts, spec, plate, plateMaterial }: { chunkId: string; parts: ReturnType<typeof P.doorParts>; spec: DoorSpec; plate: BufferGeometry; plateMaterial: MeshStandardMaterial }) {
-  const open = useStore((s) => s.doors[chunkId] ?? true);
+  const open = useStore((s) => s.doors[chunkId] ?? false);
   const initialOpen = useRef(open);
   const leaves = useRef<(Group | null)[]>([]);
   useFrame((_, dt) => {
@@ -405,7 +404,7 @@ function FloorInterior({ chunkId, entrance, floor, origin, flags }: { chunkId: s
       <mesh geometry={ceiling} material={solidMaterial} />
       <mesh geometry={labels.geometry} material={materials.label} />
       <AnimatedDoor chunkId={chunkId} parts={parts} spec={mainDoor} plate={labels.plate} plateMaterial={materials.label} />
-      <FloorAnimated origin={origin} floor={floor} curtain={floorTheme(entrance, floor).curtain} flags={flags} />
+      <FloorAnimated chunkId={chunkId} origin={origin} floor={floor} curtain={floorTheme(entrance, floor).curtain} flags={flags} />
     </group>
   );
 }

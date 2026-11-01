@@ -12,9 +12,10 @@ import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
 import { Crowd } from "./crowd/Crowd";
-import { FxParticles, InteractMarkers, type Interact } from "./Effects";
+import { FxParticles } from "./Effects";
 import { useLampLight } from "./LocalLights";
 import { Interior, parseFloorId } from "./decor/Interior";
+import { PropExtinguisher, isExtinguisher } from "./decor/Carry";
 import { isYardAnimated, YardAnimated } from "./decor/YardAnimated";
 import { paintSurface } from "./style";
 import { uploadStaticBoxes, type StaticBox } from './staticBoxes';
@@ -23,6 +24,54 @@ import { uploadStaticBoxes, type StaticBox } from './staticBoxes';
 const OWN_MODELS = new Set(["door", "lift", "stove"]);
 
 const active = (o: WorldObject, flags: string[]) => isObjectActive(o, flags);
+
+/** Папа в данных стоит в квартирах 6–9 этажей; виден только на этаже старта (флаг сервера home_fN). */
+export function npcHere(o: WorldObject, chunkId: string, flags: readonly string[]): boolean {
+  if (o.kind !== "npc" || o.npcId !== "papa" || !flags.some((f) => f.startsWith("home_f"))) return true;
+  const floor = parseFloorId(chunkId)?.floor;
+  return floor !== undefined && flags.includes(`home_f${floor}`);
+}
+
+/**
+ * Внешние стены этажа в данных сплошные. Рисуем их с проёмами под окна (стекло — в decor/Animated),
+ * столкновения остаются по целой коробке (getColliders).
+ */
+const WINDOW_HOLES: Record<string, { x: number; w: number; y0: number; y1: number }[]> = {
+  "back-wall": [
+    { x: 2.5, w: 2.0, y0: 0.95, y1: 2.45 },
+    { x: 8, w: 2.0, y0: 0.95, y1: 2.45 },
+  ],
+  "south-wall": [
+    { x: 2, w: 1.5, y0: 1.175, y1: 2.425 },
+    { x: 10, w: 1.5, y0: 1.175, y1: 2.425 },
+  ],
+};
+function withWindowHoles(o: StaticBox, origin: Vec3): StaticBox[] {
+  const holes = WINDOW_HOLES[o.id];
+  if (!holes || o.rotY) return [o];
+  const x0 = o.pos[0] - o.size[0] / 2;
+  const x1 = o.pos[0] + o.size[0] / 2;
+  const yb = o.pos[1] - o.size[1] / 2;
+  const yt = o.pos[1] + o.size[1] / 2;
+  const part = (id: string, ax: number, bx: number, ay: number, by: number): StaticBox => ({
+    ...o,
+    id: `${o.id}:${id}`,
+    pos: [(ax + bx) / 2, (ay + by) / 2, o.pos[2]],
+    size: [bx - ax, by - ay, o.size[2]],
+  });
+  const out: StaticBox[] = [];
+  let x = x0;
+  holes.forEach((h, i) => {
+    const hx0 = origin[0] + h.x - h.w / 2;
+    const hx1 = origin[0] + h.x + h.w / 2;
+    if (hx0 > x) out.push(part(`col${i}`, x, hx0, yb, yt));
+    out.push(part(`below${i}`, hx0, hx1, yb, origin[1] + h.y0));
+    out.push(part(`above${i}`, hx0, hx1, origin[1] + h.y1, yt));
+    x = hx1;
+  });
+  if (x < x1) out.push(part("end", x, x1, yb, yt));
+  return out;
+}
 
 function Sign({object}:{object:Extract<WorldObject,{kind:'sign'}>}) {
   const texture=useMemo(()=>{
@@ -96,17 +145,15 @@ function useCompiledReveal() {
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const root = useCompiledReveal();
   const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
-  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)&&!(props.flags.includes('fire_out')&&o.kind==='fx'&&(o.fx==='fire'||o.fx==='smoke'))),[props.chunk,props.flags]);
+  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)&&npcHere(o,props.chunk.id,props.flags)&&!(props.flags.includes('fire_out')&&o.kind==='fx'&&(o.fx==='fire'||o.fx==='smoke'))),[props.chunk,props.flags]);
   const boxes=useMemo(()=>{
     const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
-    return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-')));
+    return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&(o.id==='window-glass'||o.id.startsWith('facade-window-')))&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-'))).flatMap(o=>floor?withWindowHoles(o,props.chunk.bounds.min):[o]);
   },[objects,Boolean(floor)]);
-  const markers=useMemo(()=>objects.filter((o):o is Interact=>o.kind==='interactable'),[objects]);
   return (
     <group ref={root} name={props.chunk.id}>
       <StaticBoxes boxes={boxes}/>
       <Crowd objects={objects} origin={props.chunk.bounds.min} />
-      <InteractMarkers objects={markers} />
       {objects.map(o=>o.id==='requested-lamp-on'&&o.kind==='box'?<LampGlow key={o.id} pos={o.pos}/>:null)}
       {objects.map((o) => {
         switch (o.kind) {
@@ -124,6 +171,8 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
               </group>
             );
           }
+          case "prop":
+            return isExtinguisher(o.id) ? <PropExtinguisher key={o.id} object={o} /> : null; // пока берём в руки только огнетушитель
           case "sign":
             return <Sign key={o.id} object={o}/>;
           case "fx":
@@ -149,8 +198,12 @@ function StaticBoxes({boxes}:{boxes:StaticBox[]}) {
 /** Коробки для столкновений. Объекты с `when` не из flags не сталкиваются. */
 export function getColliders(chunk: ChunkData, flags: string[]): Aabb[] {
   const out: Aabb[] = [];
+  // Коробка «lift» из данных — стенка сразу за дверями лифта: без неё в открытый лифт можно зайти.
+  // Боковых стенок кабины не ставим: за лифтом (z 4.1..4.9) проход, по нему идёт обход через балкон 4-го этажа.
+  const floor = parseFloorId(chunk.id);
   for (const o of chunk.objects) {
     if (o.kind !== "box" || o.collide === false || !active(o, flags)) continue;
+    if (floor && o.id === "lift") continue;
     const a = o.rotY ?? 0;
     const c = Math.abs(Math.cos(a));
     const s = Math.abs(Math.sin(a));

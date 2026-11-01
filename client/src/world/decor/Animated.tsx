@@ -7,12 +7,17 @@
  *   люстры    — качаются при толчке, амплитуда от strength, затухают 3 с после конца
  *   шторы     — чуть колышутся всегда, сильно — при выбитом окне кухни (window_broken)
  *   холодильник и плита — дверца и крышка хлопают при толчке
+ *   свет      — выключатель у двери квартиры (E): гаснут люстры комнат и их свет, клавиша щёлкает
+ *   окна      — прозрачное стекло (стены с проёмами рисует ChunkView)
  */
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame, type RootState } from "@react-three/fiber";
 import { MeshStandardMaterial, type BufferGeometry, type Group } from "three";
+import type { Vec3 } from "@game/shared";
 import { local } from "../../core/local";
-import { store } from "../../core/store";
+import { store, useStore } from "../../core/store";
+import { useLampLight } from "../LocalLights";
+import { Builder } from "./build";
 import { paintSurface } from "../style";
 import * as P from "./props";
 
@@ -38,6 +43,32 @@ const QUAKE_FADE_MS = 3000;
 
 const material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.82 });
 paintSurface(material);
+/** Люстра с выключенным светом: абажур и лампочка темнее */
+const lampOff = new MeshStandardMaterial({ vertexColors: true, roughness: 0.82, color: "#5a5a5a" });
+const glass = new MeshStandardMaterial({ color: "#bfe3ee", roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false });
+/** Комнатные люстры (индексы в LAMPS), их гасит выключатель */
+const ROOM_LAMPS = [2, 3];
+
+let glassGeo: { fixed: BufferGeometry; kitchen: BufferGeometry } | null = null;
+/** Стёкла: окна лестницы (x 2, 10) и комнаты (x 2.5) — всегда; кухня (x 8) — пока окно не выбито */
+const glassGeometry = () =>
+  (glassGeo ??= {
+    fixed: new Builder()
+      .box(1.5, 1.25, 0.02, "#ffffff", { x: 2, y: 1.8, z: 0.0 })
+      .box(1.5, 1.25, 0.02, "#ffffff", { x: 10, y: 1.8, z: 0.0 })
+      .box(2.0, 1.5, 0.02, "#ffffff", { x: 2.5, y: 1.7, z: 11.8 })
+      .build(),
+    kitchen: new Builder().box(2.0, 1.5, 0.02, "#ffffff", { x: 8, y: 1.7, z: 11.8 }).build(),
+  });
+
+let leverGeo: BufferGeometry | null = null;
+const lever = () => (leverGeo ??= new Builder().box(0.03, 0.045, 0.02, "#f4f2ee", { z: 0.01 }).build());
+
+/** Свет люстры в общий пул точечных источников (LocalLights), пока свет включён */
+function RoomLight({ pos }: { pos: Vec3 }) {
+  useLampLight(pos);
+  return null;
+}
 
 let shared: { lamp: BufferGeometry; leaf: BufferGeometry; lid: BufferGeometry; door: BufferGeometry } | null = null;
 const geo = () => (shared ??= { lamp: P.ceilingLamp(), leaf: P.elevatorLeaf(), lid: P.stoveLid(), door: P.fridgeDoor() });
@@ -68,8 +99,14 @@ function playerXZ(state: RootState): [number, number, number] {
   return [c.x, c.y - 1.6, c.z];
 }
 
-export function FloorAnimated({ origin, floor, curtain, flags }: { origin: readonly number[]; floor: number; curtain: string; flags: readonly string[] }) {
+export function FloorAnimated({ chunkId, origin, floor, curtain, flags }: { chunkId: string; origin: readonly number[]; floor: number; curtain: string; flags: readonly string[] }) {
   const g = geo();
+  const glassG = glassGeometry();
+  const lightOn = useStore((s) => s.lights[chunkId] ?? true);
+  const lightPos = useMemo(
+    () => ROOM_LAMPS.map((i): Vec3 => [origin[0]! + LAMPS[i]![0], origin[1]! + CEIL - 0.75, origin[2]! + LAMPS[i]![1]]),
+    [origin],
+  );
   const curtains = curtainGeo(curtain);
   const lamps = useRef<(Group | null)[]>([]);
   const leaves = useRef<(Group | null)[]>([]);
@@ -120,9 +157,15 @@ export function FloorAnimated({ origin, floor, curtain, flags }: { origin: reado
     <group>
       {LAMPS.map(([x, z], i) => (
         <group key={`lamp${i}`} ref={(el) => void (lamps.current[i] = el)} position={[x, CEIL, z]}>
-          <mesh geometry={g.lamp} material={material} />
+          <mesh geometry={g.lamp} material={!lightOn && ROOM_LAMPS.includes(i) ? lampOff : material} />
         </group>
       ))}
+      {lightOn && lightPos.map((p, i) => <RoomLight key={i} pos={p} />)}
+      {/* клавиши выключателя: в квартире у двери и со стороны коридора */}
+      <mesh geometry={lever()} material={material} position={[6.2, 1.2, 5.075 + 0.03]} rotation-x={lightOn ? -0.35 : 0.35} />
+      <mesh geometry={lever()} material={material} position={[3.2, 1.25, 4.925 - 0.03]} rotation={[lightOn ? -0.35 : 0.35, Math.PI, 0]} />
+      <mesh geometry={glassG.fixed} material={glass} renderOrder={2} />
+      {!broken && <mesh geometry={glassG.kitchen} material={glass} renderOrder={2} />}
       <group position={[10, 0, LIFT_Z]} rotation-y={Math.PI}>
         {[0, 1].map((i) => (
           <group key={i} ref={(el) => void (leaves.current[i] = el)}>

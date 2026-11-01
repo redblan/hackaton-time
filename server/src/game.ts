@@ -308,6 +308,8 @@ export class Game {
     room.flags = new Set(config.flags);
     // D-67: застрявший в лифте — на этаже ниже старта (в мире Ваня стоит на 5–8 с флагом vanya_f{N})
     if (config.flags.includes("lift_vanya")) room.flags.add(`vanya_f${Math.max(5, Math.min(8, config.startFloor - 1))}`);
+    // Папа в данных стоит в квартирах 6–9 этажей; клиент показывает его только на этаже старта
+    room.flags.add(`home_f${config.startFloor}`);
     for (const p of room.players.values()) {
       const sp = this.chunks.findSpawn(p.role!, config.startFloor);
       p.pos = [sp.pos[0], sp.pos[1], sp.pos[2]];

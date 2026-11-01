@@ -66,8 +66,12 @@ export interface State {
   debug: boolean;
   /** Чувствительность мыши, множитель */
   sensitivity: number;
-  /** Дверь квартиры по чанкам: false — закрыта (E на «Дверь квартиры»). По умолчанию открыта. Только вид, без коллизий. */
+  /** Дверь квартиры по чанкам: true — открыта (E на «Дверь квартиры»). По умолчанию закрыта. Только вид, без коллизий. */
   doors: Record<string, boolean>;
+  /** Свет в квартире по чанкам: false — выключен (E на выключателе). По умолчанию включён. */
+  lights: Record<string, boolean>;
+  /** Предмет у меня в руках (id prop), сейчас — только огнетушитель */
+  held: string | null;
   /** Вид от третьего лица (C): видно своего персонажа и его анимацию */
   thirdPerson: boolean;
   /** Метрики (01.11): FPS считается здесь, ping — через ping/pong, gpu — из WebGL. Уходят на сервер раз в 2 с */
@@ -103,6 +107,8 @@ const initial: State = {
   debug: false,
   sensitivity: readSensitivity(),
   doors: {},
+  lights: {},
+  held: null,
   thirdPerson: false,
   fps: 0,
   ping: 0,

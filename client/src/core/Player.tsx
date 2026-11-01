@@ -8,7 +8,8 @@ import { PointerLockControls } from "@react-three/drei";
 import { Euler, Vector3, type Group } from "three";
 import type { Aabb, InteractableId, NpcId, Vec3, ZoneId } from "@game/shared";
 import { Character, variantFor } from "../world/Character";
-import { getColliders } from "../world/ChunkView";
+import { getColliders, npcHere } from "../world/ChunkView";
+import { carryMaterial, extinguisherGeometry, isExtinguisher } from "../world/decor/Carry";
 import { chunkAt, isActive, wantedChunks, movementChunksReady, transitionChunks } from "./chunkMath";
 import { local } from "./local";
 import { PHYS, stepBody, type Body } from "./physics";
@@ -29,6 +30,44 @@ function insideAny(p: Vector3, cols: Aabb[]) {
 const { WALK, RUN } = PHYS;
 const SEND_MS = 66; // ~15 Гц
 const NPC_TALK_RADIUS = 4;
+/**
+ * Что сейчас можно делать на E (решение Егора 01.11): двери, люди, выключатель и огнетушитель.
+ * Остальные точки (укрытия, вещи, газ, план, вызов лифта) пока выключены — вернуть: добавить сюда.
+ */
+const ALLOWED_INTERACTS = new Set<string>([
+  "apartment_door",
+  "neighbor_door",
+  "balcony_door",
+  "elevator_shaft",
+  "light_switch",
+  "victim_bleeding",
+  "victim_scared",
+  "victim_cpr",
+  "victim_unconscious",
+  "neighbor_leg",
+  "brigade",
+]);
+const PICK_RADIUS = 1.3;
+
+/** Взять огнетушитель / поставить перед собой (положение — всем через prop:move) */
+function carry(target: string, pos: Vec3, yaw: number) {
+  const st = store.get();
+  const me = st.auth?.playerId ?? null;
+  if (target.startsWith("pick:")) {
+    const id = target.slice(5);
+    const chunkId = chunkAt(pos);
+    const prop = { id, chunkId, pos: [pos[0], pos[1] + 1, pos[2]] as Vec3, rotY: yaw, holder: me };
+    store.set((s) => ({ held: id, props: { ...s.props, [id]: prop } }));
+    getSocket()?.emit("prop:move", prop);
+  } else if (target === "drop" && st.held) {
+    const id = st.held;
+    // ставим на пол в 0.6 м перед собой; pos предмета — центр коробки 0.75 м
+    const at: Vec3 = [pos[0] - Math.sin(yaw) * 0.6, pos[1] + 0.375, pos[2] - Math.cos(yaw) * 0.6];
+    const prop = { id, chunkId: chunkAt(at), pos: at, rotY: yaw, holder: null };
+    store.set((s) => ({ held: null, props: { ...s.props, [id]: prop } }));
+    getSocket()?.emit("prop:move", prop);
+  }
+}
 
 const keys = new Set<string>();
 const isTypingTarget = (t: EventTarget | null) =>
@@ -54,12 +93,15 @@ export function Player() {
       keys.add(e.code);
       if (e.code === "KeyE" && !e.repeat) {
         const p = store.get().prompt;
-        if (p) sendEvent({ type: "interact", target: p.target as InteractableId });
-        // Дверь квартиры открывается/закрывается на клиенте (вид), сценарий на сервере получает interact как раньше
-        if (p?.target === "apartment_door") {
-          const id = chunkAt(body.current.pos);
-          store.set((st) => ({ doors: { ...st.doors, [id]: !(st.doors[id] ?? true) } }));
+        if (p && (p.target.startsWith("pick:") || p.target === "drop")) {
+          carry(p.target, body.current.pos, local.rotY);
+          return;
         }
+        if (p) sendEvent({ type: "interact", target: p.target as InteractableId });
+        // Дверь квартиры и свет — на клиенте (вид), сценарий на сервере получает interact как раньше
+        const id = chunkAt(body.current.pos);
+        if (p?.target === "apartment_door") store.set((st) => ({ doors: { ...st.doors, [id]: !(st.doors[id] ?? false) } }));
+        if (p?.target === "light_switch") store.set((st) => ({ lights: { ...st.lights, [id]: !(st.lights[id] ?? true) } }));
       }
       if (e.code === "KeyC" && !e.repeat && !store.get().typing) store.set((st) => ({ thirdPerson: !st.thirdPerson }));
     };
@@ -153,6 +195,8 @@ export function Player() {
 
   const stepState = useRef({ moving: false, running: false });
   const avatar = useRef<Group>(null);
+  const heldRef = useRef<Group>(null);
+  const held = useStore((s) => s.held);
   const [selfAnim, setSelfAnim] = useState<"idle" | "walk" | "run">("idle");
 
   const afterStep = () => {
@@ -182,6 +226,12 @@ export function Player() {
       me.rotation.y = yaw;
       const next = moving ? (running ? "run" : "walk") : "idle";
       if (next !== selfAnim) setSelfAnim(next);
+    }
+    // огнетушитель в руках: справа внизу перед камерой
+    const h = heldRef.current;
+    if (h) {
+      h.position.set(0.32, -0.62, -0.6).applyQuaternion(camera.quaternion).add(camera.position);
+      h.rotation.set(0, yaw + 0.3, 0);
     }
     const q = st.quake;
     if (q) {
@@ -229,9 +279,16 @@ export function Player() {
         for (const o of c.objects) {
           if (!isActive(o, st.flags)) continue;
           if (o.kind === "interactable") {
+            if (!ALLOWED_INTERACTS.has(o.target)) continue;
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[2] - pos[2]);
             if (d <= o.radius && Math.abs(o.pos[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: o.target, label: o.label, d };
-          } else if (o.kind === "npc" && !moving.has(o.npcId)) {
+          } else if (o.kind === "prop" && isExtinguisher(o.id) && !st.held) {
+            const ps = st.props[o.id];
+            if (ps?.holder) continue;
+            const at = ps?.pos ?? o.pos;
+            const d = Math.hypot(at[0] - pos[0], at[2] - pos[2]);
+            if (d <= PICK_RADIUS && Math.abs(at[1] - pos[1]) < 2 && (!best || d < best.d)) best = { target: `pick:${o.id}`, label: "Взять огнетушитель", d };
+          } else if (o.kind === "npc" && !moving.has(o.npcId) && npcHere(o, c.id, st.flags)) {
             const d = Math.hypot(o.pos[0] - pos[0], o.pos[1] - pos[1], o.pos[2] - pos[2]);
             if (d <= NPC_TALK_RADIUS && (!npc || d < npc.d)) npc = { id: o.npcId, d };
           } else if (o.kind === "zone") {
@@ -244,6 +301,7 @@ export function Player() {
       for (const z of inZones) if (!t.zones.has(z)) sendEvent({ type: "enterZone", zone: z });
       t.zones = inZones;
 
+      if (!best && st.held) best = { target: "drop", label: "Поставить огнетушитель", d: 0 };
       const prompt = best ? { target: best.target, label: best.label } : null;
       if (prompt?.target !== st.prompt?.target || prompt?.label !== st.prompt?.label) store.set({ prompt });
       const near = npc?.id ?? null;
@@ -253,6 +311,11 @@ export function Player() {
 
   return (
     <>
+      {held && (
+        <group ref={heldRef}>
+          <mesh geometry={extinguisherGeometry()} material={carryMaterial} scale={0.6} />
+        </group>
+      )}
       <group ref={avatar} visible={false}>
         <Character color="#4a7fb5" anim={selfAnim} variant={variantFor(store.get().auth?.playerId ?? "me")} />
       </group>
