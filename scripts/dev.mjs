@@ -6,6 +6,12 @@ import { join } from "node:path";
 
 const lanIps = () => Object.values(networkInterfaces()).flat().filter((i) => i && i.family === "IPv4" && !i.internal).map((i) => i.address);
 
+// openssl: OPENSSL из окружения → в PATH → из Git for Windows (на Windows его нет в PATH)
+const works = (b) => { try { execFileSync(b, ["version"], { stdio: "ignore" }); return true; } catch { return false; } };
+const opensslBin = () =>
+  [process.env.OPENSSL, "openssl", "C:\\Program Files\\Git\\usr\\bin\\openssl.exe", "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe"]
+    .find((b) => b && (b === "openssl" || existsSync(b)) && works(b));
+
 // Шифрование и в dev: самоподписанный сертификат для Vite (тот же, что у npm run start). HTTPS=0 — выключить.
 const certsDir = join(import.meta.dirname, "..", "server", ".certs");
 let https = process.env.HTTPS !== "0";
@@ -13,10 +19,12 @@ if (https && !existsSync(join(certsDir, "cert.pem"))) {
   try {
     mkdirSync(certsDir, { recursive: true });
     const san = ["DNS:localhost", "IP:127.0.0.1", ...lanIps().map((ip) => `IP:${ip}`)].join(",");
-    execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-sha256", "-days", "825",
+    const bin = opensslBin();
+    if (!bin) throw new Error("нет openssl");
+    execFileSync(bin, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-sha256", "-days", "825",
       "-keyout", join(certsDir, "key.pem"), "-out", join(certsDir, "cert.pem"), "-subj", "/CN=toltchok-local", "-addext", `subjectAltName=${san}`], { stdio: "ignore" });
   } catch {
-    console.warn("[dev] openssl недоступен — клиент по HTTP");
+    console.warn("[dev] openssl недоступен — клиент по HTTP (микрофон по сети не заработает). Укажи путь: OPENSSL=C:\\...\\openssl.exe");
     https = false;
   }
 }

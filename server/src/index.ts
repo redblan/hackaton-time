@@ -22,6 +22,20 @@ function lanIps(): string[] {
     .map((i) => i!.address);
 }
 
+/** openssl: OPENSSL из окружения → в PATH → из Git for Windows (на Windows его нет в PATH) */
+function opensslBin(): string | undefined {
+  const works = (b: string) => {
+    try {
+      execFileSync(b, ["version"], { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const list = [process.env.OPENSSL, "openssl", "C:\\Program Files\\Git\\usr\\bin\\openssl.exe", "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe"];
+  return list.find((b): b is string => !!b && (b === "openssl" || existsSync(b)) && works(b));
+}
+
 /** Самоподписанный сертификат через openssl (есть на macOS/Linux). Нет openssl — работаем по HTTP. */
 function loadCert(): { key: Buffer; cert: Buffer } | null {
   const key = join(config.certsDir, "key.pem");
@@ -30,7 +44,9 @@ function loadCert(): { key: Buffer; cert: Buffer } | null {
     try {
       mkdirSync(config.certsDir, { recursive: true });
       const san = ["DNS:localhost", "IP:127.0.0.1", ...lanIps().map((ip) => `IP:${ip}`)].join(",");
-      execFileSync("openssl", [
+      const bin = opensslBin();
+      if (!bin) throw new Error("нет openssl");
+      execFileSync(bin, [
         "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-sha256", "-days", "825",
         "-keyout", key, "-out", cert, "-subj", "/CN=toltchok-local", "-addext", `subjectAltName=${san}`,
       ], { stdio: "ignore" });

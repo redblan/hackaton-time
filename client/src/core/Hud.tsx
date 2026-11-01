@@ -10,6 +10,7 @@ import { NPC_NAMES, ROLE_NAMES, STAGE_NAMES } from "./names";
 import { sample } from "./remote";
 import { nextKey, store, useStore } from "./store";
 import { Button } from "./ui";
+import { NpcAudio } from "../voice/NpcAudio";
 import { VoiceButton } from "../voice/VoiceButton";
 
 type Target = "radio" | NpcId;
@@ -328,6 +329,7 @@ export function Hud() {
       <NpcLines />
       <ChatBox />
       <VoiceButton />
+      <NpcAudio />
       <HangUp />
       <Partners />
       <Loading />
