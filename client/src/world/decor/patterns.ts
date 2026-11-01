@@ -4,6 +4,7 @@
  * поэтому панели любого размера сходятся без швов, а в памяти — ни одной текстуры.
  */
 import { Color, MeshStandardMaterial, type WebGLProgramParametersWithUniforms } from "three";
+import { PLASTER_TILE_M, plasterTexture } from "../style";
 import type { WallpaperPattern } from "./themes";
 
 const PATTERN_ID: Record<WallpaperPattern, number> = { plain: 0, stripes: 1, dots: 2, diamonds: 3, floral: 4 };
@@ -11,6 +12,11 @@ const PATTERN_ID: Record<WallpaperPattern, number> = { plain: 0, stripes: 1, dot
 const COMMON = /* glsl */ `
   varying vec3 vWorldPos;
   float hashP(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  /** Чёткий край узора: шириной в пиксель на любом расстоянии */
+  float sharp(float edge, float x) {
+    float w = fwidth(x) * 0.75;
+    return smoothstep(edge - w, edge + w, x);
+  }
 `;
 
 function withWorld(shader: WebGLProgramParametersWithUniforms, uniformsDecl: string, paint: string) {
@@ -40,35 +46,37 @@ export function wallpaperMaterial(base: string, accent: string, pattern: Wallpap
     shader.uniforms.uBase = uBase;
     shader.uniforms.uAccent = uAccent;
     shader.uniforms.uPattern = uPattern;
+    shader.uniforms.uPlaster = { value: plasterTexture() };
     withWorld(
       shader,
-      "uniform vec3 uBase; uniform vec3 uAccent; uniform int uPattern;",
+      "uniform vec3 uBase; uniform vec3 uAccent; uniform int uPattern; uniform sampler2D uPlaster;",
       /* glsl */ `
       float u = vWorldPos.x + vWorldPos.z;
       float v = vWorldPos.y;
       float k = 0.0;
       if (uPattern == 1) {
-        k = smoothstep(0.42, 0.5, abs(fract(u * 3.0) - 0.5)) * 0.9;
+        k = sharp(0.46, abs(fract(u * 3.0) - 0.5)) * 0.9;
       } else if (uPattern == 2) {
         vec2 c = vec2(fract(u * 4.0), fract(v * 4.0)) - 0.5;
-        k = 1.0 - smoothstep(0.1, 0.16, length(c));
+        k = 1.0 - sharp(0.13, length(c));
       } else if (uPattern == 3) {
         vec2 c = abs(vec2(fract(u * 2.5), fract(v * 2.5)) - 0.5);
         float d = c.x + c.y;
-        k = smoothstep(0.26, 0.3, d) * (1.0 - smoothstep(0.34, 0.38, d));
+        k = sharp(0.28, d) * (1.0 - sharp(0.36, d));
       } else if (uPattern == 4) {
         vec2 cell = floor(vec2(u * 2.2, v * 2.2));
         vec2 c = vec2(fract(u * 2.2), fract(v * 2.2)) - 0.5 + (vec2(hashP(cell), hashP(cell + 7.0)) - 0.5) * 0.3;
         float petals = 0.0;
         for (int i = 0; i < 5; i++) {
           float a = float(i) * 1.2566;
-          petals += 1.0 - smoothstep(0.05, 0.09, length(c - vec2(cos(a), sin(a)) * 0.09));
+          petals += 1.0 - sharp(0.07, length(c - vec2(cos(a), sin(a)) * 0.09));
         }
-        k = clamp(petals, 0.0, 1.0) * 0.85 + (1.0 - smoothstep(0.03, 0.05, length(c))) * 0.4;
+        k = clamp(petals, 0.0, 1.0) * 0.85 + (1.0 - sharp(0.04, length(c))) * 0.4;
       }
       float dirt = 0.94 + 0.06 * hashP(floor(vWorldPos.xz * 3.0) + floor(v * 3.0));
-      diffuseColor.rgb = mix(uBase, uAccent, k) * dirt;
-      `,
+      float paper = texture2D(uPlaster, vec2(u, v) / PLASTER_TILE_M, -0.7).r;
+      diffuseColor.rgb = mix(uBase, uAccent, k) * dirt * (0.82 + 0.36 * paper);
+      `.replace("PLASTER_TILE_M", PLASTER_TILE_M),
     );
   };
   return m;

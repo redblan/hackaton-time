@@ -139,10 +139,13 @@ function Sun() {
   );
 }
 
-/** Слабый ноутбук один раз снижает разрешение. Переключать чаще нельзя: каждая смена сама даёт рывок. */
+/**
+ * Только совсем слабый ноутбук один раз снижает разрешение, ниже 30 кадров: картинка от этого мылится.
+ * Переключать чаще нельзя, каждая смена сама даёт рывок.
+ */
 function AdaptiveResolution() {
   const setDpr = useThree((s) => s.setDpr);
-  return <PerformanceMonitor onDecline={() => setDpr(1)} />;
+  return <PerformanceMonitor bounds={() => [24, 30]} onDecline={() => setDpr(1)} />;
 }
 
 export function Atmosphere() {

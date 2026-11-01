@@ -59,21 +59,21 @@ export function paintSurface(material: Material) {
       shader,
       `vec3 faceNormal = abs(normalize(cross(dFdx(vWorld), dFdy(vWorld))));
        vec2 plasterUv = (faceNormal.y > 0.5 ? vWorld.xz : faceNormal.x > 0.5 ? vWorld.zy : vWorld.xy) / PLASTER_TILE_M;
-       float plaster = texture2D(uPlaster, plasterUv).r;
-       float strokes = fbm3(vWorld * vec3(3.2, 1.6, 3.2));
-       diffuseColor.rgb *= (0.93 + 0.14 * strokes) * (0.72 + 0.56 * plaster);
+       float plaster = texture2D(uPlaster, plasterUv, -0.7).r;
+       diffuseColor.rgb *= 0.7 + 0.6 * plaster;
        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.08, 0.97, 0.86), 0.5);`.replace("PLASTER_TILE_M", PLASTER_TILE_M),
     );
   };
 }
 
-const PLASTER_TILE_M = "2.2";
+/** Размер тайла, м. 1024 пикселя на 1.4 м: вблизи по 1.4 мм на пиксель, стена не расплывается */
+export const PLASTER_TILE_M = "1.4";
 let plaster: CanvasTexture | null = null;
 
 /** Штукатурка: мазки шпателя, крапинки и волосяные трещины. Один тайл, бесшовный, без файлов. */
-function plasterTexture() {
+export function plasterTexture() {
   if (plaster) return plaster;
-  const size = 512;
+  const size = 1024;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d")!;
@@ -93,10 +93,10 @@ function plasterTexture() {
   };
   ctx.lineCap = "round";
   for (let i = 0; i < 420; i++) {
-    const [x, y, angle, length, bend] = [random() * size, random() * size, random() * Math.PI, 30 + random() * 90, (random() - 0.5) * 50];
+    const [x, y, angle, length, bend] = [random() * size, random() * size, random() * Math.PI, 60 + random() * 180, (random() - 0.5) * 100];
     const shade = random() < 0.5 ? "255,255,255" : "0,0,0";
-    const alpha = 0.03 + random() * 0.06;
-    const width = 6 + random() * 18;
+    const alpha = 0.02 + random() * 0.04;
+    const width = 3 + random() * 16;
     wrapped(() => {
       ctx.strokeStyle = `rgba(${shade},${alpha})`;
       ctx.lineWidth = width;
@@ -106,19 +106,19 @@ function plasterTexture() {
       ctx.stroke();
     });
   }
-  for (let i = 0; i < 16000; i++) {
-    ctx.fillStyle = `rgba(${random() < 0.55 ? "0,0,0" : "255,255,255"},${0.05 + random() * 0.14})`;
-    ctx.fillRect(random() * size, random() * size, 1 + random() * 1.5, 1 + random() * 1.5);
+  for (let i = 0; i < 90000; i++) {
+    ctx.fillStyle = `rgba(${random() < 0.55 ? "0,0,0" : "255,255,255"},${0.08 + random() * 0.2})`;
+    ctx.fillRect(Math.floor(random() * size), Math.floor(random() * size), 1 + Math.floor(random() * 2), 1 + Math.floor(random() * 2));
   }
   for (let i = 0; i < 7; i++) {
     const points: [number, number][] = [[random() * size, random() * size]];
     for (let k = 0; k < 7; k++) {
       const [px, py] = points[k]!;
-      points.push([px + (random() - 0.5) * 34, py + 6 + random() * 18]);
+      points.push([px + (random() - 0.5) * 68, py + 12 + random() * 36]);
     }
     wrapped(() => {
-      ctx.strokeStyle = "rgba(0,0,0,.28)";
-      ctx.lineWidth = 0.9;
+      ctx.strokeStyle = "rgba(0,0,0,.4)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
       points.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.stroke();
@@ -126,7 +126,7 @@ function plasterTexture() {
   }
   plaster = new CanvasTexture(canvas);
   plaster.wrapS = plaster.wrapT = RepeatWrapping;
-  plaster.anisotropy = 4;
+  plaster.anisotropy = 8;
   return plaster;
 }
 
