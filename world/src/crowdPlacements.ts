@@ -1,12 +1,10 @@
-import type { ChunkData, Vec3 } from '@game/shared';
+import type { ChunkData, Vec3, WorldObject } from '@game/shared';
 
-/** Placement plan, NOT a WorldObject: enable in generateWorld after Egor adds kind:crowd. */
-export interface CrowdPlacement {
-  id: string;
-  type: 'person' | 'cat' | 'dog' | 'pigeon';
-  pos: Vec3;
-  route: Vec3[];
-  seed: number;
+type CrowdObject = Extract<WorldObject, { kind: 'crowd' }>;
+export type CrowdPlacement = Omit<CrowdObject, 'kind'> & { route: Vec3[] };
+
+export function addCrowd(chunk: ChunkData): ChunkData {
+  return { ...chunk, objects: [...chunk.objects, ...crowdPlacements(chunk).map((p): CrowdObject => ({ ...p, kind: 'crowd' }))] };
 }
 
 /** All routes stay on one floor / yard tile, preserving the three-chunk budget. */
@@ -18,7 +16,7 @@ export function crowdPlacements(chunk: ChunkData): CrowdPlacement[] {
     const route = points.map(([a, b, c]): Vec3 => [x + a, y + b + (chunk.id.startsWith('y') && b === 0 ? .021 : 0), z + c]);
     let seed = 2166136261;
     for (const char of id) seed = Math.imul(seed ^ char.charCodeAt(0), 16777619) >>> 0;
-    result.push({ id, type, pos: [...route[0]], route, seed });
+    result.push({ id, type, pos: [...route[0]], route: route.slice(1), seed });
   };
   const floor = /^e[12]f([1-9])$/.exec(chunk.id);
   if (floor) {

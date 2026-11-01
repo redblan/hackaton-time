@@ -1895,6 +1895,29 @@
       "color": "#e4d3bc",
       "collide": false,
       "when": "window_broken"
+    },
+    {
+      "id": "e1f2-crowd-person-0",
+      "type": "person",
+      "pos": [
+        10,
+        3,
+        1.8
+      ],
+      "route": [
+        [
+          10.4,
+          3,
+          2.5
+        ],
+        [
+          9.5,
+          3,
+          2.5
+        ]
+      ],
+      "seed": 2368085994,
+      "kind": "crowd"
     }
   ]
 }

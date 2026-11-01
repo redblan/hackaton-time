@@ -13,6 +13,7 @@ function intersects(pos: Vec3, size: Vec3, box: Aabb) {
 it('prepares the required crowd counts with deterministic seeds and routes clear of static obstacles', () => {
   const chunks = generateWorld();
   const all = chunks.flatMap(crowdPlacements);
+  expect(chunks.flatMap(c => c.objects.filter(o => o.kind === 'crowd'))).toEqual(all.map(p => ({ ...p, kind: 'crowd' })));
   const yard = chunks.filter(c => c.id.startsWith('y')).flatMap(crowdPlacements);
   expect(yard.filter(p => p.type === 'person')).toHaveLength(15);
   expect(yard.filter(p => p.type === 'cat' || p.type === 'dog')).toHaveLength(8);
@@ -29,15 +30,18 @@ it('prepares the required crowd counts with deterministic seeds and routes clear
       return { min: p.pos.map((v, axis) => v - size[axis] / 2) as Vec3,
         max: p.pos.map((v, axis) => v + size[axis] / 2) as Vec3 };
     });
-    for (const p of crowd) for (let segment = 0; segment < p.route.length; segment++) {
-      const a = p.route[segment], b = p.route[(segment + 1) % p.route.length];
-      for (let step = 0; step <= 20; step++) {
-        const pos = a.map((v, axis) => v + (b[axis] - v) * step / 20) as Vec3;
-        expect(pos.every((v, axis) => v >= c.bounds.min[axis] && v <= c.bounds.max[axis])).toBe(true);
-        const height = p.type === 'person' ? 1.7 : .3;
-        const centre: Vec3 = [pos[0], pos[1] + height / 2, pos[2]];
-        expect([...boxes, ...futureProps].some(box => intersects(centre, [.4, height, .4], box)), `${p.id} at ${pos}`).toBe(false);
-        expect(boxes.some(box => Math.abs(box.max[1] - pos[1]) < .04 && pos[0] >= box.min[0] && pos[0] <= box.max[0] && pos[2] >= box.min[2] && pos[2] <= box.max[2]), `${p.id}: no support`).toBe(true);
+    for (const p of crowd) {
+      const route = [p.pos, ...p.route];
+      for (let segment = 0; segment < route.length; segment++) {
+        const a = route[segment], b = route[(segment + 1) % route.length];
+        for (let step = 0; step <= 20; step++) {
+          const pos = a.map((v, axis) => v + (b[axis] - v) * step / 20) as Vec3;
+          expect(pos.every((v, axis) => v >= c.bounds.min[axis] && v <= c.bounds.max[axis])).toBe(true);
+          const height = p.type === 'person' ? 1.7 : .3;
+          const centre: Vec3 = [pos[0], pos[1] + height / 2, pos[2]];
+          expect([...boxes, ...futureProps].some(box => intersects(centre, [.4, height, .4], box)), `${p.id} at ${pos}`).toBe(false);
+          expect(boxes.some(box => Math.abs(box.max[1] - pos[1]) < .04 && pos[0] >= box.min[0] && pos[0] <= box.max[0] && pos[2] >= box.min[2] && pos[2] <= box.max[2]), `${p.id}: no support`).toBe(true);
+        }
       }
     }
   }

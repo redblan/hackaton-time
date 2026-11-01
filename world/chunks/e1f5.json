@@ -1919,6 +1919,29 @@
       "color": "#e4d3bc",
       "collide": false,
       "when": "window_broken"
+    },
+    {
+      "id": "e1f5-crowd-person-0",
+      "type": "person",
+      "pos": [
+        10,
+        12,
+        1.8
+      ],
+      "route": [
+        [
+          10.4,
+          12,
+          2.5
+        ],
+        [
+          9.5,
+          12,
+          2.5
+        ]
+      ],
+      "seed": 2453870445,
+      "kind": "crowd"
     }
   ]
 }

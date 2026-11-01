@@ -418,6 +418,24 @@
       "color": "#fff2bd",
       "collide": false,
       "when": "power_on"
+    },
+    {
+      "id": "y20-crowd-person-0",
+      "type": "person",
+      "pos": [
+        29,
+        0.021,
+        -11
+      ],
+      "route": [
+        [
+          31,
+          0.021,
+          -11
+        ]
+      ],
+      "seed": 758328645,
+      "kind": "crowd"
     }
   ]
 }

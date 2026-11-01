@@ -307,6 +307,24 @@
       "color": "#4b606a",
       "collide": false,
       "rotY": 0
+    },
+    {
+      "id": "y13-crowd-person-0",
+      "type": "person",
+      "pos": [
+        17,
+        0.021,
+        -40
+      ],
+      "route": [
+        [
+          17,
+          0.021,
+          -38
+        ]
+      ],
+      "seed": 435141591,
+      "kind": "crowd"
     }
   ]
 }

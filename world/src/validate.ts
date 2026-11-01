@@ -25,7 +25,17 @@ export function validateWorld(chunks: ChunkData[]): void {
       if(vectors.some(v=>v.length!==3||v.some(n=>!Number.isFinite(n)))) fail('Invalid coordinates');
       if(o.kind==='box'&&o.size.some(n=>!Number.isFinite(n)||n<=0)) fail('Invalid size');
       if(o.kind==='zone'&&o.min.some((n,i)=>n>=o.max[i])) fail('Invalid zone bounds');
+      if(o.kind==='crowd') {
+        if(!['person','cat','dog','pigeon'].includes(o.type)) fail('Unknown crowd type');
+        if(!Number.isSafeInteger(o.seed)||o.seed<0) fail('Invalid crowd seed');
+        if(o.speed!==undefined&&(!Number.isFinite(o.speed)||o.speed<=0)) fail('Invalid crowd speed');
+        for(const point of [o.pos,...(o.route??[])]) {
+          if(point.length!==3||point.some(n=>!Number.isFinite(n))) fail('Invalid crowd route');
+          if(point.some((n,axis)=>n<c.bounds.min[axis]||n>c.bounds.max[axis])) fail('Crowd route leaves chunk');
+        }
+      }
     }
+    if(c.objects.filter(o=>o.kind==='crowd').length>10) fail(`Too many crowd objects: ${c.id}`);
     for(const n of c.neighbors) if(n===c.id||!ids.has(n)||!chunks.find(v=>v.id===n)!.neighbors.includes(c.id)) fail(`Invalid neighbor: ${c.id}/${n}`);
     if(Buffer.byteLength(JSON.stringify(c))>3*1024*1024) fail(`Oversized chunk: ${c.id}`);
   }
