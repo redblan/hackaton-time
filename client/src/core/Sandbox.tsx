@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, Stats } from "@react-three/drei";
-import { MINIGAMES, type ChunkData, type MinigameId, type MinigameResult } from "@game/shared";
+import { MINIGAMES, type ChunkData, type CrowdType, type MinigameId, type MinigameResult, type Vec3, type WorldObject } from "@game/shared";
 import { minigames } from "../minigames";
 import { Atmosphere } from "../world/Atmosphere";
 import { ChunkView, getColliders } from "../world/ChunkView";
@@ -88,6 +88,34 @@ function CameraRig({ view, origin }: { view: string; origin: [number, number, nu
   return null;
 }
 
+/** Пример толпы для проверки G12 без данных Никиты: 4 человека, 3 кошки, 2 собаки, 3 голубя (координаты от угла чанка) */
+function sampleCrowd(chunk: ChunkData): WorldObject[] {
+  const [x0, y0, z0] = chunk.bounds.min;
+  const at = (x: number, z: number): Vec3 => [x0 + x, y0, z0 + z];
+  const list: [CrowdType, [number, number], [number, number][]][] = [
+    ["person", [2, 2], [[9, 2], [9, 5]]],
+    ["person", [10, 10], [[3, 10]]],
+    ["person", [6, 4], [[6, 9], [4, 7]]],
+    ["person", [3, 8], []],
+    ["cat", [4, 5], [[7, 5], [7, 7]]],
+    ["cat", [8, 8], [[8, 3]]],
+    ["cat", [2, 10], []],
+    ["dog", [5, 2], [[10, 4], [5, 6]]],
+    ["dog", [9, 9], [[6, 11]]],
+    ["pigeon", [6, 6], [[6.6, 6.4]]],
+    ["pigeon", [6.8, 5.6], [[6.2, 5.2]]],
+    ["pigeon", [5.6, 6.8], []],
+  ];
+  return list.map(([type, pos, route], i) => ({
+    id: `sample-crowd-${i}`,
+    kind: "crowd",
+    type,
+    pos: at(...pos),
+    route: route.map(([x, z]) => at(x, z)),
+    seed: 11 + i * 7,
+  }));
+}
+
 function ChunksTab() {
   const [ids, setIds] = useState<string[]>([]);
   const [id, setId] = useState<string | null>(null);
@@ -96,6 +124,8 @@ function ChunksTab() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState("снаружи");
   const [building, setBuilding] = useState(true);
+  const [crowd, setCrowd] = useState(false);
+  const shown = useMemo(() => (chunk && crowd ? { ...chunk, objects: [...chunk.objects, ...sampleCrowd(chunk)] } : chunk), [chunk, crowd]);
   const loaded = useMemo(() => new Set(chunk ? [chunk.id] : []), [chunk]);
   const origin = useMemo(() => (chunk ? ([...chunk.bounds.min] as [number, number, number]) : ([0, 0, 0] as [number, number, number])), [chunk]);
 
@@ -146,6 +176,10 @@ function ChunksTab() {
           <input type="checkbox" checked={building} onChange={(e) => setBuilding(e.target.checked)} />
           силуэт дома (Building)
         </label>
+        <label className="small check">
+          <input type="checkbox" checked={crowd} onChange={(e) => setCrowd(e.target.checked)} />
+          толпа (пример)
+        </label>
         {allFlags.length > 0 && <h3>Флаги</h3>}
         {allFlags.map((f) => (
           <label key={f} className="small check">
@@ -168,7 +202,7 @@ function ChunksTab() {
           <Atmosphere />
           <Landscape />
           {building && <Building loaded={loaded} />}
-          {chunk && <ChunkView chunk={chunk} flags={flags} />}
+          {shown && <ChunkView chunk={shown} flags={flags} />}
           <OrbitControls target={center} makeDefault />
           <Stats />
           <CameraRig view={view} origin={origin} />

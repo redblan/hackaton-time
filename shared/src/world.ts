@@ -51,7 +51,16 @@ export type WorldObject =
   /** Табличка с текстом (адрес дома, номер этажа) */
   | (Base & { kind: "sign"; pos: Vec3; rotY?: number; text: string })
   /** Эффект: дым, искры, пыль */
-  | (Base & { kind: "fx"; fx: "smoke" | "sparks" | "dust" | "fire"; pos: Vec3; size?: number });
+  | (Base & { kind: "fx"; fx: "smoke" | "sparks" | "dust" | "fire"; pos: Vec3; size?: number })
+  /**
+   * Простой NPC толпы, не агент (sunday.md): ходит и реагирует на игроков только на клиенте, без сервера.
+   * `route` — точки в мировых координатах; маршрут замкнутый: pos → route[0] → … → pos. Без route — стоит на месте.
+   * `seed` — детерминированные отличия (фигура, фаза шага, паузы). `color` — одежда/шерсть, `speed` — м/с (иначе по типу).
+   * Коллизий нет. В чанке не больше ~10 штук.
+   */
+  | (Base & { kind: "crowd"; type: CrowdType; pos: Vec3; rotY?: number; route?: Vec3[]; seed: number; color?: string; speed?: number });
+
+export type CrowdType = "person" | "cat" | "dog" | "pigeon";
 
 export interface Aabb {
   min: Vec3;

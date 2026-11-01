@@ -10,6 +10,7 @@ import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@ga
 import { Character, npcColor, npcVariant } from "./Character";
 import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
 import { NpcWalker } from "./NpcWalker";
+import { Crowd } from "./crowd/Crowd";
 import { FxParticles, InteractMarker } from "./Effects";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { paintSurface } from "./style";
@@ -79,6 +80,7 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   return (
     <group name={props.chunk.id}>
       <StaticBoxes boxes={boxes}/>
+      <Crowd objects={objects} origin={props.chunk.bounds.min} />
       {objects.map((o) => {
         switch (o.kind) {
           case "box":
