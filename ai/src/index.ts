@@ -5,7 +5,7 @@
  * локальная Ollama стримом → если модель молчит дольше таймаута, шаблон из карточки,
  * который этот игрок ещё не слышал → обновляем память.
  */
-import type { AiModule, AiOptions, NpcRequest, NpcResponse, PlayerId, PlayerMemory, StageId } from "@game/shared";
+import type { AiModule, AiOptions, CharacterCard, NpcId, NpcRequest, NpcResponse, PlayerId, PlayerMemory, StageId } from "@game/shared";
 import { factsBySkill, loadData, type AiData } from "./data";
 import { createDispatcher } from "./dispatcher";
 import { createGromov } from "./gromov";
@@ -17,6 +17,7 @@ import { partnerNames } from "./team";
 import { detectInjection, detectTone, looksBroken, searchFacts, stripLabel } from "./text";
 import type { KnowledgeFact, NpcCard } from "./types";
 
+export { classifyIntent, resolveIntent, INTENTS, type IntentResult, type Intent } from "./intents";
 export { createFileMemory, createInMemoryStore, emptyMemory } from "./memory";
 export { createDispatcher, extractSlots, requiredSlots } from "./dispatcher";
 export { createGromov, extractHandover, requiredHandover } from "./gromov";
@@ -70,6 +71,11 @@ export function createAi(opts: CreateAiOptions): Ai {
     concurrency: opts.llmConcurrency ?? envInt("AI_LLM_CONCURRENCY") ?? 1,
     maxQueue: opts.llmMaxQueue ?? envInt("AI_LLM_QUEUE") ?? 3,
   });
+  const characters = new Map<NpcId, CharacterCard>([...data.cards.values()].map(card => [card.id, {
+    npcId: card.id, name: card.name, traits: card.personality, mood: "как в карточке",
+    temperature: 0.3, templatesOnly: false, factsOnly: true,
+  }]));
+  let available = false, lastMs = 0, totalMs = 0, measured = 0, llm = 0, template = 0;
   const dispatcher = createDispatcher();
   const gromov = createGromov(data);
 
@@ -82,7 +88,9 @@ export function createAi(opts: CreateAiOptions): Ai {
   }
 
   function plan(req: NpcRequest, memory: PlayerMemory): Plan {
-    const card = data.cards.get(req.npcId) ?? FALLBACK_CARD(req.npcId);
+    const original = data.cards.get(req.npcId) ?? FALLBACK_CARD(req.npcId);
+    const behavior = characters.get(req.npcId);
+    const card = behavior ? { ...original, personality: `${behavior.traits}. Настроение: ${behavior.mood}` } : original;
     const eventCard = card.events[req.event];
     const ids = new Set(eventCard?.facts ?? []);
     let mistakeNote: string | undefined;
@@ -127,6 +135,7 @@ export function createAi(opts: CreateAiOptions): Ai {
   }
 
   function outcomeOf(req: NpcRequest, p: Plan, memory: PlayerMemory): string | undefined {
+    if (req.npcId === "victim_cpr" || req.npcId === "victim_unconscious") return undefined;
     if (!EMOTIONAL.has(req.npcId) || !req.playerMessage) return undefined;
     if (p.tone === "rude" || p.tone === "panic") return "panicked";
     if (p.tone !== "calm") return undefined;
@@ -261,10 +270,14 @@ export function createAi(opts: CreateAiOptions): Ai {
     let text: string;
     let source: NpcResponse["source"];
     try {
+      if (req.npcId === "victim_cpr" || req.npcId === "victim_unconscious") throw new Error("без сознания — только описания из карточки");
+      if (characters.get(req.npcId)?.templatesOnly) throw new Error("включены только шаблоны");
       if (p.injection) throw new Error("попытка вывести NPC из роли — отвечаем шаблоном");
       // Через очередь: срок — timeoutMs с момента запроса, а не с момента, когда дошла очередь
-      const raw = await queue.run(req.playerId, timeoutMs, (remaining) =>
-        ollamaChat({
+      const raw = await queue.run(req.playerId, timeoutMs, async (remaining) => {
+        const started = Date.now();
+        try {
+          const answer = await ollamaChat({
           url,
           model,
           timeoutMs: remaining,
@@ -272,8 +285,17 @@ export function createAi(opts: CreateAiOptions): Ai {
           messages: buildMessages(req, p, memory),
           onToken,
           fetchImpl: opts.fetchImpl,
-        }),
-      );
+          temperature: characters.get(req.npcId)?.temperature,
+          });
+          available = true;
+          return answer;
+        } catch (error) {
+          available = false;
+          throw error;
+        } finally {
+          lastMs = Date.now() - started; totalMs += lastMs; measured++;
+        }
+      });
       text = cleanReply(raw);
       if (!text) throw new Error("ollama: пустой ответ");
       if (looksBroken(text)) throw new Error("ollama: ответ вышел из роли");
@@ -296,10 +318,35 @@ export function createAi(opts: CreateAiOptions): Ai {
     return { text, factIds: spoken(req, p).map((f) => f.fact.id), outcome, source };
   }
 
+  async function tracked(req: NpcRequest, onToken?: (t: string) => void, onOutcome?: (outcome: string) => void) {
+    const result = await respond(req, onToken, onOutcome);
+    if (result.source === "llm") llm++; else template++;
+    return result;
+  }
+
   return {
     llmStats: () => queue.stats(),
-    say: (req) => respond(req),
-    sayStream: (req, onToken, onOutcome) => respond(req, onToken, onOutcome),
+    say: (req) => tracked(req),
+    sayStream: (req, onToken, onOutcome) => tracked(req, onToken, onOutcome),
+    getCharacters: () => [...characters.values()].map(card => ({ ...card })),
+    setCharacter(npcId, patch) {
+      const current = characters.get(npcId);
+      if (!current || !patch || typeof patch !== "object") return null;
+      const next = { ...current };
+      if (typeof patch.traits === "string") next.traits = patch.traits.trim().slice(0, 1500);
+      if (typeof patch.mood === "string") next.mood = patch.mood.trim().slice(0, 300);
+      if (typeof patch.temperature === "number" && Number.isFinite(patch.temperature)) next.temperature = Math.max(0, Math.min(2, patch.temperature));
+      if (typeof patch.templatesOnly === "boolean") next.templatesOnly = patch.templatesOnly;
+      // The project forbids advice outside the verified knowledge base, including admin overrides.
+      next.factsOnly = true;
+      characters.set(npcId, next);
+      return { ...next };
+    },
+    getStats() {
+      const stats = queue.stats();
+      return { model, available, queued: stats.waiting, inFlight: stats.running, lastMs,
+        avgMs: measured ? totalMs / measured : 0, llm, template };
+    },
     resetRun(playerId: PlayerId) {
       dispatcher.reset(playerId);
       gromov.reset(playerId);

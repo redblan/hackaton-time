@@ -111,3 +111,12 @@ describe('Piper limits',()=>{
     release(fakeWav('a'));await first;expect(tts.stats().waiting).toBe(0);
   });
 });
+
+describe("D-70 silent victims", () => {
+  it.each(["victim_cpr", "victim_unconscious"] as const)("never synthesizes %s, including erroneous model speech", async npcId => {
+    let calls = 0;
+    const tts = createTts({ run: async () => { calls++; return fakeWav("x"); } });
+    expect(await tts.speak(npcId, "Я сейчас заговорю без скобок.")).toBeNull();
+    expect(calls).toBe(0);
+  });
+});

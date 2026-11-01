@@ -15,6 +15,7 @@ export interface OllamaCall {
   totalMs?: number;
   onToken?: (t: string) => void;
   fetchImpl?: typeof fetch;
+  temperature?: number;
 }
 
 /**
@@ -40,7 +41,7 @@ export async function ollamaChat(call: OllamaCall): Promise<string> {
         // Модель остаётся в памяти между репликами — иначе первая фраза после паузы грузится секундами
         keep_alive: "2h",
         // 0.3: на 0.6 модель 3B дописывала от себя («газовое отопление»), прогон M4
-        options: { num_predict: 120, temperature: 0.3 },
+        options: { num_predict: 120, temperature: call.temperature ?? 0.3 },
       }),
       signal: ctrl.signal,
     });

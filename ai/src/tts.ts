@@ -138,6 +138,8 @@ export function createTts(opts: TtsOptions = {}) {
 
     /** Реплика NPC → WAV. null — нечего озвучивать, Piper не настроен или упал (игра идёт без звука). */
     async speak(npcId: NpcId, text: string): Promise<Buffer | null> {
+      // D-70: unconscious victims cannot speak, even if a model returned unparenthesized text.
+      if (npcId === "victim_cpr" || npcId === "victim_unconscious") return null;
       const say = speakable(text);
       if (!say || say.length>2000 || !this.available()) return null;
       const voice = voiceOf(npcId);

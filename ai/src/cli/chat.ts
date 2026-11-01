@@ -4,6 +4,7 @@
  */
 import { createInterface } from "node:readline";
 import { NPC_EVENTS, NPC_IDS, type NpcEvent, type NpcId, type PlayerMemory, type SkillId } from "@game/shared";
+import { resolveIntent } from "../intents";
 import { createAi, createFileMemory, loadData, unverifiedFacts } from "../index";
 
 const npcId = (process.argv[2] ?? "papa") as NpcId;
@@ -22,7 +23,7 @@ if (unverified.length > 0) {
   console.log(`⚠ Фактов без ссылки на источник: ${unverified.length} (${unverified.map((f) => f.id).join(", ")})`);
 }
 console.log(`Чат с ${data.cards.get(npcId)?.name ?? npcId}. Модель ${model}, игрок ${playerId}.`);
-console.log("Пиши реплику или команду: /event <событие>, /mistake <навык> <код>, /mem, /run (новое прохождение), /quit");
+console.log("Пиши реплику или команду: /event <событие>, /mistake <навык> <код>, /intent <просьба>, /mem, /run (новое прохождение), /quit");
 
 function diff(before: PlayerMemory, after: PlayerMemory): string {
   const told = Object.entries(after.toldFacts)
@@ -43,6 +44,10 @@ for await (const raw of rl) {
     continue;
   }
   if (line === "/quit") break;
+  if (line.startsWith("/intent ")) {
+    console.log(await resolveIntent(line.slice(8), { url: process.env.OLLAMA_URL ?? "http://127.0.0.1:11434", model }));
+    rl.prompt(); continue;
+  }
   if (line === "/mem") {
     console.log(JSON.stringify(await memory.get(playerId), null, 2));
     rl.prompt();
