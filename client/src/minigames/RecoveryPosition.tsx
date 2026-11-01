@@ -3,6 +3,7 @@ import type { MinigameProps } from "@game/shared";
 import { Button } from "../core/ui";
 import { Frame, useFinish } from "./kit";
 import { RECOVERY_STEPS, recoveryMistakes, shuffled } from "./logic";
+import { sfx } from "./sfx";
 
 export function RecoveryPosition({ game, onDone }: MinigameProps) {
   const finish = useFinish(game, onDone);
@@ -16,7 +17,7 @@ export function RecoveryPosition({ game, onDone }: MinigameProps) {
           {steps
             .filter((step) => !order.includes(step))
             .map((step) => (
-              <button key={step} className="mg-card" onClick={() => setOrder((cur) => [...cur, step])}>
+              <button key={step} className="mg-card" onClick={() => { sfx.click(); setOrder((cur) => [...cur, step]); }}>
                 {RECOVERY_STEPS[step]}
               </button>
             ))}

@@ -3,10 +3,15 @@ import { useCallback, useEffect, useState, type ComponentType } from "react";
 import type { MinigameProps, MinigameResult } from "@game/shared";
 import { Button } from "../core/ui";
 import { outcomeLines } from "./logic";
+import { sfx } from "./sfx";
 
 const SHOW_MS = 3_000;
 
 function Outcome({ result, onNext }: { result: MinigameResult; onNext: () => void }) {
+  useEffect(() => {
+    (result.ok ? sfx.success : sfx.failure)();
+  }, [result.ok]);
+
   useEffect(() => {
     const timer = setTimeout(onNext, SHOW_MS);
     return () => clearTimeout(timer);

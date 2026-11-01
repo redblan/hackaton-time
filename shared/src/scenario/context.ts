@@ -68,6 +68,8 @@ export function logOkIfClean(ctx: Ctx, skill: SkillId, note: string) {
 }
 
 export function say(ctx: Ctx, npcId: NpcId, event: NpcEvent, context?: Record<string, unknown>) {
+  // В коопе роль Михалыча играет напарник снаружи.
+  if (npcId === "mihalych" && ctx.state.config.mode !== "solo") return;
   ctx.effects.push({
     type: "npcSay",
     npcId,
@@ -77,13 +79,18 @@ export function say(ctx: Ctx, npcId: NpcId, event: NpcEvent, context?: Record<st
   });
 }
 
+/** Открытая мини-игра и место игрока у каждого свои, остальные факты общие на команду. */
+export const minigameFact = (playerId: PlayerId) => `minigame_open:${playerId}`;
+export const safeAreaFact = (playerId: PlayerId) => `in_safe_area:${playerId}`;
+export const resumeFact = (playerId: PlayerId) => `aftershock_resume:${playerId}`;
+
 /** Реакция NPC на ошибку. Код — ключ в ai/knowledge, список кодов в D-58. */
 export function sayMistake(ctx: Ctx, npcId: NpcId, skill: SkillId, code: string) {
   say(ctx, npcId, "mistake", { mistake: { skill, code } });
 }
 
 export function openMinigame(ctx: Ctx, game: MinigameId, params?: Record<string, unknown>) {
-  addFact(ctx.state, "minigame_open");
+  addFact(ctx.state, minigameFact(ctx.playerId));
   ctx.effects.push({
     type: "openMinigame",
     playerId: ctx.playerId,

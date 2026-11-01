@@ -3,6 +3,7 @@ import type { MinigameProps, VictimKind } from "@game/shared";
 import { Button } from "../core/ui";
 import { Frame, useFinish } from "./kit";
 import { shuffled, triageMistakes, type TriageGroups } from "./logic";
+import { sfx } from "./sfx";
 
 const DEFAULT_ORDER: TriageGroups = [["bleeding"], ["cpr", "unconscious"], ["scared"]];
 
@@ -20,7 +21,10 @@ export function Triage({ game, params, onDone }: MinigameProps) {
   const victims = useMemo(() => shuffled(groups.flat()), [groups]);
   const [queue, setQueue] = useState<VictimKind[]>([]);
 
-  const add = (kind: VictimKind) => setQueue((cur) => (cur.includes(kind) ? cur : [...cur, kind]));
+  const add = (kind: VictimKind) => {
+    sfx.click();
+    setQueue((cur) => (cur.includes(kind) ? cur : [...cur, kind]));
+  };
   const remove = (kind: VictimKind) => setQueue((cur) => cur.filter((k) => k !== kind));
   const onDrop = (e: DragEvent) => {
     e.preventDefault();

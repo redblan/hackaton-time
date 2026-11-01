@@ -1,5 +1,5 @@
 import { ITEMS, type ItemId } from "../../ids";
-import { addFact, getTimer, hasFact, log, openMinigame, say, sayMistake, setTimer, type Ctx } from "../context";
+import { addFact, getTimer, hasFact, log, minigameFact, openMinigame, say, sayMistake, setTimer, type Ctx } from "../context";
 import type { StageDef } from "./types";
 
 const WAKE_MS = 3_000;
@@ -21,7 +21,10 @@ export const wake: StageDef = {
   enter: (ctx) => setTimer(ctx.state, "wake", ctx.at),
   on(ctx, event) {
     if (event.type !== "tick" || event.at - getTimer(ctx.state, "wake")! < WAKE_MS) return;
-    ctx.effects.push({ type: "quake", strength: 1, durationMs: COVER_LIMIT_MS });
+    if (!hasFact(ctx.state, "quake_started")) {
+      addFact(ctx.state, "quake_started");
+      ctx.effects.push({ type: "quake", strength: 1, durationMs: COVER_LIMIT_MS });
+    }
     say(ctx, "papa", "quake_started");
     ctx.advance();
   },
@@ -81,7 +84,7 @@ export const pack: StageDef = {
       say(ctx, "papa", "gas_smell");
       return;
     }
-    if (event.type !== "interact" || hasFact(ctx.state, "minigame_open")) return;
+    if (event.type !== "interact" || hasFact(ctx.state, minigameFact(ctx.playerId))) return;
     if (event.target === "light_switch") {
       log(ctx, "gas", "mistake", "Потянулся к выключателю при запахе газа", "gas_switch");
       sayMistake(ctx, "papa", "gas", "gas_light_switch");

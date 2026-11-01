@@ -3,6 +3,7 @@ import { ITEMS, type ItemId, type MinigameProps } from "@game/shared";
 import { Button } from "../core/ui";
 import { Frame, useCountdown, useFinish } from "./kit";
 import { BAG_SLOTS, bagMistakes } from "./logic";
+import { sfx } from "./sfx";
 
 const DURATION_MS = 40_000;
 
@@ -27,11 +28,13 @@ export function GoBag({ game, onDone }: MinigameProps) {
   const submit = () => finish(bagMistakes(bagRef.current), { items: bagRef.current });
   const left = useCountdown(DURATION_MS, submit);
 
-  const toggle = (item: ItemId) =>
+  const toggle = (item: ItemId) => {
+    sfx.click();
     setBag((cur) => {
       if (cur.includes(item)) return cur.filter((i) => i !== item);
       return cur.length < BAG_SLOTS ? [...cur, item] : cur;
     });
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

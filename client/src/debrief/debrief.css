@@ -1,0 +1,13 @@
+.debrief-card { display: flex; flex-direction: column; gap: 14px; }
+.debrief-card h1 { margin: 0; }
+.debrief-stats { display: flex; flex-wrap: wrap; gap: 10px; }
+.debrief-stats div { flex: 1 1 110px; display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 14px; background: var(--line); }
+.debrief-stats b { font-size: 26px; color: var(--accent); }
+.debrief-stats span { font-size: 13px; color: var(--muted); }
+.debrief-speech { margin: 0; padding: 12px; border-radius: 14px; background: #fff7ed; }
+.debrief-skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; max-height: 40vh; overflow: auto; }
+.debrief-skill { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: 12px; border-left: 5px solid var(--line); background: #f8fafc; }
+.debrief-skill small { color: var(--muted); }
+.debrief-ok { border-left-color: #22c55e; }
+.debrief-fixed { border-left-color: var(--accent); }
+.debrief-mistake { border-left-color: var(--danger); }

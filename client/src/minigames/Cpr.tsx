@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { MinigameProps } from "@game/shared";
 import { Frame, useCountdown, useFinish } from "./kit";
 import { CPR_MAX_MS, CPR_MIN_MS, cprMistakes, cprRate } from "./logic";
+import { sfx } from "./sfx";
 
 const DURATION_MS = 30_000;
+const METRONOME_MS = 545;
 const SLOWEST = 60_000 / CPR_MAX_MS;
 const FASTEST = 60_000 / CPR_MIN_MS;
 
@@ -30,7 +32,13 @@ export function Cpr({ game, params, onDone }: MinigameProps) {
     presses.current.push(Math.round(performance.now() - started.current));
     setCount(presses.current.length);
     setBeat((b) => !b);
+    sfx.press();
   };
+
+  useEffect(() => {
+    const timer = setInterval(sfx.metronome, METRONOME_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

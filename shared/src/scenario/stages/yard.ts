@@ -1,4 +1,4 @@
-import type { MinigameId } from "../../ids";
+import type { MinigameId, NpcId, StageId } from "../../ids";
 import {
   addFact,
   getTimer,
@@ -6,8 +6,11 @@ import {
   hasFlag,
   log,
   logOkIfClean,
+  minigameFact,
   openMinigame,
   removeFact,
+  resumeFact,
+  safeAreaFact,
   say,
   sayMistake,
   setTimer,
@@ -21,6 +24,8 @@ import type { StageDef } from "./types";
 const AFTERSHOCK_LIMIT_MS = 10_000;
 const DEBRIEF_MS = 60_000;
 const CALL_LIMIT_MS = 120_000;
+const HANDOVER_LIMIT_MS = 120_000;
+const AFTER_AID: StageId[] = ["first_aid", "aftershock", "handover", "debrief", "done"];
 
 /** Временные группы сортировки из D-20. TODO(Q-01): заменить на подтверждённый порядок. */
 const TRIAGE_GROUPS: VictimKind[][] = [["bleeding"], ["cpr", "unconscious"], ["scared"], ["light_injury"]];
@@ -32,9 +37,8 @@ const VICTIM_GAMES: Partial<Record<VictimKind, MinigameId>> = {
 };
 
 function finishAftershock(ctx: Ctx) {
-  ctx.effects.push({ type: "setFlag", flag: "balcony_debris" });
-  if (hasFact(ctx.state, "aftershock_resume")) {
-    removeFact(ctx.state, "aftershock_resume");
+  if (hasFact(ctx.state, resumeFact(ctx.playerId))) {
+    removeFact(ctx.state, resumeFact(ctx.playerId));
     ctx.goTo("first_aid");
   } else {
     ctx.advance();
@@ -45,13 +49,25 @@ function allStable(ctx: Ctx) {
   return Object.values(ctx.state.victims).every((v) => v.state === "stable");
 }
 
+/** В коопе бригаду ждут все: напарник внутри дома ещё может спускаться. */
+function everyoneOutside(ctx: Ctx) {
+  return Object.values(ctx.state.stage).every((stage) => AFTER_AID.includes(stage));
+}
+
+function leaveIfDone(ctx: Ctx) {
+  if (allStable(ctx) && everyoneOutside(ctx)) ctx.advance();
+}
+
 function stabilize(ctx: Ctx, id: string) {
   ctx.state.victims[id]!.state = "stable";
-  if (allStable(ctx)) ctx.advance();
+  leaveIfDone(ctx);
 }
 
 export const yardAssess: StageDef = {
-  hint: "Отведи людей на детскую площадку, обходи опасности",
+  hint: (state) =>
+    hasFact(state, "valentina_agreed")
+      ? "Доведи соседку до детской площадки, обходи опасности"
+      : "Отведи людей на детскую площадку, обходи опасности",
   enter(ctx) {
     setTimer(ctx.state, "yard", ctx.at);
     say(ctx, "mihalych", "yard_hazard");
@@ -148,18 +164,18 @@ export const triage: StageDef = {
 
 export const firstAid: StageDef = {
   hint: "Помоги пострадавшим",
-  enter(ctx) {
-    if (allStable(ctx)) ctx.advance();
-  },
+  enter: leaveIfDone,
   on(ctx, event) {
+    if (event.type === "tick") leaveIfDone(ctx);
     if (event.type === "interact") {
       const victim = ctx.state.victims[event.target];
-      if (!victim || victim.state === "stable" || hasFact(ctx.state, "minigame_open")) return;
-      removeFact(ctx.state, "in_safe_area");
-      victim.state = "in_progress";
+      if (!victim || victim.state === "stable" || hasFact(ctx.state, minigameFact(ctx.playerId))) return;
       const game = VICTIM_GAMES[victim.kind];
+      if (game && victim.state === "in_progress") return;
+      removeFact(ctx.state, safeAreaFact(ctx.playerId));
+      victim.state = "in_progress";
+      say(ctx, event.target as NpcId, "victim_help");
       if (game) openMinigame(ctx, game);
-      else say(ctx, "victim_scared", "victim_help");
     }
     if (event.type === "minigameResult") {
       const entry = Object.entries(ctx.state.victims).find(
@@ -186,8 +202,9 @@ export const aftershock: StageDef = {
     addFact(ctx.state, "aftershock_done");
     setTimer(ctx.state, "aftershock", ctx.at);
     ctx.effects.push({ type: "quake", strength: 0.7, durationMs: AFTERSHOCK_LIMIT_MS });
+    ctx.effects.push({ type: "setFlag", flag: "balcony_debris" });
     say(ctx, "mihalych", "aftershock");
-    if (hasFact(ctx.state, "in_safe_area")) {
+    if (hasFact(ctx.state, safeAreaFact(ctx.playerId))) {
       log(ctx, "aftershock", "ok", "Оставался в безопасной зоне при повторном толчке");
       finishAftershock(ctx);
     }
@@ -206,12 +223,21 @@ export const aftershock: StageDef = {
 
 export const handover: StageDef = {
   hint: "Расскажи бригаде: кто, в каком состоянии, что сделано",
-  enter: (ctx) =>
+  enter(ctx) {
+    setTimer(ctx.state, `handover:${ctx.playerId}`, ctx.at);
     say(ctx, "gromov", "brigade_arrived", {
       flags: ctx.state.config.flags,
       tourniquetApplied: hasFact(ctx.state, "tourniquet_applied"),
-    }),
+    });
+  },
   on(ctx, event) {
+    const timeUp =
+      event.type === "tick" && event.at - getTimer(ctx.state, `handover:${ctx.playerId}`)! >= HANDOVER_LIMIT_MS;
+    if (timeUp) {
+      log(ctx, "handover", "missed", "Не закончил передачу бригаде за 2 минуты");
+      ctx.advance();
+      return;
+    }
     if (event.type !== "dialogOutcome" || event.npcId !== "gromov") return;
     if (event.outcome === "handover_complete") {
       logOkIfClean(ctx, "handover", "Полностью передал информацию бригаде");
@@ -226,11 +252,11 @@ export const handover: StageDef = {
 export const debrief: StageDef = {
   hint: "Разбор с капитаном Громовым",
   enter(ctx) {
-    setTimer(ctx.state, "debrief", ctx.at);
+    setTimer(ctx.state, `debrief:${ctx.playerId}`, ctx.at);
     say(ctx, "gromov", "debrief", { journal: ctx.state.journal });
   },
   on(ctx, event) {
-    const timeUp = event.type === "tick" && event.at - getTimer(ctx.state, "debrief")! >= DEBRIEF_MS;
+    const timeUp = event.type === "tick" && event.at - getTimer(ctx.state, `debrief:${ctx.playerId}`)! >= DEBRIEF_MS;
     if (timeUp || (event.type === "interact" && event.target === "brigade")) ctx.advance();
   },
 };

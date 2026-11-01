@@ -1456,6 +1456,17 @@
       "when": "fire_f3"
     },
     {
+      "id": "spawn-mid",
+      "kind": "spawn",
+      "role": "inside_mid",
+      "pos": [
+        5,
+        6,
+        4
+      ],
+      "rotY": 3.141592653589793
+    },
+    {
       "id": "neighbor_door",
       "kind": "interactable",
       "target": "neighbor_door",
@@ -1465,7 +1476,8 @@
         5.5
       ],
       "radius": 1.5,
-      "label": "Постучать соседке"
+      "label": "Постучать соседке",
+      "when": "valentina_e1"
     },
     {
       "id": "valentina",
@@ -1476,18 +1488,7 @@
         6,
         6
       ],
-      "when": "neighbor_valentina"
-    },
-    {
-      "id": "spawn-mid",
-      "kind": "spawn",
-      "role": "inside_mid",
-      "pos": [
-        5,
-        6,
-        4
-      ],
-      "rotY": 3.141592653589793
+      "when": "valentina_e1"
     },
     {
       "id": "floor-sign",

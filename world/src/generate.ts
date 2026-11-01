@@ -127,9 +127,14 @@ export function floorChunk(entrance: number, floor: number): ChunkData {
     if(vanyaHere) objects.push({id:'vanya',kind:'npc',npcId:'vanya',pos:p(10,0,4.5),when:`vanya_f${floor}`});
     if(floor>=6) objects.push({id:'spawn-top',kind:'spawn',role:'inside_top',pos:p(3,0,6),rotY:Math.PI},{id:'papa',kind:'npc',npcId:'papa',pos:p(4,0,9),unless:'papa_left'});
     if(floor===3) {
-      interact('neighbor_door',[7,0,5.5],'Постучать соседке');
-      objects.push({id:'valentina',kind:'npc',npcId:'valentina',pos:p(7,0,6),when:'neighbor_valentina'},{id:'spawn-mid',kind:'spawn',role:'inside_mid',pos:p(5,0,4),rotY:Math.PI});
+      objects.push({id:'spawn-mid',kind:'spawn',role:'inside_mid',pos:p(5,0,4),rotY:Math.PI});
     }
+  }
+  // Соседка ждёт там, куда игрок реально дойдёт: при обвале обход идёт через 2-й подъезд.
+  if(floor===3) {
+    const when=`valentina_e${entrance}`;
+    objects.push({id:'neighbor_door',kind:'interactable',target:'neighbor_door',pos:p(7,0,5.5),radius:1.5,label:'Постучать соседке',when});
+    objects.push({id:'valentina',kind:'npc',npcId:'valentina',pos:p(7,0,6),when});
   }
   if(floor===1) zone('z_exit_door',[4,0,0],[8,3,1]);
   objects.push({id:'floor-sign',kind:'sign',pos:p(7,2,5),text:`Подъезд ${entrance} · Этаж ${floor}`});

@@ -55,7 +55,10 @@ export function generateRun(input: GenerateRunInput): RunConfig {
   // Обходной балкон есть только на 4-м этаже, поэтому обвал ставим только под ним.
   if (chance(0.7, ["route"])) flags.push("collapse_f4");
   if (chance(0.7, ["elevator"])) flags.push("lift_vanya");
-  if (chance(0.7, ["escort", "psych_support"])) flags.push("neighbor_valentina");
+  // Довести соседку вниз — обязательное задание. При обвале обход идёт через 2-й подъезд, поэтому
+  // она ждёт там, иначе до неё не дойти. В coop3 её ведёт игрок с 3-го этажа 1-го подъезда.
+  const inSecondEntrance = flags.includes("collapse_f4") && mode !== "coop3";
+  flags.push("neighbor_valentina", inSecondEntrance ? "valentina_e2" : "valentina_e1");
   flags.push(rng() < 0.5 ? "wire" : "gas");
   if (mode === "coop3") flags.push("neighbor_leg");
 

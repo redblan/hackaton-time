@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Stats } from "@react-three/drei";
 import { MINIGAMES, type ChunkData, type MinigameId, type MinigameResult } from "@game/shared";
 import { minigames } from "../minigames";
 import { Atmosphere } from "../world/Atmosphere";
@@ -170,6 +170,7 @@ function ChunksTab() {
           {building && <Building loaded={loaded} />}
           {chunk && <ChunkView chunk={chunk} flags={flags} />}
           <OrbitControls target={center} makeDefault />
+          <Stats />
           <CameraRig view={view} origin={origin} />
         </Canvas>
       </div>

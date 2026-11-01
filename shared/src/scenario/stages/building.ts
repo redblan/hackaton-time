@@ -95,7 +95,7 @@ export const collapse: StageDef = {
 };
 
 export const neighbor: StageDef = {
-  hint: "Спокойно поговори с соседкой и уговори её уйти",
+  hint: "Задание: найди соседку на 3-м этаже, спокойно уговори её и доведи до детской площадки",
   on(ctx, event) {
     const { state } = ctx;
     if (event.type === "interact" && event.target === "neighbor_door") {
@@ -119,7 +119,10 @@ export const neighbor: StageDef = {
 };
 
 export const exitBuilding: StageDef = {
-  hint: "Не задерживайся у стены, сразу отходи на открытое место",
+  hint: (state) =>
+    hasFact(state, "valentina_agreed")
+      ? "Веди соседку вниз, не убегай вперёд. На улице сразу отходите от дома"
+      : "Не задерживайся у стены, сразу отходи на открытое место",
   enter: (ctx) => say(ctx, "mihalych", "exit_warning"),
   on(ctx, event) {
     trackEscort(ctx, event);

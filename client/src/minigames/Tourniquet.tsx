@@ -3,6 +3,7 @@ import type { MinigameProps } from "@game/shared";
 import { Button } from "../core/ui";
 import { Frame, useFinish } from "./kit";
 import { tourniquetMistakes, type LegSpot } from "./logic";
+import { sfx } from "./sfx";
 
 const HOLD_MS = 4_000;
 
@@ -55,6 +56,7 @@ export function Tourniquet({ game, onDone }: MinigameProps) {
   }, [phase, held]);
 
   const place = (chosen: LegSpot) => {
+    sfx.click();
     setSpot(chosen);
     setPhase("note");
   };

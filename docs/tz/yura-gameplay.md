@@ -103,3 +103,22 @@ export const minigames: Record<MinigameId, React.FC<MinigameProps>> = { go_bag: 
 8. **Запас:** баланс очков (`summary.ts`) после плейтеста; подсказки этапов короче и конкретнее; тест «прохождение с ошибкой в каждой мини-игре → ожидаемые записи журнала».
 
 Не трогай: `client/src/core/` (Егор), `shared/src/*.ts` и `types.ts` (контракт — через Егора).
+
+## Роли в коопе (Y6, Y10)
+
+Этапы по ролям заданы в `stagesFor()` в `shared/src/scenario/reducer.ts`.
+
+| Роль | Этапы |
+|---|---|
+| `inside_top`, solo | все этапы |
+| `inside_top`, coop2 | все, кроме `call_112` и `triage` |
+| `inside_top`, coop3 | все, кроме `call_112`, `triage` и `neighbor` |
+| `inside_mid` | `wake` → `cover` → `pack` → `exit_apartment` → `neighbor` → `exit_building` → `yard_assess` → двор |
+| `outside` | `yard_assess` → `call_112` → `triage` → двор |
+
+Двор у всех: `first_aid` → `aftershock` → `handover` → `debrief` → `done`.
+
+- Точка встречи: `first_aid`. Пока все не дошли до двора, бригада не приезжает.
+- Прохождение кончается, когда `done` у всех.
+- В коопе Михалыч молчит, его роль играет игрок снаружи.
+- Вынос соседа вдвоём, передача предметов и смена при СЛР ждут событий из Q-02.

@@ -8,6 +8,8 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Box3, CanvasTexture, DoubleSide, SRGBColorSpace, Vector3, type InstancedMesh, type MeshStandardMaterial } from "three";
 import { isObjectActive, type Aabb, type ChunkData, type WorldObject } from "@game/shared";
 import { Character, npcColor } from "./Character";
+import { NPC_ROUTES, STANDING_NPCS } from "./npcRoutes";
+import { NpcWalker } from "./NpcWalker";
 import { FxParticles, InteractMarker } from "./Effects";
 import { Interior, parseFloorId } from "./decor/Interior";
 import { paintSurface } from "./style";
@@ -86,12 +88,15 @@ export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
             return <Suspense key={o.id} fallback={<ModelPlaceholder object={o} objects={objects}/>}><Model object={o}/></Suspense>;
           case "interactable":
             return <InteractMarker key={o.id} object={o} />;
-          case "npc":
+          case "npc": {
+            const route = NPC_ROUTES[o.npcId];
+            if (route) return <NpcWalker key={o.id} color={npcColor(o.npcId)} pos={o.pos} route={route} seed={o.id.length} />;
             return (
               <group key={o.id} position={o.pos} rotation-y={o.rotY ?? 0}>
-                <Character color={npcColor(o.npcId)} pose={o.pose} />
+                <Character color={npcColor(o.npcId)} pose={STANDING_NPCS[o.npcId] ? "stand" : o.pose} />
               </group>
             );
+          }
           case "sign":
             return <Sign key={o.id} object={o}/>;
           case "fx":

@@ -1439,6 +1439,30 @@
       "when": "fire_f3"
     },
     {
+      "id": "neighbor_door",
+      "kind": "interactable",
+      "target": "neighbor_door",
+      "pos": [
+        19,
+        6,
+        5.5
+      ],
+      "radius": 1.5,
+      "label": "Постучать соседке",
+      "when": "valentina_e2"
+    },
+    {
+      "id": "valentina",
+      "kind": "npc",
+      "npcId": "valentina",
+      "pos": [
+        19,
+        6,
+        6
+      ],
+      "when": "valentina_e2"
+    },
+    {
       "id": "floor-sign",
       "kind": "sign",
       "pos": [

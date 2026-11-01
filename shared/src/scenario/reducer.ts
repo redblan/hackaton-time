@@ -1,5 +1,18 @@
-import { STAGES, type PlayerId, type Role, type StageId } from "../ids";
-import { addFact, getTimer, hasFact, hasFlag, log, removeFact, say, setTimer, type Ctx } from "./context";
+import { STAGES, type Mode, type PlayerId, type Role, type StageId } from "../ids";
+import {
+  addFact,
+  getTimer,
+  hasFact,
+  hasFlag,
+  log,
+  minigameFact,
+  removeFact,
+  resumeFact,
+  safeAreaFact,
+  say,
+  setTimer,
+  type Ctx,
+} from "./context";
 import { MISTAKE_NOTES } from "./notes";
 import { cover, exitApartment, pack, wake } from "./stages/apartment";
 import { collapse, elevator, exitBuilding, neighbor, smoke } from "./stages/building";
@@ -8,8 +21,18 @@ import { aftershock, call112, debrief, firstAid, handover, triage, yardAssess } 
 import { summarize } from "./summary";
 import type { GameEvent, MinigameResult, ReduceResult, RunConfig, RunState } from "./types";
 
-/** Пока реализован одиночный режим: этапы идут только у роли inside_top. */
-const ACTIVE_ROLE: Role = "inside_top";
+/** В коопе 112 и сортировка на игроке снаружи, а соседка в coop3 на игроке с 3-го этажа. */
+const YARD_STAGES: StageId[] = ["first_aid", "aftershock", "handover", "debrief", "done"];
+
+function stagesFor(role: Role, mode: Mode): StageId[] {
+  if (role === "outside") return ["yard_assess", "call_112", "triage", ...YARD_STAGES];
+  if (role === "inside_mid") {
+    return ["wake", "cover", "pack", "exit_apartment", "neighbor", "exit_building", "yard_assess", ...YARD_STAGES];
+  }
+  if (mode === "solo") return [...STAGES];
+  const skipped: StageId[] = mode === "coop3" ? ["call_112", "triage", "neighbor"] : ["call_112", "triage"];
+  return STAGES.filter((stage) => !skipped.includes(stage));
+}
 
 const IDLE_MS = 40_000;
 const NO_IDLE_HINT: StageId[] = ["wake", "cover", "debrief", "done"];
@@ -34,6 +57,7 @@ const STAGE_DEFS: Record<StageId, StageDef> = {
   done: {
     hint: "Прохождение завершено",
     enter(ctx) {
+      if (!Object.values(ctx.state.stage).every((stage) => stage === "done")) return;
       ctx.state.finished = true;
       setTimer(ctx.state, "finished", ctx.at);
       ctx.effects.push({ type: "runEnd", summary: summarize(ctx.state) });
@@ -50,6 +74,11 @@ function isSkipped(state: RunState, stage: StageId): boolean {
   return false;
 }
 
+function hintFor(state: RunState, stage: StageId): string {
+  const { hint } = STAGE_DEFS[stage];
+  return typeof hint === "function" ? hint(state) : hint;
+}
+
 function makeCtx(
   state: RunState,
   effects: ReduceResult["effects"],
@@ -63,13 +92,15 @@ function makeCtx(
     at,
     goTo(stage) {
       state.stage[playerId] = stage;
-      setTimer(state, "activity", at);
-      effects.push({ type: "stage", playerId, stage, hint: STAGE_DEFS[stage].hint });
+      setTimer(state, `activity:${playerId}`, at);
+      effects.push({ type: "stage", playerId, stage, hint: hintFor(state, stage) });
       STAGE_DEFS[stage].enter?.(ctx);
     },
     advance() {
-      const from = STAGES.indexOf(state.stage[playerId]!);
-      const next = STAGES.slice(from + 1).find((s) => !isSkipped(state, s));
+      const role = state.players.find((p) => p.id === playerId)!.role;
+      const path = stagesFor(role, state.config.mode);
+      const from = path.indexOf(state.stage[playerId]!);
+      const next = path.slice(from + 1).find((s) => !isSkipped(state, s));
       if (next) ctx.goTo(next);
     },
   };
@@ -77,7 +108,7 @@ function makeCtx(
 }
 
 function applyMinigame(ctx: Ctx, result: MinigameResult) {
-  removeFact(ctx.state, "minigame_open");
+  removeFact(ctx.state, minigameFact(ctx.playerId));
   for (const code of result.mistakes) {
     log(ctx, result.skill, "mistake", MISTAKE_NOTES[code] ?? code);
   }
@@ -96,7 +127,7 @@ function aftershockDue(ctx: Ctx, at: number): boolean {
     yardAt !== null &&
     at - yardAt >= delay &&
     !hasFact(state, "aftershock_done") &&
-    !hasFact(state, "minigame_open") &&
+    !hasFact(state, minigameFact(ctx.playerId)) &&
     state.stage[ctx.playerId] === "first_aid"
   );
 }
@@ -105,11 +136,14 @@ function aftershockDue(ctx: Ctx, at: number): boolean {
 function hintIfIdle(ctx: Ctx, at: number) {
   const { state } = ctx;
   const stage = state.stage[ctx.playerId]!;
-  if (NO_IDLE_HINT.includes(stage) || hasFact(state, "minigame_open")) return;
-  const lastAction = Math.max(getTimer(state, "activity") ?? 0, getTimer(state, "idle_hint") ?? 0);
+  if (NO_IDLE_HINT.includes(stage) || hasFact(state, minigameFact(ctx.playerId))) return;
+  const lastAction = Math.max(
+    getTimer(state, `activity:${ctx.playerId}`) ?? 0,
+    getTimer(state, `idle_hint:${ctx.playerId}`) ?? 0,
+  );
   if (at - lastAction < IDLE_MS) return;
-  setTimer(state, "idle_hint", at);
-  const context = { stage, hint: STAGE_DEFS[stage].hint };
+  setTimer(state, `idle_hint:${ctx.playerId}`, at);
+  const context = { stage, hint: hintFor(state, stage) };
   if (stage === "pack") say(ctx, "papa", "gas_smell", context);
   else if (stage === "exit_apartment") say(ctx, "papa", "door_jammed", context);
   else say(ctx, "mihalych", "route_hint", context);
@@ -117,17 +151,17 @@ function hintIfIdle(ctx: Ctx, at: number) {
 
 function trackZone(ctx: Ctx, event: GameEvent) {
   if (event.type !== "enterZone") return;
-  if (event.zone === "z_safe_area") addFact(ctx.state, "in_safe_area");
-  else removeFact(ctx.state, "in_safe_area");
+  if (event.zone === "z_safe_area") addFact(ctx.state, safeAreaFact(ctx.playerId));
+  else removeFact(ctx.state, safeAreaFact(ctx.playerId));
 }
 
 function handle(ctx: Ctx, event: GameEvent) {
   if (event.type === "minigameResult") applyMinigame(ctx, event.result);
   trackZone(ctx, event);
   if (event.type === "tick") hintIfIdle(ctx, event.at);
-  else setTimer(ctx.state, "activity", event.at);
+  else setTimer(ctx.state, `activity:${ctx.playerId}`, event.at);
   if (event.type === "tick" && aftershockDue(ctx, event.at)) {
-    addFact(ctx.state, "aftershock_resume");
+    addFact(ctx.state, resumeFact(ctx.playerId));
     ctx.goTo("aftershock");
     return;
   }
@@ -144,7 +178,7 @@ export function initRun(config: RunConfig, players: { id: PlayerId; role: Role }
   return {
     config,
     players,
-    stage: Object.fromEntries(players.map((p) => [p.id, "wake"])),
+    stage: Object.fromEntries(players.map((p) => [p.id, stagesFor(p.role, config.mode)[0]!])),
     inventory: Object.fromEntries(players.map((p) => [p.id, []])),
     facts: [],
     victims: Object.fromEntries(
@@ -163,15 +197,14 @@ export function reduce(state: RunState, event: GameEvent): ReduceResult {
 
   const next = JSON.parse(JSON.stringify(state)) as RunState;
   const effects: ReduceResult["effects"] = [];
-  const active = next.players.filter((p) => p.role === ACTIVE_ROLE);
 
   if (event.type === "start") {
     next.startedAt = event.at;
-    for (const { id } of active) makeCtx(next, effects, id, event.at).goTo("wake");
+    for (const { id } of next.players) makeCtx(next, effects, id, event.at).goTo(next.stage[id]!);
     return { state: next, effects };
   }
 
-  const targets = event.type === "tick" ? active : active.filter((p) => p.id === event.playerId);
+  const targets = event.type === "tick" ? next.players : next.players.filter((p) => p.id === event.playerId);
   for (const { id } of targets) handle(makeCtx(next, effects, id, event.at), event);
 
   return { state: next, effects };
