@@ -34,7 +34,7 @@ describe("Громов: передача бригаде (D-24)", () => {
   });
 
   it("без времени жгута → handover_missing:tourniquet_time, потом handover_complete", async () => {
-    const ai = createAi({ memory: createInMemoryStore() });
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: (async () => { throw new Error("offline test"); }) as typeof fetch });
     expect((await ai.say(arrive())).outcome).toBeUndefined();
     const r1 = await ai.say(say("Трое пострадавших: мужчина с кровотечением, женщина не дышит. Наложил жгут, делал СЛР. Парень в лифте, во дворе оборван провод"));
     expect(r1.outcome).toBe("handover_missing:tourniquet_time");
@@ -45,7 +45,7 @@ describe("Громов: передача бригаде (D-24)", () => {
   });
 
   it("жгута не было — время не требует", async () => {
-    const ai = createAi({ memory: createInMemoryStore() });
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: (async () => { throw new Error("offline test"); }) as typeof fetch });
     await ai.say(arrive(false));
     const r = await ai.say(say("Двое пострадавших, один без сознания, уложили на бок. Парень в лифте, провод во дворе"));
     expect(r.outcome).toBe("handover_complete");
@@ -73,7 +73,7 @@ describe("Громов: разбор по журналу", () => {
   });
 
   it("в следующем прохождении объясняет ту же ошибку другими словами", async () => {
-    const ai = createAi({ memory: createInMemoryStore() });
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: (async () => { throw new Error("offline test"); }) as typeof fetch });
     const first = await ai.say(debrief());
     ai.resetRun?.("p1");
     const second = await ai.say(debrief());
@@ -95,7 +95,7 @@ describe("Громов помнит прошлые прохождения (M16)"
   const debriefOf = (journal: JournalEntry[]): NpcRequest => ({ npcId: "gromov", playerId: "p1", event: "debrief", context: { flags: [], facts: [], journal } });
 
   it("первое прохождение — без «в прошлый раз» и без «опять», даже если разбор зовут дважды", async () => {
-    const ai = createAi({ memory: createInMemoryStore() });
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: (async () => { throw new Error("offline test"); }) as typeof fetch });
     const a = await ai.say(debriefOf(run1));
     const b = await ai.say(debriefOf(run1));
     for (const r of [a, b]) {
@@ -122,7 +122,7 @@ describe("Громов помнит прошлые прохождения (M16)"
   });
 
   it("та же ошибка второй раз подряд — «Опять»", async () => {
-    const ai = createAi({ memory: createInMemoryStore() });
+    const ai = createAi({ memory: createInMemoryStore(), fetchImpl: (async () => { throw new Error("offline test"); }) as typeof fetch });
     await ai.say(debriefOf(run1));
     ai.resetRun?.("p1");
     expect((await ai.say(debriefOf(run1))).text).toContain("Опять");

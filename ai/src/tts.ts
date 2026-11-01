@@ -7,6 +7,7 @@
  *   PIPER_BIN    — piper(.exe)
  *   PIPER_VOICES — папка с ru_RU-<голос>-medium.onnx и .onnx.json
  */
+import { createRvc, type RvcOptions } from "./rvc";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -31,6 +32,8 @@ export const DEFAULT_VOICES: Partial<Record<NpcId, NpcVoice>> = {
 const FALLBACK: NpcVoice = { name: "dmitri", speed: 1 };
 
 export interface TtsOptions {
+  /** Disabled by default. RVC_BIN/RVC_ARGS point to an external command. */
+  rvc?: RvcOptions;
   bin?: string;
   voicesDir?: string;
   /** Карточки NPC — чтобы взять голос из поля `voice` */
@@ -96,6 +99,7 @@ async function defaultRun(bin: string, args: string[], text: string, timeoutMs: 
 }
 
 export function createTts(opts: TtsOptions = {}) {
+  const rvc = createRvc(opts.rvc);
   const bin = opts.bin ?? process.env.PIPER_BIN ?? "";
   const voicesDir = opts.voicesDir ?? process.env.PIPER_VOICES ?? "";
   const run = opts.run ?? defaultRun;
@@ -143,7 +147,7 @@ export function createTts(opts: TtsOptions = {}) {
       const say = speakable(text);
       if (!say || say.length>2000 || !this.available()) return null;
       const voice = voiceOf(npcId);
-      const key = `${voice.name}|${voice.speed ?? 1}|${say}`;
+      const key = `${rvc.enabled ? npcId : "piper"}|${voice.name}|${voice.speed ?? 1}|${say}`;
       const hit = cache.get(key);
       if (hit) {cache.delete(key);cache.set(key,hit);return hit;}
       const existing=pending.get(key);
@@ -159,7 +163,7 @@ export function createTts(opts: TtsOptions = {}) {
         start:()=>{
           clearTimeout(job.timer);running=true;
           const finish=(wav:Buffer|null)=>{pending.delete(key);running=false;pump();complete(wav);};
-          void Promise.resolve().then(()=>run(bin,args,say,timeoutMs)).then(wav=>{
+          void Promise.resolve().then(()=>run(bin,args,say,timeoutMs)).then(wav=>rvc.convert(npcId,wav)).then(wav=>{
             synthesized++;remember(key,wav);finish(wav);
           },e=>{console.error('[tts]',(e as Error).message);finish(null);});
         },
