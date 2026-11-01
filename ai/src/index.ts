@@ -6,7 +6,8 @@
  * который этот игрок ещё не слышал → обновляем память.
  */
 import type { AiModule, AiOptions, CharacterCard, NpcId, NpcRequest, NpcResponse, PlayerId, PlayerMemory, StageId } from "@game/shared";
-import { classifyIntent } from "./intents";
+import { classifyIntent, resolveIntent } from "./intents";
+import { agentAction, worldReaction } from "./agentActions";
 import { actionPatch } from "./worldActions";
 import { factsBySkill, loadData, type AiData } from "./data";
 import { createDispatcher } from "./dispatcher";
@@ -78,6 +79,7 @@ export function createAi(opts: CreateAiOptions): Ai {
     temperature: 0.3, templatesOnly: false, factsOnly: true,
   }]));
   let available = false, lastMs = 0, totalMs = 0, measured = 0, llm = 0, template = 0;
+  let flagHook: Parameters<NonNullable<AiModule["setFlagHook"]>>[0] | undefined;
   let worldHook: Parameters<NonNullable<AiModule["setWorldHook"]>>[0] | undefined;
   const dispatcher = createDispatcher();
   const gromov = createGromov(data);
@@ -242,6 +244,22 @@ export function createAi(opts: CreateAiOptions): Ai {
   }
 
   async function respond(req: NpcRequest, onToken?: (t: string) => void, onOutcome?: (outcome: string) => void): Promise<NpcResponse> {
+    if (flagHook && req.event === "free_talk" && req.playerMessage && req.npcId !== "victim_cpr" && req.npcId !== "victim_unconscious") {
+      const rule = classifyIntent(req.playerMessage);
+      // Preserve immediate dispatcher/handover outcomes; these reports are not model-classification jobs.
+      const fsmReport = req.npcId === "dispatcher" || (req.npcId === "gromov" && gromov.inHandover(req));
+      const resolved = rule ? { intent: rule, source: "rule" as const, ms: 0 } : !fsmReport && ["papa", "mihalych", "gromov"].includes(req.npcId) && !characters.get(req.npcId)?.templatesOnly
+        ? await resolveIntent(req.playerMessage, { url, model, fetchImpl: opts.fetchImpl, run: task => queue.run(`intent:${req.playerId}`, 2000, task) }) : null;
+      if (resolved?.intent) {
+        const text = agentAction(resolved.intent, req, flagHook);
+        if (text) {
+          const memory = await opts.memory.get(req.playerId);
+          remember(req, { ...plan(req, memory), facts: [] }, memory, text);
+          await opts.memory.save(memory); onToken?.(text);
+          return { text, factIds: [], source: "template", intent: { id: resolved.intent, source: resolved.source === "model" ? "llm" : "rule", ms: resolved.ms } };
+        }
+      }
+    }
     if (worldHook && req.event === "free_talk" && req.playerMessage) {
       const intent = classifyIntent(req.playerMessage);
       const action = intent && actionPatch(intent, req);
@@ -345,6 +363,8 @@ export function createAi(opts: CreateAiOptions): Ai {
   return {
     llmStats: () => queue.stats(),
     setWorldHook(hook) { worldHook = hook; },
+    setFlagHook(hook) { flagHook = hook; },
+    async onWorldEvent(event) { return worldReaction(event); },
     say: (req) => tracked(req),
     sayStream: (req, onToken, onOutcome) => tracked(req, onToken, onOutcome),
     getCharacters: () => [...characters.values()].map(card => ({ ...card })),
