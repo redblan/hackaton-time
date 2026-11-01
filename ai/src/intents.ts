@@ -39,6 +39,8 @@ export async function resolveIntent(text: string, opts?: IntentClassifierOptions
   if (!normalized) return result(null, "none");
   const intent = classifyIntent(text);
   if (intent) return result(intent, "rule");
+  // Greetings need a dialogue reply, not a second model request for world actions.
+  if (/^(?:привет|здравствуй(?:те)?|добрый (?:день|вечер)|как (?:ты|вы|дела))[!?. ,]*$/u.test(normalized)) return result(null, "none");
   if (!opts) return result(null, "none");
   const task = (remainingMs: number) => ollamaChat({
     url: opts.url, model: opts.model, timeoutMs: remainingMs, totalMs: remainingMs, temperature: 0,
