@@ -63,6 +63,8 @@ export interface ClientToServer {
    * и помнит последнее состояние. `holder` — кто несёт (null — лежит), `vel` — скорость после броска.
    */
   "prop:move": (p: PropState) => void;
+  /** Потушил огонь огнетушителем (Props, G13): сервер ставит флаг комнаты fire_out — пожар гаснет у всех */
+  "fire:out": () => void;
   /** Дверь квартиры открыли/закрыли (E): сервер помнит по чанку и рассылает всем в комнате — дверь общая */
   "door:set": (p: { chunkId: ChunkId; open: boolean }) => void;
 }

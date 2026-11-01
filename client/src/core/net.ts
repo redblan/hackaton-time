@@ -127,7 +127,13 @@ export function connect(auth: Auth) {
       return cur ? { chunks: { ...st.chunks, [patch.chunkId]: applyPatch(cur, patch) } } : {};
     }),
   );
-  s.on("prop:move", (p) => store.set((st) => ({ props: { ...st.props, [p.id]: p } })));
+  s.on("prop:move", (p) =>
+    store.set((st) => ({
+      props: { ...st.props, [p.id]: p },
+      // NPC дал огнетушитель мне в руки (сервер, «дай огнетушитель»); остальные предметы берёт Props
+      ...(p.holder && p.holder === st.auth?.playerId && p.id.endsWith("-prop-extinguisher") && !st.held ? { held: p.id } : {}),
+    })),
+  );
   s.on("door:set", ({ chunkId, open }) => store.set((st) => ({ doors: { ...st.doors, [chunkId]: open } })));
   s.on("voice:chat", (p) => voiceChatListeners.forEach((fn) => fn(p)));
   s.on("player:teleport", ({ pos, rotY }) => teleport(pos, rotY ?? local.rotY));

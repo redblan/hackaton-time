@@ -154,6 +154,17 @@ export function Props() {
   // Чужие предметы по сети
   useEffect(() => {
     for (const state of Object.values(remote)) {
+      // NPC дал предмет мне (сервер: «дай аптечку») — беру в руки, если руки свободны
+      if (state.holder && state.holder === playerId && !carried.current && !isExtinguisher(state.id) && !store.get().held) {
+        const prop = live.current.get(state.id);
+        if (prop) {
+          carried.current = prop;
+          prop.holder = state.holder;
+          prop.flying = false;
+          prop.target = null;
+        }
+        continue;
+      }
       if (state.holder === playerId || carried.current?.id === state.id || isExtinguisher(state.id)) continue;
       let prop = live.current.get(state.id);
       if (!prop) {
@@ -270,8 +281,9 @@ export function Props() {
     if (fire && spraying.current >= EXTINGUISH_S) {
       spraying.current = 0;
       fire = null;
-      // TODO(G13): пока только у этого игрока. Комнате флаг поставит сценарий, когда Егор добавит событие
+      // Сразу у себя и всем в комнате через сервер (флаг fire_out; «режиссёр» оставит гарь)
       store.set((st) => ({ flags: [...st.flags, "fire_out"] }));
+      getSocket()?.emit("fire:out");
     }
     if (fire !== spray) setSpray(fire);
 

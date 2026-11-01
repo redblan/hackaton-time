@@ -1,4 +1,5 @@
 /** Чистая логика комнат (без сокетов) — чтобы её можно было тестировать. */
+import { initDirector, type DirectorState } from "./director";
 import type { ChunkId, Effect, Mode, NpcId, NpcPublic, PlayerId, PlayerPublic, PropState, Role, RunState, StageId, WorldObject } from "@game/shared";
 import type { Escort } from "./escort";
 
@@ -30,6 +31,8 @@ export interface Room {
   /** Флаги мира: из генератора + setFlag */
   flags: Set<string>;
   timers: NodeJS.Timeout[];
+  /** «Режиссёр» мира (director.ts): газ, огонь, скорая */
+  director: DirectorState;
   emptySince?: number;
   /** Игровое время (D-50): накоплено до последней паузы + момент, с которого часы идут (null — пауза) */
   clock: { elapsedMs: number; runningSince: number | null };
@@ -57,6 +60,7 @@ export function newRoom(id: string, mode: Mode): Room {
     run: null,
     flags: new Set(),
     timers: [],
+    director: initDirector(),
     clock: { elapsedMs: 0, runningSince: null },
     npcs: new Map(),
     dirty: false,

@@ -36,6 +36,7 @@ import {
 import { planChunks, type ChunkStore } from "./chunks";
 import type { Store } from "./db";
 import type { Stt, Tts } from "@game/ai";
+import { direct } from "./director";
 import { checkLeftBehind, recordTrail, startEscort, startWalk, stepEscort, stepWalk } from "./escort";
 import {
   canStart,
@@ -160,6 +161,12 @@ export class Game {
     s.on("voice:say", (p) => this.safe(() => this.onVoice(s, p)));
     s.on("client:metrics", (p) => this.safe(() => this.onMetrics(s, p)));
     s.on("door:set", (p) => this.safe(() => this.onDoor(s, p)));
+    s.on("fire:out", () =>
+      this.safe(() => {
+        const room = this.myRoom(s.data.playerId);
+        if (room?.started && room.flags.has("fire_f5") && !room.flags.has("fire_out")) this.setFlag(room.id, "fire_out", true);
+      }),
+    );
     s.on("ping", (t) => {
       if (typeof t === "number") s.emit("pong", t);
     });
@@ -392,7 +399,10 @@ export class Game {
   private startTicking(room: Room) {
     room.timers.push(
       setInterval(() => {
-        if (room.clock.runningSince !== null) this.safe(() => this.dispatch(room, { type: "tick", at: this.now(room) }));
+        if (room.clock.runningSince !== null) {
+          this.safe(() => this.dispatch(room, { type: "tick", at: this.now(room) }));
+          this.safe(() => this.runDirector(room));
+        }
       }, TICK_MS),
     );
   }
@@ -472,6 +482,79 @@ export class Game {
     room.patches.set(patch.chunkId, cur);
     this.io.to(`r:${room.id}`).emit("world:patch", { chunkId: patch.chunkId, add, remove });
     console.log(`[world] комната ${room.id}: патч ${patch.chunkId} +${add.length} −${remove.length}`);
+    return true;
+  }
+
+  /** «Режиссёр» мира: последствия действий игроков (газ, огонь, скорая) — патчи мира и реплики */
+  private runDirector(room: Room) {
+    if (!room.run || room.finished) return;
+    const journal = room.run.journal.filter((j) => j.skill === "call_112");
+    const out = direct(
+      room.director,
+      {
+        flags: room.flags,
+        stages: Object.values(room.run.stage),
+        facts: room.run.facts,
+        addressMissed: journal.some((j) => j.outcome !== "ok" && /адрес/i.test(j.note)),
+        callOk: journal.some((j) => j.outcome === "ok"),
+      },
+      this.now(room) / 1000,
+      (id) => this.chunks.get(id),
+    );
+    for (const p of out.patches) this.patchWorld(room.id, p);
+    for (const s of out.say) this.sayAs(room.id, s.npcId, s.text);
+    for (const n of out.notes) {
+      console.log(`[режиссёр] ${room.id}: ${n}`);
+      this.remember(room, "dispatcher", "мир", n, "director");
+    }
+  }
+
+  /**
+   * «Дай аптечку» рядом с NPC: если такой предмет лежит на этаже (не в чужих руках) — NPC даёт его игроку в руки.
+   * Нет такого рядом — false, дальше отвечает ИИ (он может сам «принести» объект через флаги D-73).
+   */
+  private giveItem(room: Room, playerId: PlayerId, npcId: NpcId, text: string): boolean {
+    if (!/(дай|дайте|подай|принеси|принесите|нужн|можно|передай|где)/i.test(text)) return false;
+    const me = room.players.get(playerId);
+    if (!me?.pos) return false;
+    const WANT: [RegExp, RegExp][] = [
+      [/аптечк/i, /аптечк/i],
+      [/фонар/i, /фонар/i],
+      [/вод[уыа]|попить|бутылк/i, /вод/i],
+      [/кружк|чашк/i, /кружк/i],
+      [/огнетуш/i, /огнетуш/i],
+      [/одеял|плед/i, /одеял/i],
+      [/стул/i, /стул/i],
+    ];
+    const want = WANT.find(([asked]) => asked.test(text))?.[1];
+    if (!want) return false;
+    const here = this.chunks.chunkAt(me.pos);
+    if (!here) return false;
+    const held = new Set([...room.props.values()].filter((p) => p.holder).map((p) => p.id));
+    if ([...room.props.values()].some((p) => p.holder === playerId)) {
+      const line = "У тебя руки заняты — сначала положи то, что несёшь.";
+      this.io.to(`p:${playerId}`).emit("npc:done", { npcId, text: line, source: "template" });
+      return true;
+    }
+    let best: { id: string; label: string; d: number } | null = null;
+    for (const id of [here, ...(this.chunks.get(here)?.neighbors ?? [])]) {
+      for (const o of this.chunks.get(id)?.objects ?? []) {
+        if (o.kind !== "prop" || !want.test(o.label) || held.has(o.id)) continue;
+        const at = room.props.get(o.id)?.pos ?? o.pos;
+        if (Math.abs(at[1] - me.pos[1]) > 2.5) continue;
+        const d = Math.hypot(at[0] - me.pos[0], at[2] - me.pos[2]);
+        if (d < 25 && (!best || d < best.d)) best = { id: o.id, label: o.label, d };
+      }
+    }
+    if (!best) return false;
+    const state: PropState = { id: best.id, chunkId: here, pos: [me.pos[0], me.pos[1] + 1, me.pos[2]], rotY: 0, holder: playerId };
+    room.props.set(best.id, state);
+    this.io.to(`r:${room.id}`).emit("prop:move", state); // и мне: клиент возьмёт предмет в руки
+    const line = `Держи — ${best.label.toLowerCase()}.`;
+    this.io.to(`p:${playerId}`).emit("npc:done", { npcId, text: line, source: "template" });
+    this.remember(room, npcId, playerId, line, "give");
+    if (this.tts?.available()) void this.speak(this.io.to(`p:${playerId}`), npcId, line);
+    console.log(`[режиссёр] ${room.id}: ${npcId} дал ${best.label} игроку ${playerId}`);
     return true;
   }
 
@@ -661,6 +744,7 @@ export class Game {
     if (!room?.started || !p || !includes(NPC_IDS, p.npcId) || typeof p.text !== "string") return;
     const text = p.text.trim().slice(0, 500);
     if (!text) return;
+    if (this.giveItem(room, s.data.playerId, p.npcId, text)) return;
     void this.npcSay(room, s.data.playerId, {
       npcId: p.npcId,
       playerId: s.data.playerId,

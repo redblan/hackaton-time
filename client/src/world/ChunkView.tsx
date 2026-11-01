@@ -234,7 +234,7 @@ function useCompiledReveal() {
 export function ChunkView(props: { chunk: ChunkData; flags: string[] }) {
   const root = useCompiledReveal();
   const floor = parseFloorId(props.chunk.id); // этаж: декор Interior заменяет GLB двери/лифта/плиты и коробки-двери N7
-  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)&&npcHere(o,props.chunk.id,props.flags)&&!(props.flags.includes('fire_out')&&o.kind==='fx'&&(o.fx==='fire'||o.fx==='smoke'))),[props.chunk,props.flags]);
+  const objects = useMemo(()=>props.chunk.objects.filter(o=>active(o,props.flags)&&npcHere(o,props.chunk.id,props.flags)&&!(props.flags.includes('fire_out')&&o.kind==='fx'&&(o.fx==='fire'||o.fx==='smoke')&&!o.id.startsWith('dir-gas'))),[props.chunk,props.flags]);
   const boxes=useMemo(()=>{
     const replaced=new Set(objects.filter(o=>o.kind==='model').map(o=>o.id.replace('visual:','')));
     return objects.filter((o):o is StaticBox=>o.kind==='box'&&!replaced.has(o.id)&&!isYardAnimated(o.id)&&!(floor&&(o.id==='window-glass'||o.id.startsWith('facade-window-')))&&!(floor&&o.id.startsWith('detail-door-'))&&!(replaced.has('table-top')&&o.id.startsWith('leg-'))&&!(replaced.has('tree')&&o.id.startsWith('tree-'))&&!(replaced.has('stairs-a')&&o.id.startsWith('stair-a-'))&&!(replaced.has('stairs-b')&&o.id.startsWith('stair-b-'))).flatMap(o=>floor?withWindowHoles(o,props.chunk.bounds.min):[o]);
